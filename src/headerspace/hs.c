@@ -50,6 +50,21 @@ vec_destroy (struct hs_vec *v)
 }
 
 static void
+vec_sum (struct hs_vec *dst, const struct hs_vec *src, int len)
+{
+    for (int i = 0; i < src->used; i++) {
+        bool diff = src->diff && src->diff[i].used;
+        vec_append(dst, src->elems[i], false);
+        int idx = dst->used - 1;
+        struct hs_vec *dst_diff = &dst->diff[idx];
+        if (diff) {
+            for(int j = 0; j < src->diff[i].used; j++)
+                vec_append(dst_diff, src->diff[i].elems[j], true);
+        }
+    }
+}
+
+static void
 vec_diff (struct hs_vec *dst, const array_t *isect, const struct hs_vec *src, int len)
 {
   for (int i = 0; i < src->used; i++) {
@@ -253,6 +268,8 @@ hs_compact_m (struct hs *hs, const array_t *mask)
       }
     }
   }
+  // TODO: check if mask is correct
+  vec_compact (v, mask, hs->len);
   return v->used;
 }
 
@@ -375,6 +392,13 @@ hs_isect_arr (struct hs *res, const struct hs *hs, const array_t *a)
     }
   }
   return true;
+}
+
+void
+hs_sum (struct hs *a, const struct hs *b)
+{
+    assert (a->len == b->len);
+    vec_sum(&a->list, &b->list, a->len);
 }
 
 void

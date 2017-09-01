@@ -45,6 +45,7 @@ void hs_cmpl      (struct hs *hs);
 bool hs_isect     (struct hs *a, const struct hs *b);
 struct hs* hs_isect_a (const struct hs *a, const struct hs *b);
 bool hs_isect_arr (struct hs *dst, const struct hs *src, const array_t *arr);
+void hs_sum       (struct hs *a, const struct hs *b);
 void hs_minus     (struct hs *a, const struct hs *b);
 void hs_rewrite   (struct hs *hs, const array_t *mask, const array_t *rewrite);
 void hs_vec_append (struct hs_vec *v, array_t *a, bool diff);
