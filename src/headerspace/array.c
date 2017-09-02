@@ -9,12 +9,6 @@
 #include "array.h"
 #include <limits.h>
 
-#define SIZE(L) ( DIV_ROUND_UP (2 * (L), sizeof (array_t)) )
-
-/* If using anything larger than 64-bit, these need to be changed. */
-#define EVEN_MASK ( (array_t) 0xaaaaaaaaaaaaaaaaull )
-#define ODD_MASK  ( (array_t) 0x5555555555555555ull )
-
 static inline bool
 has_x (array_t x)
 { return x & (x >> 1) & ODD_MASK; }
@@ -252,7 +246,7 @@ array_get_bit (const array_t *a, int byte, int bit)
   const uint8_t *p = (const uint8_t *) a;
   uint8_t x = p[2 * byte + bit / (CHAR_BIT / 2)];
   int shift = 2 * (CHAR_BIT / 2 - (bit % (CHAR_BIT / 2)) - 1);
-  return x >> shift;
+  return (x >> shift) & BIT_X;
 }
 
 uint16_t
@@ -268,7 +262,7 @@ array_set_bit (array_t *a, enum bit_val val, int byte, int bit)
   uint8_t *p = (uint8_t *) a;
   int idx = 2 * byte + bit / (CHAR_BIT / 2);
   int shift = 2 * (CHAR_BIT / 2 - (bit % (CHAR_BIT / 2)) - 1);
-  uint8_t mask = BIT_X >> shift;
+  uint8_t mask = BIT_X << shift;
   p[idx] = (p[idx] & ~mask) | (val << shift);
 }
 

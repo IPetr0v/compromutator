@@ -21,6 +21,12 @@ enum bit_val { BIT_Z = 0, BIT_0, BIT_1, BIT_X, BIT_UNDEF };
 
 #define ARRAY_BYTES(L) ( ROUND_UP (2 * (L), sizeof (array_t)) )
 
+#define SIZE(L) ( DIV_ROUND_UP (2 * (L), sizeof (array_t)) )
+
+/* If using anything larger than 64-bit, these need to be changed. */
+#define EVEN_MASK ( (array_t) 0xaaaaaaaaaaaaaaaaull )
+#define ODD_MASK  ( (array_t) 0x5555555555555555ull )
+
 array_t *array_create   (int len, enum bit_val val);
 void     array_free     (array_t *a);
 
