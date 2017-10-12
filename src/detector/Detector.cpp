@@ -28,7 +28,7 @@ void Detector::deleteTable(SwitchId switch_id, TableId table_id)
 }
 
 RuleInfo Detector::addRule(SwitchId switch_id, TableId table_id,
-                         uint16_t priority, Match& match,
+                         uint16_t priority, NetworkSpace& match,
                          std::vector<Action>& action_list)
 {
     // Generate rule id

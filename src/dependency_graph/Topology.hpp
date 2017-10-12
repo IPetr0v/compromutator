@@ -15,6 +15,9 @@ class Topology
 public:
     Topology();
     
+    void addRule(RulePtr rule);
+    
+    TopoId adjacentPort(SwitchId switch_id, PortId port_id) const;
     bool addLink(SwitchPtr src_switch, PortId src_port_id,
                  SwitchPtr dst_switch, PortId dst_port_id);
     void deleteLink();
@@ -26,6 +29,7 @@ public:
     const std::vector<RulePtr>& inRules(SwitchId switch_id, PortId port_id);
 
 private:
+    Network& network_;
     std::map<TopoId, TopoId> port_map_;
     std::map<TopoId, std::vector<RulePtr>> out_port_dependency_;
     std::map<TopoId, std::vector<RulePtr>> in_port_dependency_;

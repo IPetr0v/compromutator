@@ -29,13 +29,18 @@ void DependencyGraph::deleteTable(SwitchId switch_id, TableId table_id)
 
 RulePtr DependencyGraph::addRule(SwitchId switch_id, TableId table_id,
                                  RuleId rule_id, uint16_t priority,
-                                 Match& match, std::vector<Action>& action_list)
+                                 NetworkSpace& match,
+                                 std::vector<Action>& action_list)
 {
     // Create rule data
     RulePtr rule = network_.addRule(switch_id, table_id, rule_id,
                                     priority, match, action_list);
     
-    // Create rule vertex
+    // Create port dependencies
+    topology_.addRule(rule);
+    
+    // Add rule to the dependency updater
+    dependency_updater_.addRule(rule);
     
     // TODO: create error codes for RuleInfo
     return rule ? rule : nullptr;

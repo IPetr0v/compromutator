@@ -9,14 +9,18 @@ DEPENDENCY_GRAPH_PATH = $(SRC_PATH)/dependency_graph
 
 HEADER_SPACE_SRC += $(HEADER_SPACE_PATH)/HeaderSpace.cpp
 
+NETWORK_SPACE_SRC += $(SRC_PATH)/NetworkSpace.cpp
+
 DETECTOR_SRC += $(DETECTOR_PATH)/Detector.cpp
 DETECTOR_SRC += $(DETECTOR_PATH)/FlowPredictor.cpp
 
 DEPENDENCY_GRAPH_SRC += $(DEPENDENCY_GRAPH_PATH)/DependencyGraph.cpp
+DEPENDENCY_GRAPH_SRC += $(DEPENDENCY_GRAPH_PATH)/DependencyUpdater.cpp
 DEPENDENCY_GRAPH_SRC += $(DEPENDENCY_GRAPH_PATH)/Network.cpp
+DEPENDENCY_GRAPH_SRC += $(DEPENDENCY_GRAPH_PATH)/Rule.cpp
 DEPENDENCY_GRAPH_SRC += $(DEPENDENCY_GRAPH_PATH)/Topology.cpp
 
-all: ./src/Main.cpp $(HEADER_SPACE_SRC) $(DETECTOR_SRC) $(DEPENDENCY_GRAPH_SRC) headerspace.o
+all: ./src/Main.cpp $(HEADER_SPACE_SRC) $(NETWORK_SPACE_SRC) $(DETECTOR_SRC) $(DEPENDENCY_GRAPH_SRC) headerspace.o
 	g++ -std=c++11 -g -o $(TARGET) $^
 	#rm -rf *.o
 

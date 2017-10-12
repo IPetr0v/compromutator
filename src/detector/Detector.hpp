@@ -23,7 +23,7 @@ public:
     void deleteTable(SwitchId switch_id, TableId table_id);
     
     RuleInfo addRule(SwitchId switch_id, TableId table_id,
-                     uint16_t priority, Match& match,
+                     uint16_t priority, NetworkSpace& match,
                      std::vector<Action>& action_list);
     void deleteRule(RuleInfo rule_info);
     

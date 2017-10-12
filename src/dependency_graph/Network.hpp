@@ -1,41 +1,18 @@
 #pragma once
 
 #include "../Common.hpp"
+#include "Rule.hpp"
 
 #include <algorithm>
 #include <map>
+#include <memory>
 #include <vector>
 
-class Rule
-{
-public:
-    Rule(SwitchId switch_id, TableId table_id, RuleId id,
-         uint16_t priority, Match& match,
-         std::vector<Action>& action_list);
-    
-    inline const SwitchId switchId() {return switch_id_;}
-    inline const TableId tableId() {return table_id_;}
-    inline const RuleId id() {return id_;}
-    
-    inline const uint16_t priority() {return priority_;}
-    inline const Match& match() {return match_;}
-    inline const std::vector<Action>& action_list() {return action_list_;}
-    
-    inline const PortId& inPort() {match_.in_port;}
-    inline const std::vector<PortId>& outPorts() {return out_ports_;}
-    
-private:
-    SwitchId switch_id_;
-    TableId table_id_;
-    RuleId id_;
-    
-    uint16_t priority_;
-    Match match_;
-    std::vector<Action> action_list_;
-    
-    std::vector<PortId> out_ports_;
+class Switch;
+class Table;
 
-};
+typedef std::shared_ptr<Switch> SwitchPtr;
+typedef std::shared_ptr<Table> TablePtr;
 
 class Table
 {
@@ -43,17 +20,36 @@ public:
     Table(SwitchId switch_id, TableId id);
     
     RulePtr getRule(RuleId id);
-    RulePtr addRule(RuleId rule_id, uint16_t priority, Match& match,
+    RulePtr addRule(RuleId rule_id, uint16_t priority,
+                    NetworkSpace& match,
                     std::vector<Action>& action_list);
     void deleteRule(RuleId id);
     
-    inline const SwitchId switchId() {return switch_id_;}
-    inline const TableId id() {return id_;}
+    RuleRange rules() const {return RuleRange(sorted_rule_map_);}
+    RuleRange upperRules(RulePtr rule) const;
+    RuleRange lowerRules(RulePtr rule) const;
+    
+    inline SwitchId switchId() const {return switch_id_;}
+    inline TableId id() const {return id_;}
 
 private:
     SwitchId switch_id_;
     TableId id_;
+    
     std::map<RuleId, RulePtr> rule_map_;
+    
+    // Experimental
+    // These maps are used in order to have a list of rules
+    // that is already sorted by priority, and to have a map
+    // from RuleId to rule pointers
+    using PriorityMap   = std::map<RuleId, Priority>;
+    using RuleMap       = std::map<RuleId, RulePtr>;
+    using SortedRuleMap = std::map<Priority, RuleMap>;
+    
+    PriorityMap priority_map_;
+    SortedRuleMap sorted_rule_map_
+    
+    RuleMap* get_rule_map(Priority priority);
 
 };
 
@@ -70,8 +66,8 @@ public:
     TablePtr addTable(TableId table_id);
     void deleteTable(TableId id);
     
-    std::vector<PortId> ports();
-    inline const SwitchId id() {return id_;}
+    std::vector<PortId>& ports();
+    inline SwitchId id() const {return id_;}
 
 private:
     SwitchId id_;
@@ -101,12 +97,13 @@ public:
                     RuleId rule_id);
     RulePtr addRule(SwitchId switch_id, TableId table_id,
                     RuleId rule_id, uint16_t priority,
-                    Match& match, std::vector<Action>& action_list);
+                    NetworkSpace& match,
+                    std::vector<Action>& action_list);
     void deleteRule(SwitchId switch_id,
                     TableId table_id,
                     RuleId rule_id);
     
-    static bool isReservedPort(PortId id);
+    static bool isSpecialPort(PortId id);
 
 private:
     std::map<SwitchId, SwitchPtr> switch_map_;

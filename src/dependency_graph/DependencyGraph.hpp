@@ -17,20 +17,18 @@ public:
     
     RulePtr addRule(SwitchId switch_id, TableId table_id,
                     RuleId rule_id, uint16_t priority,
-                    Match& match, std::vector<Action>& action_list);
+                    NetworkSpace& match,
+                    std::vector<Action>& action_list);
     void deleteRule(SwitchId switch_id, TableId table_id, RuleId rule_id);
     
     void addLink(SwitchId src_switch_id, PortId src_port_id,
                  SwitchId dst_switch_id, PortId dst_port_id);
     void deleteLink(SwitchId src_switch_id, PortId src_port_id,
                     SwitchId dst_switch_id, PortId dst_port_id);
-    
-    uint64_t getCounter(SwitchId switch_id,
-                        TableId table_id,
-                        RuleId rule_id);
 
 private:
     Network network_;
     Topology topology_;
+    DependencyUpdater dependency_updater_;
 
 };
