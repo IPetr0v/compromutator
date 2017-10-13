@@ -1,9 +1,9 @@
 #include "HeaderSpace.hpp"
 
 int get_len(const char* str) {
-    bool commas = strchr (str, ',');
+    auto commas = (bool)strchr(str, ',');
     int div = CHAR_BIT + commas;
-    int len = strlen(str) + commas;
+    int len = (int)strlen(str) + commas;
     assert(len % div == 0);
     len /= div;
     return len;
@@ -48,6 +48,12 @@ HeaderSpace& HeaderSpace::operator=(const HeaderSpace& other)
     return *this;
 }
 
+HeaderSpace& HeaderSpace::operator~()
+{
+    hs_cmpl(hs_);
+    return *this;
+}
+
 HeaderSpace& HeaderSpace::operator|=(const HeaderSpace& right) {
     hs_sum(hs_, right.hs_);
     return *this;
@@ -84,12 +90,6 @@ HeaderSpace HeaderSpace::operator-(const HeaderSpace& right)
     HeaderSpace header(hs_);
     header -= right;
     return header;
-}
-
-HeaderSpace& HeaderSpace::operator~()
-{
-    hs_cmpl(hs_);
-    return *this;
 }
 
 std::ostream& operator<<(std::ostream& os, const HeaderSpace& header)
@@ -199,7 +199,7 @@ HeaderChanger::~HeaderChanger()
     array_free(rewrite_);
 }
 
-HeaderSpace HeaderChanger::apply(const HeaderSpace& header)
+HeaderSpace HeaderChanger::apply(const HeaderSpace& header) const
 {
     // TODO: add identity check: if so, then do not copy
     // use smart pointers to avoid copy constructor on return
@@ -208,7 +208,7 @@ HeaderSpace HeaderChanger::apply(const HeaderSpace& header)
     return new_header;
 }
 
-HeaderSpace HeaderChanger::inverse(const HeaderSpace& header)
+HeaderSpace HeaderChanger::inverse(const HeaderSpace& header) const
 {
     HeaderSpace new_header(header);
     hs_rewrite(new_header.hs_, mask_, inverse_rewrite_);

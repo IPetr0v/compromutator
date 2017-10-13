@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     
     TableId front_table = 0;
     uint16_t table_miss_priority = 0;
-    Match table_miss_match(HeaderSpace("xxxxxxxx"));
+    NetworkSpace table_miss_match(HeaderSpace("xxxxxxxx"));
     std::vector<Action> table_miss_actions;
     
     for (auto& switch_id : {1,2,3,4}) {

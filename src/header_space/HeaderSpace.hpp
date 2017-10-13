@@ -13,8 +13,6 @@ extern "C" {
 
 // TODO: rename to Domain
 
-class HeaderChanger;
-
 class HeaderSpace
 {
 public:
@@ -22,25 +20,30 @@ public:
     // and change copy methods, so they will only copy a pointer
     // And think how to implement copy on write to hs_
     // that will be needed if I will use smart pointers
-    HeaderSpace(int length);
-    HeaderSpace(const char* str);
-    HeaderSpace(struct hs* hs);
+    explicit HeaderSpace(int length);
+    explicit HeaderSpace(const char* str);
+    explicit HeaderSpace(struct hs* hs);
     HeaderSpace(const HeaderSpace& other);
     ~HeaderSpace();
     
     HeaderSpace& operator=(const HeaderSpace& other);
+    HeaderSpace& operator~();
     HeaderSpace& operator|=(const HeaderSpace& right);
     HeaderSpace& operator&=(const HeaderSpace& right);
     HeaderSpace& operator-=(const HeaderSpace& right);
     HeaderSpace operator|(const HeaderSpace& right);
     HeaderSpace operator&(const HeaderSpace& right);
     HeaderSpace operator-(const HeaderSpace& right);
-    HeaderSpace& operator~();
     
-    inline const int length() {return length_;}
+    // TODO: check correctness and make more optimal empty()
+    // (do not compact every time)
+    inline bool empty() const {return !hs_compact(hs_);}
     
-    friend std::ostream& operator<<(std::ostream& os, const HeaderSpace& header);
-    friend HeaderChanger;
+    inline int length() const {return length_;}
+    
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const HeaderSpace& header);
+    friend class HeaderChanger;
 
 private:
     int length_;
@@ -48,25 +51,26 @@ private:
     
 };
 
-std::ostream& operator<<(std::ostream& os, const HeaderSpace& header);
+//std::ostream& operator<<(std::ostream& os, const HeaderSpace& header);
 
 class HeaderChanger
 {
 public:
     // TODO: set bool:identity_ if the function is identity
-    HeaderChanger(int length);
+    explicit HeaderChanger(int length);
     HeaderChanger(const HeaderChanger& other);
-    HeaderChanger(const char* transfer_str);
+    explicit HeaderChanger(const char* transfer_str);
     HeaderChanger(const char* mask_str, const char* rewrite_str);
     ~HeaderChanger();
     
-    HeaderSpace apply(const HeaderSpace& header);
-    HeaderSpace inverse(const HeaderSpace& header);
+    HeaderSpace apply(const HeaderSpace& header) const;
+    HeaderSpace inverse(const HeaderSpace& header) const;
     
-    inline const int length() {return length_;}
-    inline const int identity() {return identity_;}
+    inline const int length() const {return length_;}
+    inline const int identity() const {return identity_;}
     
-    friend std::ostream& operator<<(std::ostream& os, const HeaderChanger& t);
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const HeaderChanger& transfer);
 
 private:
     int length_;
@@ -79,4 +83,4 @@ private:
 
 };
 
-std::ostream& operator<<(std::ostream& os, const HeaderChanger& transfer);
+//std::ostream& operator<<(std::ostream& os, const HeaderChanger& transfer);

@@ -1,6 +1,8 @@
 #include "DependencyGraph.hpp"
 
-DependencyGraph::DependencyGraph(int header_length)
+DependencyGraph::DependencyGraph(int header_length):
+    topology_(network_),
+    dependency_updater_(header_length, network_, topology_)
 {
     
 }
@@ -8,7 +10,7 @@ DependencyGraph::DependencyGraph(int header_length)
 SwitchId DependencyGraph::addSwitch(SwitchId id, std::vector<PortId>& port_list)
 {
     SwitchPtr sw = network_.addSwitch(id, port_list);
-    return sw ? sw->id() : 0;
+    return sw ? sw->id() : (SwitchId)0;
 }
 
 void DependencyGraph::deleteSwitch(SwitchId id)
@@ -19,7 +21,7 @@ void DependencyGraph::deleteSwitch(SwitchId id)
 TableId DependencyGraph::addTable(SwitchId switch_id, TableId table_id)
 {
     TablePtr table = network_.addTable(switch_id, table_id);
-    return table ? table->id() : 0;
+    return table ? table->id() : (TableId)0;
 }
 
 void DependencyGraph::deleteTable(SwitchId switch_id, TableId table_id)

@@ -21,35 +21,26 @@ public:
     
     RulePtr getRule(RuleId id);
     RulePtr addRule(RuleId rule_id, uint16_t priority,
-                    NetworkSpace& match,
+                    NetworkSpace& domain,
                     std::vector<Action>& action_list);
     void deleteRule(RuleId id);
     
-    RuleRange rules() const {return RuleRange(sorted_rule_map_);}
-    RuleRange upperRules(RulePtr rule) const;
-    RuleRange lowerRules(RulePtr rule) const;
+    RuleRange rules() {return RuleRange(sorted_rule_map_);}
+    RuleRange upperRules(RulePtr rule);
+    RuleRange lowerRules(RulePtr rule);
     
-    inline SwitchId switchId() const {return switch_id_;}
-    inline TableId id() const {return id_;}
+    SwitchId switchId() const {return switch_id_;}
+    TableId id() const {return id_;}
 
 private:
     SwitchId switch_id_;
     TableId id_;
-    
-    std::map<RuleId, RulePtr> rule_map_;
-    
-    // Experimental
+
     // These maps are used in order to have a list of rules
     // that is already sorted by priority, and to have a map
     // from RuleId to rule pointers
-    using PriorityMap   = std::map<RuleId, Priority>;
-    using RuleMap       = std::map<RuleId, RulePtr>;
-    using SortedRuleMap = std::map<Priority, RuleMap>;
-    
     PriorityMap priority_map_;
-    SortedRuleMap sorted_rule_map_
-    
-    RuleMap* get_rule_map(Priority priority);
+    SortedRuleMap sorted_rule_map_;
 
 };
 
@@ -66,7 +57,7 @@ public:
     TablePtr addTable(TableId table_id);
     void deleteTable(TableId id);
     
-    std::vector<PortId>& ports();
+    const std::vector<PortId>& ports();
     inline SwitchId id() const {return id_;}
 
 private:
@@ -79,7 +70,7 @@ private:
 class Network
 {
 public:
-    Network();
+    Network() = default;
     
     // Switch management
     SwitchPtr getSwitch(SwitchId id);
@@ -97,7 +88,7 @@ public:
                     RuleId rule_id);
     RulePtr addRule(SwitchId switch_id, TableId table_id,
                     RuleId rule_id, uint16_t priority,
-                    NetworkSpace& match,
+                    NetworkSpace& domain,
                     std::vector<Action>& action_list);
     void deleteRule(SwitchId switch_id,
                     TableId table_id,

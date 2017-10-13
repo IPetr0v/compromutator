@@ -1,14 +1,20 @@
 #pragma once
 
 #include "../Common.hpp"
+#include "../NetworkSpace.hpp"
 #include "Network.hpp"
 #include "Topology.hpp"
+
+#include <algorithm>
+#include <vector>
 
 class DependencyUpdater
 {
 public:
-    DependencyUpdater(int header_length):
-        header_length_(header_length) {}
+    DependencyUpdater(int header_length, Network& network, Topology& topology):
+        header_length_(header_length),
+        network_(network),
+        topology_(topology) {}
     
     /*SwitchId addSwitch(SwitchId id, std::vector<PortNum>& port_list);
     void deleteSwtich(SwitchId id);
@@ -38,14 +44,18 @@ private:
     DependencyPtr add_table_dependency(RulePtr src_rule, RulePtr dst_rule,
                                        NetworkSpace domain);
     DependencyPtr add_dependency(RulePtr src_rule, RulePtr dst_rule,
-                                 NetworkSpace domain)
-    void add_dependencies(RulePtr src_rule, SwtichId dst_switch_id,
+                                 NetworkSpace domain);
+    void delete_dependency(DependencyPtr dependency);
+    
+    void add_dependencies(RulePtr src_rule, SwitchId dst_switch_id,
                           PortId dst_port_id);
     void add_dependencies(RulePtr src_rule, TableId dst_table_id);
     void add_dependencies(RulePtr src_rule, std::vector<RulePtr>& dst_rules);
     void add_dependencies(RulePtr src_rule, RuleRange& dst_rules);
+    
     void add_table_dependencies(RulePtr new_rule);
     void delete_table_dependencies(RulePtr old_rule);
+    
     void add_out_dependencies(RulePtr new_rule);
     void delete_out_dependencies(RulePtr old_rule);
 

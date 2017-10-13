@@ -26,16 +26,43 @@ DependencyPtr DependencyUpdater::add_dependency(RulePtr src_rule,
     return dependency;
 }
 
+void DependencyUpdater::delete_dependency(DependencyPtr dependency)
+{
+    RulePtr src_rule = dependency->src_rule;
+    RulePtr dst_rule = dependency->dst_rule;
+    std::vector<DependencyPtr>& out_list = src_rule->out_dependency_list_;
+    std::vector<DependencyPtr>& in_list = dst_rule->in_dependency_list_;
+    
+    auto is_from_src_rule = [src_rule] (const DependencyPtr& dep)
+    {
+        return dep->src_rule->id() == src_rule->id();
+    };
+    auto is_to_dst_rule = [dst_rule] (const DependencyPtr& dep)
+    {
+        return dep->dst_rule->id() == dst_rule->id();
+    };
+    
+    out_list.erase(std::remove_if(out_list.begin(),
+                                  out_list.end(),
+                                  is_to_dst_rule),
+                   out_list.end());
+    in_list.erase(std::remove_if(in_list.begin(),
+                                 in_list.end(),
+                                 is_from_src_rule),
+                  in_list.end());
+}
+
 void DependencyUpdater::add_dependencies(RulePtr src_rule,
-                                         SwtichId dst_switch_id,
+                                         SwitchId dst_switch_id,
                                          PortId dst_port_id)
 {
     // TODO: do smth with TopoId
     TopoId next_port = topology_.adjacentPort(dst_switch_id, dst_port_id);
     if (next_port.port_id) {
         // TODO: return RuleRange from inRules()
-        add_dependencies(rule, topology_.inRules(next_port.switch_id
-                                                 next_port.port_id));
+        auto in_rules = topology_.inRules(next_port.switch_id,
+                                          next_port.port_id);
+        add_dependencies(src_rule, in_rules);
     }
     else {
         // Port doesn't have connected link
@@ -45,18 +72,19 @@ void DependencyUpdater::add_dependencies(RulePtr src_rule,
 void DependencyUpdater::add_dependencies(RulePtr src_rule, TableId dst_table_id)
 {
     TablePtr dst_table = network_.getTable(src_rule->switchId(), dst_table_id);
-    addDependencies(src_rule, dst_table->rules());
+    auto table_rules = dst_table->rules();
+    add_dependencies(src_rule, table_rules);
 }
 
 void DependencyUpdater::add_dependencies(RulePtr src_rule,
                                          std::vector<RulePtr>& dst_rules)
 {
-    // Get chenged network state
-    NetworkSpace output_domain = src_rule->outDomain());
+    // Get changed network state
+    NetworkSpace output_domain = src_rule->outDomain();
     
     // Create dependencies
     for (auto& dst_rule : dst_rules) {
-        NetworkSpace dependency_domain = next_rule->domain() & output_domain;
+        NetworkSpace dependency_domain = dst_rule->domain() & output_domain;
         output_domain -= dependency_domain;
         
         add_dependency(src_rule, dst_rule, dependency_domain);
@@ -65,12 +93,12 @@ void DependencyUpdater::add_dependencies(RulePtr src_rule,
 // TODO: merge this two functions!
 void DependencyUpdater::add_dependencies(RulePtr src_rule, RuleRange& dst_rules)
 {
-    // Get chenged network state
-    NetworkSpace output_domain = src_rule->outDomain());
+    // Get changed network state
+    NetworkSpace output_domain = src_rule->outDomain();
     
     // Create dependencies
     for (auto& dst_rule : dst_rules) {
-        NetworkSpace dependency_domain = next_rule->domain() & output_domain;
+        NetworkSpace dependency_domain = dst_rule->domain() & output_domain;
         output_domain -= dependency_domain;
         
         add_dependency(src_rule, dst_rule, dependency_domain);
@@ -81,20 +109,23 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
 {
     if (new_rule->inPort() == SpecialPort::NONE) return;
     
-    for (auto& lower_rule : table->lower_rules(new_rule)) {
+    TablePtr table = network_.getTable(new_rule->switchId(),
+                                       new_rule->tableId());
+    for (auto& lower_rule : table->lowerRules(new_rule)) {
+        NetworkSpace lower_domain = new_rule->domain();
+
         // Update table dependencies
-        NetworkState lower_domain = new_rule->domain();
-        for (auto& lower_table_dependency : lower_rule->in_table_dependencies())
-        {
-            RulePtr upper_rule = lower_table_dependency.src_rule;
+        auto& in_table_list = lower_rule->in_table_dependency_list_;
+        for (auto& lower_table_dependency : in_table_list) {
+            RulePtr upper_rule = lower_table_dependency->src_rule;
             if (upper_rule->priority() < new_rule->priority()) continue;
             
             NetworkSpace inter_domain = lower_domain & 
                                         lower_table_dependency->domain;
             lower_domain -= lower_table_dependency->domain;
             
-            lower_table_dependency.domain -= inter_domain;
-            if (lower_table_dependency.domain.empty())
+            lower_table_dependency->domain -= inter_domain;
+            if (lower_table_dependency->domain.empty())
                 delete_dependency(lower_table_dependency);
             
             if (!inter_domain.empty()) {
@@ -104,14 +135,15 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
         }
         
         // Update rule dependencies
-        for (auto& lower_dependency : lower_rule->inDependencies()) {
-            RulePtr prev_rule = lower_dependency.src_rule;
+        auto& in_list = lower_rule->in_dependency_list_;
+        for (auto& lower_dependency : in_list) {
+            RulePtr prev_rule = lower_dependency->src_rule;
             
             NetworkSpace inter_domain = lower_domain & 
                                         lower_dependency->domain;
             
-            lower_dependency.domain -= inter_domain;
-            if (lower_dependency.domain.empty())
+            lower_dependency->domain -= inter_domain;
+            if (lower_dependency->domain.empty())
                 delete_dependency(lower_dependency);
             
             if (!inter_domain.empty()) {
@@ -132,6 +164,8 @@ void DependencyUpdater::delete_table_dependencies(RulePtr old_rule)
 
 void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
 {
+    SwitchPtr sw = network_.getSwitch(new_rule->switchId());
+
     for (auto& action : new_rule->actions()) {
         switch (action.type) {
         case ActionType::PORT:
@@ -145,17 +179,18 @@ void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
             case PortAction::IN_PORT:
             case PortAction::ALL:
                 // In this case every port may be an output port
-                // TODO: Do it later with multiple actions and transfers
+                // TODO: do it later with multiple actions and transfers
                 // TODO: if new port is added, should we add new dependencies?
-                SwitchPtr sw = network_->getSwitch(new_rule->switch_id());
                 for (auto& port_id : sw->ports()) {
-                    add_dependencies(new_rule, new_rule->switch_id(), port_id);
+                    add_dependencies(new_rule, new_rule->switchId(), port_id);
                 }
                 break;
             default: // Normal port
                 // Check port existence
-                // TODO: Different switches may have same PortId!
-                add_dependencies(new_rule, action.port_id);
+                // TODO: different switches may have same PortId!
+                add_dependencies(new_rule,
+                                 new_rule->switchId(),
+                                 action.port_id);
                 break;
             }
             break;
@@ -165,8 +200,8 @@ void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
         case ActionType::GROUP:
             break;
         default:
-            // TODO: Error, undefined action,
-            // or may be enum class prevents this
+            // TODO: error, undefined action,
+            // TODO: or may be enum class prevents this
             break;
         }
     }
@@ -175,21 +210,19 @@ void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
 void DependencyUpdater::delete_out_dependencies(RulePtr old_rule)
 {
     // TODO: do this in a more optimal way!
-    for (auto dependency : out_dependency_list_) {
+    auto& out_list = old_rule->out_dependency_list_;
+    for (auto& dependency : out_list) {
         auto is_from_old_rule = [old_rule] (const DependencyPtr& dep)
         {
             return dep->src_rule->id() == old_rule->id();
         };
-        
-        RulePtr next_rule = out_dependency_list_->dst_rule;
-        auto rule_it = std::find_if(next_rule->in_dependency_list_.begin(),
-                                    next_rule->in_dependency_list_.end(),
-                                    is_from_old_rule);
-        if (rule_it != next_rule->in_dependency_list_.end()) {
-            next_rule->in_dependency_list_.erase(rule_it);
-        }
+
+        out_list.erase(std::remove_if(out_list.begin(),
+                                      out_list.end(),
+                                      is_from_old_rule),
+                       out_list.end());
     }
-    old_rule->out_dependency_list_.clear();
+    out_list.clear();
 }
 
 RulePtr DependencyUpdater::addRule(RulePtr new_rule)
@@ -200,7 +233,7 @@ RulePtr DependencyUpdater::addRule(RulePtr new_rule)
     // Update input dependencies and internal table dependencies
     add_table_dependencies(new_rule);
     
-    return rule;
+    return new_rule;
 }
 
 void DependencyUpdater::deleteRule(RulePtr old_rule)
@@ -209,7 +242,7 @@ void DependencyUpdater::deleteRule(RulePtr old_rule)
     delete_out_dependencies(old_rule);
 }
 
-void DependencyGraph::addLink(SwitchId src_switch_id,
+/*void DependencyGraph::addLink(SwitchId src_switch_id,
                               PortId src_port_id,
                               SwitchId dst_switch_id,
                               PortId dst_port_id)
@@ -225,7 +258,7 @@ void DependencyGraph::deleteLink(SwitchId src_switch_id,
                                  PortId dst_port_id)
 {
     
-}
+}*/
 
 /*Transfer DependencyGraph::transfer(RulePtr rule,
                                    NetworkSpace in_domain = NetworkSpace())

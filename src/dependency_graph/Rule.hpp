@@ -3,6 +3,7 @@
 #include "../Common.hpp"
 #include "../NetworkSpace.hpp"
 
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -11,29 +12,32 @@ class Dependency;
 
 class Action;
 
-class DependencyUpdater;
-
 typedef std::shared_ptr<Rule> RulePtr;
 typedef std::shared_ptr<Dependency> DependencyPtr;
+
+typedef std::map<RuleId, RulePtr> RuleMap;
+typedef std::map<RuleId, Priority> PriorityMap;
+typedef std::map<Priority, RuleMap> SortedRuleMap;
 
 class Rule
 {
 public:
     Rule(SwitchId switch_id, TableId table_id, RuleId id,
-         uint16_t priority, NetworkSpace& match,
+         uint16_t priority, NetworkSpace& domain,
          std::vector<Action>& action_list);
     
-    inline SwitchId switchId() const {return switch_id_;}
-    inline TableId tableId() const {return table_id_;}
-    inline RuleId id() const {return id_;}
+    SwitchId switchId() const {return switch_id_;}
+    TableId tableId() const {return table_id_;}
+    RuleId id() const {return id_;}
     
-    inline uint16_t priority() const {return priority_;}
-    inline NetworkSpace& domain() const {return domain_;}
-    inline std::vector<Action>& actions() const {return action_list_;}
+    uint16_t priority() const {return priority_;}
+    NetworkSpace domain() const {return domain_;}
+    std::vector<Action> actions() const {return action_list_;}
     
-    inline PortId& inPort() const {match_.in_port;}
+    PortId inPort() const {domain_.inPort();}
+    NetworkSpace outDomain() const;
     
-    friend DependencyUpdater;
+    friend class DependencyUpdater;
     
 private:
     SwitchId switch_id_;
@@ -55,7 +59,7 @@ private:
 struct Dependency
 {
     Dependency(RulePtr _src_rule, RulePtr _dst_rule,
-               NetworkSpace _domain);
+               NetworkSpace& _domain);
     
     RulePtr src_rule;
     RulePtr dst_rule;
@@ -66,7 +70,7 @@ struct Dependency
 class RuleIterator
 {
 public:
-    RuleIterator(SortedRuleMap::Iterator iterator,
+    RuleIterator(SortedRuleMap::iterator iterator,
                  SortedRuleMap& sorted_rule_map);
     
     bool operator!=(const RuleIterator& other);
@@ -74,7 +78,7 @@ public:
     RulePtr& operator*() const;
 
 private:
-    SortedRuleMap::Iterator iterator_;
+    SortedRuleMap::iterator iterator_;
     RuleMap::iterator rule_map_iterator_;
     SortedRuleMap& sorted_rule_map_;
     
@@ -85,13 +89,18 @@ private:
 class RuleRange
 {
 public:
-    RuleRange(SortedRuleMap& sorted_rule_map);
+    explicit RuleRange(SortedRuleMap& sorted_rule_map);
+    RuleRange(SortedRuleMap& sorted_rule_map,
+              SortedRuleMap::iterator begin,
+              SortedRuleMap::iterator end);
     
     RuleIterator begin() const;
     RuleIterator end() const;
 
 private:
     SortedRuleMap& sorted_rule_map_;
+    SortedRuleMap::iterator begin_;
+    SortedRuleMap::iterator end_;
 
 };
 

@@ -3,6 +3,7 @@
 #include "../Common.hpp"
 #include "Network.hpp"
 #include "Topology.hpp"
+#include "DependencyUpdater.hpp"
 
 class DependencyGraph
 {

@@ -7,12 +7,18 @@ bool TopoId::operator<(const TopoId& other) const
                  port_id < other.port_id : false;
 }
 
-Topology::Topology()
+bool TopoId::operator==(const TopoId& other) const
+{
+    return switch_id == other.switch_id && port_id == other.port_id;
+}
+
+Topology::Topology(Network& network):
+        network_(network)
 {
     
 }
 
-const PortId Topology::adjacentPort(SwitchId switch_id, PortId port_id)
+TopoId Topology::adjacentPort(SwitchId switch_id, PortId port_id) const
 {
     TopoId topo_id{switch_id, port_id};
     auto it = port_map_.find(topo_id);
@@ -51,8 +57,12 @@ bool Topology::addLink(SwitchPtr src_switch, PortId src_port_id,
     return true;
 }
 
-void Topology::deleteLink()
+void Topology::deleteLink(SwitchPtr src_switch, PortId src_port_id,
+                          SwitchPtr dst_switch, PortId dst_port_id)
 {
+    TopoId src_id{src_switch->id(), src_port_id};
+    TopoId dst_id{dst_switch->id(), dst_port_id};
+
     // Check if the link exists
     auto src_it = port_map_.find(src_id);
     auto dst_it = port_map_.find(dst_id);
@@ -64,14 +74,14 @@ void Topology::deleteLink()
     }
 }
 
-Topology::newRule(RulePtr rule)
+void Topology::addRule(RulePtr new_rule)
 {
-    SwitchId switch_id = rule->switch_id();
-    SwitchPtr sw = network_->getSwitch(switch_id);
-    std::vector<PortId>& sw_ports = sw->ports();
+    SwitchId switch_id = new_rule->switchId();
+    SwitchPtr sw = network_.getSwitch(switch_id);
+    auto sw_ports = sw->ports();
     
     // Compute out port dependency
-    for (auto& action : rule->actions()) {
+    for (auto& action : new_rule->actions()) {
         switch (action.type) {
         case ActionType::PORT:
             switch (action.port_id) {
@@ -85,26 +95,25 @@ Topology::newRule(RulePtr rule)
                 for (auto& port_id : sw_ports) {
                     TopoId topo_id{sw->id(), port_id};
                     // TODO: use sorted rule map
-                    out_port_dependency_[topo_id].second.push_back(rule);
+                    out_port_dependency_[topo_id].push_back(new_rule);
                 }
                 break;
             default: // Normal port
                 // Check port existence
                 if (std::find(sw_ports.begin(),
                               sw_ports.end(),
-                              port_id) == sw_ports.end())
+                              action.port_id) == sw_ports.end())
                 { 
                     // TODO: Error, no such port
                 }
                 else {
-                    TopoId topo_id{sw->id(), port_id};
-                    out_port_dependency_[topo_id].second.push_back(rule);
+                    TopoId topo_id{sw->id(), action.port_id};
+                    out_port_dependency_[topo_id].push_back(new_rule);
                 }
                 break;
             }
             break;
         case ActionType::TABLE:
-            addDependencies(rule, action.table_id, transfer);
             break;
         case ActionType::GROUP:
             break;
@@ -116,8 +125,8 @@ Topology::newRule(RulePtr rule)
     }
     
     // Compute in port dependency
-    if (rule->tableId() == sw->frontTable()->id()) {
-        PortId in_port = rule->inPort();
+    if (new_rule->tableId() == sw->getFrontTable()->id()) {
+        PortId in_port = new_rule->inPort();
         switch (in_port) {
         case SpecialPort::NONE:
             // Error, every rule must get packets from some port
@@ -126,27 +135,27 @@ Topology::newRule(RulePtr rule)
             for (auto& port_id : sw_ports) {
                 TopoId topo_id{sw->id(), port_id};
                 // TODO: use sorted rule map
-                in_port_dependency_[topo_id].second.push_back(rule);
+                in_port_dependency_[topo_id].push_back(new_rule);
             }
             break;
         default:
             if (std::find(sw_ports.begin(),
                           sw_ports.end(),
-                          port_id) == sw_ports.end())
+                          in_port) == sw_ports.end())
             { 
                 // TODO: Error, no such port
             }
             else {
-                TopoId topo_id{sw->id(), port_id};
-                in_port_dependency_[topo_id].second.push_back(rule);
+                TopoId topo_id{sw->id(), in_port};
+                in_port_dependency_[topo_id].push_back(new_rule);
             }
             break;
         }
     }
 }
 
-const std::vector<RulePtr> Topology::outRules(SwitchId switch_id,
-                                              PortId port_id)
+std::vector<RulePtr> Topology::outRules(SwitchId switch_id,
+                                        PortId port_id) const
 {
     TopoId topo_id{switch_id, port_id};
     auto it = out_port_dependency_.find(topo_id);
@@ -155,8 +164,8 @@ const std::vector<RulePtr> Topology::outRules(SwitchId switch_id,
            : std::vector<RulePtr>();
 }
 
-const std::vector<RulePtr>& Topology::inRules(SwitchId switch_id,
-                                              PortId port_id)
+std::vector<RulePtr> Topology::inRules(SwitchId switch_id,
+                                       PortId port_id) const
 {
     TopoId topo_id{switch_id, port_id};
     auto it = in_port_dependency_.find(topo_id);
