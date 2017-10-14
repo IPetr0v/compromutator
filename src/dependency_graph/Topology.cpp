@@ -44,6 +44,10 @@ bool Topology::addLink(SwitchId src_switch_id, PortId src_port_id,
         // All ports are available
         port_map_[src_id] = dst_id;
         port_map_[dst_id] = src_id;
+
+        // DEBUG LOG
+        std::cout<<"Link "<<src_switch_id<<":"<<src_port_id
+                          <<dst_switch_id<<":"<<dst_port_id<<std::endl;
     }
     else {
         // TODO: think what to do with existing links

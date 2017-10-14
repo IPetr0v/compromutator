@@ -37,6 +37,11 @@ RulePtr Table::addRule(uint16_t priority, NetworkSpace& domain,
                                               domain, action_list);
     auto rule_id = new_rule->id();
 
+    // DEBUG LOG
+    std::cout<<"Creating Rule "<<rule_id <<" at "
+                               <<switch_id_<<"("<<(int)this->id()<<")"
+                               <<std::endl;
+
     // Get priority
     auto priority_it = priority_map_.find(rule_id);
     if (priority_it != priority_map_.end()) {
@@ -114,6 +119,9 @@ Port::Port(SwitchId switch_id, PortId id):
 Switch::Switch(SwitchId id, std::vector<PortId>& port_list):
     id_(id)
 {
+    // DEBUG LOG
+    std::cout<<"Switch "<<id_<<std::endl;
+
     for (auto& port_id : port_list)
         addPort(port_id);
     

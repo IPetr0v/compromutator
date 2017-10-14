@@ -119,7 +119,7 @@ private:
     RuleMap::iterator rule_map_iterator_;
     SortedRuleMap& sorted_rule_map_;
     
-    void skip_empty_rule_maps();
+    void set_rule_map_iterator();
 
 };
 
