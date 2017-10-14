@@ -1,7 +1,6 @@
 #include "Detector.hpp"
 
-Detector::Detector(int header_length):
-    dependency_graph_(header_length),
+Detector::Detector():
     flow_predictor_(dependency_graph_)
 {
     
@@ -12,7 +11,7 @@ SwitchId Detector::addSwitch(SwitchId id, std::vector<PortId> port_list)
     return dependency_graph_.addSwitch(id, port_list);
 }
 
-void Detector::deleteSwtich(SwitchId id)
+void Detector::deleteSwitch(SwitchId id)
 {
     dependency_graph_.deleteSwitch(id);
 }
@@ -28,23 +27,19 @@ void Detector::deleteTable(SwitchId switch_id, TableId table_id)
 }
 
 RuleInfo Detector::addRule(SwitchId switch_id, TableId table_id,
-                         uint16_t priority, NetworkSpace& match,
-                         std::vector<Action>& action_list)
+                           uint16_t priority, NetworkSpace& domain,
+                           std::vector<Action>& action_list)
 {
-    // Generate rule id
-    RuleId rule_id = 0xFF;
-    RuleInfo rule_info{switch_id, table_id, rule_id};
-    
     // Create rule data
-    RulePtr rule = dependency_graph_.addRule(switch_id, table_id,
-                                             rule_id, priority,
-                                             match, action_list);
+    RulePtr rule = dependency_graph_.addRule(switch_id, table_id, priority,
+                                             domain, action_list);
     
     // Insert rule data in the flow predictor
     flow_predictor_.addRule(rule);
     
     // TODO: create error codes for RuleInfo
-    return rule ? rule_info : RuleInfo{0, 0, 0};
+    return rule ? RuleInfo{switch_id, table_id, rule->id()}
+                : RuleInfo{0, 0, 0};
 }
 
 void Detector::deleteRule(RuleInfo rule_info)

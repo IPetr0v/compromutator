@@ -9,3 +9,5 @@ typedef uint32_t GroupId;
 typedef uint64_t RuleId;
 
 typedef uint16_t Priority;
+
+const int HEADER_LENGTH = 1;

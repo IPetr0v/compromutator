@@ -11,8 +11,6 @@ extern "C" {
 // TODO: create class inherited from struct hs,
 // so I can write a destructor and use smart pointers
 
-// TODO: rename to Domain
-
 class HeaderSpace
 {
 public:

@@ -26,11 +26,11 @@ TopoId Topology::adjacentPort(SwitchId switch_id, PortId port_id) const
                                  : TopoId{0, SpecialPort::NONE};
 }
 
-bool Topology::addLink(SwitchPtr src_switch, PortId src_port_id,
-                       SwitchPtr dst_switch, PortId dst_port_id)
+bool Topology::addLink(SwitchId src_switch_id, PortId src_port_id,
+                       SwitchId dst_switch_id, PortId dst_port_id)
 {
-    TopoId src_id{src_switch->id(), src_port_id};
-    TopoId dst_id{dst_switch->id(), dst_port_id};
+    TopoId src_id{src_switch_id, src_port_id};
+    TopoId dst_id{dst_switch_id, dst_port_id};
     
     // Check for port loopback
     if (src_id == dst_id) {
@@ -41,7 +41,7 @@ bool Topology::addLink(SwitchPtr src_switch, PortId src_port_id,
     auto src_it = port_map_.find(src_id);
     auto dst_it = port_map_.find(dst_id);
     if (src_it == port_map_.end() && dst_it == port_map_.end()) {
-        // All ports are avaivable
+        // All ports are available
         port_map_[src_id] = dst_id;
         port_map_[dst_id] = src_id;
     }
@@ -57,11 +57,11 @@ bool Topology::addLink(SwitchPtr src_switch, PortId src_port_id,
     return true;
 }
 
-void Topology::deleteLink(SwitchPtr src_switch, PortId src_port_id,
-                          SwitchPtr dst_switch, PortId dst_port_id)
+void Topology::deleteLink(SwitchId src_switch_id, PortId src_port_id,
+                          SwitchId dst_switch_id, PortId dst_port_id)
 {
-    TopoId src_id{src_switch->id(), src_port_id};
-    TopoId dst_id{dst_switch->id(), dst_port_id};
+    TopoId src_id{src_switch_id, src_port_id};
+    TopoId dst_id{dst_switch_id, dst_port_id};
 
     // Check if the link exists
     auto src_it = port_map_.find(src_id);

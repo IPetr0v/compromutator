@@ -20,10 +20,10 @@ public:
     explicit Topology(Network& network);
     
     TopoId adjacentPort(SwitchId switch_id, PortId port_id) const;
-    bool addLink(SwitchPtr src_switch, PortId src_port_id,
-                 SwitchPtr dst_switch, PortId dst_port_id);
-    void deleteLink(SwitchPtr src_switch, PortId src_port_id,
-                    SwitchPtr dst_switch, PortId dst_port_id);
+    bool addLink(SwitchId src_switch_id, PortId src_port_id,
+                 SwitchId dst_switch_id, PortId dst_port_id);
+    void deleteLink(SwitchId src_switch_id, PortId src_port_id,
+                    SwitchId dst_switch_id, PortId dst_port_id);
 
     void addRule(RulePtr new_rule);
     

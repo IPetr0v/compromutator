@@ -14,16 +14,16 @@ struct RuleInfo
 class Detector
 {
 public:
-    Detector(int header_length);
+    Detector();
     
     SwitchId addSwitch(SwitchId id, std::vector<PortId> port_list);
-    void deleteSwtich(SwitchId id);
+    void deleteSwitch(SwitchId id);
     
     TableId addTable(SwitchId switch_id, TableId table_id);
     void deleteTable(SwitchId switch_id, TableId table_id);
     
     RuleInfo addRule(SwitchId switch_id, TableId table_id,
-                     uint16_t priority, NetworkSpace& match,
+                     uint16_t priority, NetworkSpace& domain,
                      std::vector<Action>& action_list);
     void deleteRule(RuleInfo rule_info);
     

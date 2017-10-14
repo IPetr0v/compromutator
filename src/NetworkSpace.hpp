@@ -14,8 +14,9 @@ enum SpecialPort: PortId
 class NetworkSpace
 {
 public:
-    NetworkSpace(HeaderSpace header);
-    NetworkSpace(PortId in_port, HeaderSpace header);
+    NetworkSpace();
+    explicit NetworkSpace(const HeaderSpace& header);
+    NetworkSpace(PortId in_port, const HeaderSpace& header);
     
     inline PortId inPort() const {return in_port_;}
     inline HeaderSpace header() const {return header_;}
@@ -35,8 +36,10 @@ private:
 class Transfer
 {
 public:
+    Transfer();
+    explicit Transfer(const HeaderChanger& header_changer);
     Transfer(PortId src_port, PortId dst_port,
-             HeaderChanger header_changer);
+             const HeaderChanger& header_changer);
     
     NetworkSpace apply(NetworkSpace domain) const;
     NetworkSpace inverse(NetworkSpace domain) const;

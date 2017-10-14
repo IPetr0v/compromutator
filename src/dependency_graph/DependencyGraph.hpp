@@ -8,7 +8,7 @@
 class DependencyGraph
 {
 public:
-    DependencyGraph(int header_length);
+    DependencyGraph();
     
     SwitchId addSwitch(SwitchId id, std::vector<PortId>& port_list);
     void deleteSwitch(SwitchId id);
@@ -17,8 +17,7 @@ public:
     void deleteTable(SwitchId switch_id, TableId table_id);
     
     RulePtr addRule(SwitchId switch_id, TableId table_id,
-                    RuleId rule_id, uint16_t priority,
-                    NetworkSpace& match,
+                    uint16_t priority, NetworkSpace& match,
                     std::vector<Action>& action_list);
     void deleteRule(SwitchId switch_id, TableId table_id, RuleId rule_id);
     

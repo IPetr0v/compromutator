@@ -1,5 +1,11 @@
 #include "DependencyUpdater.hpp"
 
+DependencyUpdater::DependencyUpdater(Network& network, Topology& topology):
+    network_(network), topology_(topology)
+{
+
+}
+
 DependencyPtr DependencyUpdater::add_table_dependency(RulePtr src_rule,
                                                       RulePtr dst_rule,
                                                       NetworkSpace domain)
@@ -11,6 +17,12 @@ DependencyPtr DependencyUpdater::add_table_dependency(RulePtr src_rule,
     src_rule->out_table_dependency_list_.push_back(dependency);
     dst_rule->in_table_dependency_list_.push_back(dependency);
     return dependency;
+}
+
+DependencyPtr DependencyUpdater::add_dependency(RulePtr src_rule,
+                                                RulePtr dst_rule)
+{
+    add_dependency(src_rule, dst_rule, src_rule->outDomain());
 }
 
 DependencyPtr DependencyUpdater::add_dependency(RulePtr src_rule,
@@ -53,19 +65,21 @@ void DependencyUpdater::delete_dependency(DependencyPtr dependency)
 }
 
 void DependencyUpdater::add_dependencies(RulePtr src_rule,
-                                         SwitchId dst_switch_id,
-                                         PortId dst_port_id)
+                                         SwitchId src_switch_id,
+                                         PortId src_port_id)
 {
     // TODO: do smth with TopoId
-    TopoId next_port = topology_.adjacentPort(dst_switch_id, dst_port_id);
+    TopoId next_port = topology_.adjacentPort(src_switch_id, src_port_id);
     if (next_port.port_id) {
         // TODO: return RuleRange from inRules()
-        auto in_rules = topology_.inRules(next_port.switch_id,
-                                          next_port.port_id);
-        add_dependencies(src_rule, in_rules);
+        auto dst_rules = topology_.inRules(next_port.switch_id,
+                                           next_port.port_id);
+        add_dependencies(src_rule, dst_rules);
     }
     else {
-        // Port doesn't have connected link
+        // Port doesn't have connected link, connect to the sink rule
+        ///RulePtr sink_rule = network_.getSinkRule(src_switch_id, src_port_id);
+        ///add_dependency(src_rule, sink_rule);
     }
 }
 
@@ -171,10 +185,10 @@ void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
         case ActionType::PORT:
             switch (action.port_id) {
             case PortAction::DROP:
-                add_dependency(new_rule, drop_, new_rule->outDomain());
+                ///add_dependency(new_rule, drop_, new_rule->outDomain());
                 break;
             case PortAction::CONTROLLER:
-                add_dependency(new_rule, controller_, new_rule->outDomain());
+                ///add_dependency(new_rule, controller_, new_rule->outDomain());
                 break;
             case PortAction::IN_PORT:
             case PortAction::ALL:
@@ -187,7 +201,6 @@ void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
                 break;
             default: // Normal port
                 // Check port existence
-                // TODO: different switches may have same PortId!
                 add_dependencies(new_rule,
                                  new_rule->switchId(),
                                  action.port_id);
@@ -240,6 +253,23 @@ void DependencyUpdater::deleteRule(RulePtr old_rule)
 {
     delete_table_dependencies(old_rule);
     delete_out_dependencies(old_rule);
+}
+
+void DependencyUpdater::addLink(SwitchId src_switch_id, PortId src_port_id,
+                                SwitchId dst_switch_id, PortId dst_port_id)
+{
+    // TODO: check if return value is a reference
+    auto src_rules = topology_.outRules(src_switch_id, src_port_id);
+    for (auto& src_rule : src_rules) {
+        auto dst_rules = topology_.inRules(dst_switch_id, dst_port_id);
+        add_dependencies(src_rule, dst_rules);
+    }
+}
+
+void DependencyUpdater::deleteLink(SwitchId src_switch_id, PortId src_port_id,
+                                   SwitchId dst_switch_id, PortId dst_port_id)
+{
+
 }
 
 /*void DependencyGraph::addLink(SwitchId src_switch_id,

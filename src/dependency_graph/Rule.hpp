@@ -10,6 +10,7 @@
 class Rule;
 class Dependency;
 
+class RuleIdGenerator;
 class Action;
 
 typedef std::shared_ptr<Rule> RulePtr;
@@ -19,15 +20,29 @@ typedef std::map<RuleId, RulePtr> RuleMap;
 typedef std::map<RuleId, Priority> PriorityMap;
 typedef std::map<Priority, RuleMap> SortedRuleMap;
 
+enum class RuleType
+{
+    TABLE,
+    GROUP,
+    SOURCE,
+    SINK,
+    CONTROLLER,
+    DROP
+};
+
 class Rule
 {
 public:
-    Rule(SwitchId switch_id, TableId table_id, RuleId id,
-         uint16_t priority, NetworkSpace& domain,
-         std::vector<Action>& action_list);
+    Rule(SwitchId switch_id, TableId table_id, uint16_t priority,
+         NetworkSpace& domain, std::vector<Action>& action_list);
+    ~Rule();
+
+    RuleType type() const {return type_;}
     
     SwitchId switchId() const {return switch_id_;}
+    PortId portId() const {return port_id_;}
     TableId tableId() const {return table_id_;}
+    GroupId groupId() const {return group_id_;}
     RuleId id() const {return id_;}
     
     uint16_t priority() const {return priority_;}
@@ -40,8 +55,12 @@ public:
     friend class DependencyUpdater;
     
 private:
+    RuleType type_;
+
     SwitchId switch_id_;
+    PortId port_id_;
     TableId table_id_;
+    GroupId group_id_;
     RuleId id_;
     
     uint16_t priority_;
@@ -67,6 +86,24 @@ struct Dependency
     //TransferPtr transfer;
 };
 
+// Singleton for rule id generation
+class RuleIdGenerator
+{
+public:
+    static RuleId getId();
+    static void releaseId(RuleId id);
+
+    RuleIdGenerator(RuleIdGenerator const&) = delete;
+    RuleIdGenerator& operator= (RuleIdGenerator const&) = delete;
+
+private:
+    RuleIdGenerator();
+    ~RuleIdGenerator() = default;
+
+    RuleId last_id_;
+
+};
+
 class RuleIterator
 {
 public:
@@ -90,6 +127,7 @@ class RuleRange
 {
 public:
     explicit RuleRange(SortedRuleMap& sorted_rule_map);
+    // TODO: make partial maps and vectors in RuleRange better than this!
     RuleRange(SortedRuleMap& sorted_rule_map,
               SortedRuleMap::iterator begin,
               SortedRuleMap::iterator end);

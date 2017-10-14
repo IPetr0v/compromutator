@@ -12,7 +12,10 @@ int get_len(const char* str) {
 HeaderSpace::HeaderSpace(int length):
     length_(length)
 {
+    // Create whole header space
     hs_ = hs_create(length_);
+    array_t* whole_space = array_create(length_, BIT_X);
+    hs_add(hs_, whole_space);
 }
 
 HeaderSpace::HeaderSpace(const char* str):
@@ -202,7 +205,7 @@ HeaderChanger::~HeaderChanger()
 HeaderSpace HeaderChanger::apply(const HeaderSpace& header) const
 {
     // TODO: add identity check: if so, then do not copy
-    // use smart pointers to avoid copy constructor on return
+    // TODO: use smart pointers to avoid copy constructor on return
     HeaderSpace new_header(header);
     hs_rewrite(new_header.hs_, mask_, rewrite_);
     return new_header;

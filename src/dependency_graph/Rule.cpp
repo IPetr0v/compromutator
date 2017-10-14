@@ -1,12 +1,19 @@
 #include "Rule.hpp"
 
-Rule::Rule(SwitchId switch_id, TableId table_id, RuleId id,
-           uint16_t priority, NetworkSpace& domain,
-           std::vector<Action>& action_list):
-    switch_id_(switch_id), table_id_(table_id), id_(id),
-    priority_(priority), domain_(domain), action_list_(action_list)
+// DEBUG LOG
+#include <iostream>
+
+Rule::Rule(SwitchId switch_id, TableId table_id, uint16_t priority,
+           NetworkSpace& domain, std::vector<Action>& action_list):
+    switch_id_(switch_id), table_id_(table_id), priority_(priority),
+    domain_(domain), action_list_(action_list)
 {
-    
+    id_ = RuleIdGenerator::getId();
+}
+
+Rule::~Rule()
+{
+    RuleIdGenerator::releaseId(id_);
 }
 
 // TODO: Delete this temporary solution
@@ -21,7 +28,26 @@ Dependency::Dependency(RulePtr _src_rule, RulePtr _dst_rule,
     dst_rule(_dst_rule),
     domain(_domain)
 {
-    
+    // DEBUG LOG
+    using namespace std;
+    cout<<"Dependency "<<src_rule->id()<<"->"<<dst_rule->id()
+        <<" ("<<domain.header()<<")"<<endl;
+}
+
+RuleIdGenerator::RuleIdGenerator()
+{
+    last_id_ = 1;
+}
+
+RuleId RuleIdGenerator::getId()
+{
+    static RuleIdGenerator generator;
+    return generator.last_id_++;
+}
+
+void RuleIdGenerator::releaseId(RuleId id)
+{
+    // TODO: implement release id
 }
 
 RuleIterator::RuleIterator(SortedRuleMap::iterator iterator,

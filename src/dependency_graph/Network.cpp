@@ -30,11 +30,12 @@ RulePtr Table::getRule(RuleId id)
         return nullptr;
 }
 
-RulePtr Table::addRule(RuleId rule_id, uint16_t priority,
-                       NetworkSpace& domain, std::vector<Action>& action_list)
+RulePtr Table::addRule(uint16_t priority, NetworkSpace& domain,
+                       std::vector<Action>& action_list)
 {
-    RulePtr new_rule = std::make_shared<Rule>(switchId(), this->id(), rule_id,
-                                              priority, domain, action_list);
+    RulePtr new_rule = std::make_shared<Rule>(switchId(), this->id(), priority,
+                                              domain, action_list);
+    auto rule_id = new_rule->id();
 
     // Get priority
     auto priority_it = priority_map_.find(rule_id);
@@ -104,6 +105,12 @@ RuleRange Table::lowerRules(RulePtr rule)
     return {sorted_rule_map_, sorted_rule_map_.begin(), upper_bound};
 }
 
+Port::Port(SwitchId switch_id, PortId id):
+    switch_id_(switch_id), id_(id)
+{
+
+}
+
 Switch::Switch(SwitchId id, std::vector<PortId>& port_list):
     id_(id)
 {
@@ -115,12 +122,32 @@ Switch::Switch(SwitchId id, std::vector<PortId>& port_list):
     addTable(front_table_id);
 }
 
-PortId Switch::addPort(PortId id)
+PortPtr Switch::addPort(PortId port_id)
 {
     // Do not create special ports
-    if (!Network::isSpecialPort(id))
-        ports_.push_back(id);
-    return id;
+    if (Network::isSpecialPort(port_id))
+        return nullptr;
+
+    PortPtr new_port = std::make_shared<Port>(this->id(), port_id);
+
+    // Check existing table
+    PortPtr old_port = getPort(port_id);
+    // TODO: remove port vector and use only map
+    //return !old_port ? port_map_[port_id] = new_port
+    //                 : old_port;
+    if (!old_port) {
+        ports_.push_back(port_id);
+        return port_map_[port_id] = new_port;
+    }
+    else {
+        return old_port;
+    }
+}
+
+PortPtr Switch::getPort(PortId id)
+{
+    auto it = port_map_.find(id);
+    return it != port_map_.end() ? it->second : nullptr;
 }
 
 void Switch::deletePort(PortId id)
@@ -210,14 +237,13 @@ RulePtr Network::getRule(SwitchId switch_id,
 }
 
 RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
-                         RuleId rule_id, uint16_t priority,
-                         NetworkSpace& domain,
+                         uint16_t priority, NetworkSpace& domain,
                          std::vector<Action>& action_list)
 {
+    // Create rule
     SwitchPtr sw = getSwitch(switch_id);
     TablePtr table = sw ? sw->getTable(table_id) : nullptr;
-    return table ? table->addRule(rule_id, priority,
-                                  domain, action_list)
+    return table ? table->addRule(priority, domain, action_list)
                  : nullptr;
 }
 

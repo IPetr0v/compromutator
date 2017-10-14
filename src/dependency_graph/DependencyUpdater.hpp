@@ -11,16 +11,7 @@
 class DependencyUpdater
 {
 public:
-    DependencyUpdater(int header_length, Network& network, Topology& topology):
-        header_length_(header_length),
-        network_(network),
-        topology_(topology) {}
-    
-    /*SwitchId addSwitch(SwitchId id, std::vector<PortNum>& port_list);
-    void deleteSwtich(SwitchId id);
-    
-    TableId addTable(SwitchId switch_id, TableId table_id);
-    void deleteTable(SwitchId switch_id, TableId table_id);*/
+    DependencyUpdater(Network& network, Topology& topology);
     
     RulePtr addRule(RulePtr rule);
     void deleteRule(RulePtr old_rule);
@@ -31,24 +22,20 @@ public:
                     SwitchId dst_switch_id, PortId dst_port_id);
 
 private:
-    int header_length_;
-    
     Network& network_;
     Topology& topology_;
-    
-    // Special rules
-    RulePtr drop_;
-    RulePtr controller_;
+
     // TODO: add SOURCE and TARGET rules
     
     DependencyPtr add_table_dependency(RulePtr src_rule, RulePtr dst_rule,
                                        NetworkSpace domain);
+    DependencyPtr add_dependency(RulePtr src_rule, RulePtr dst_rule);
     DependencyPtr add_dependency(RulePtr src_rule, RulePtr dst_rule,
                                  NetworkSpace domain);
     void delete_dependency(DependencyPtr dependency);
     
-    void add_dependencies(RulePtr src_rule, SwitchId dst_switch_id,
-                          PortId dst_port_id);
+    void add_dependencies(RulePtr src_rule, SwitchId src_switch_id,
+                          PortId src_port_id);
     void add_dependencies(RulePtr src_rule, TableId dst_table_id);
     void add_dependencies(RulePtr src_rule, std::vector<RulePtr>& dst_rules);
     void add_dependencies(RulePtr src_rule, RuleRange& dst_rules);
