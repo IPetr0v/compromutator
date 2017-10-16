@@ -37,11 +37,6 @@ RulePtr Table::addRule(uint16_t priority, NetworkSpace& domain,
                                               domain, action_list);
     auto rule_id = new_rule->id();
 
-    // DEBUG LOG
-    std::cout<<"Creating Rule "<<rule_id <<" at "
-                               <<switch_id_<<"("<<(int)this->id()<<")"
-                               <<std::endl;
-
     // Get priority
     auto priority_it = priority_map_.find(rule_id);
     if (priority_it != priority_map_.end()) {
@@ -100,14 +95,22 @@ void Table::deleteRule(RuleId id)
 
 RuleRange Table::upperRules(RulePtr rule)
 {
-    auto lower_bound = ++sorted_rule_map_.lower_bound(rule->priority());
-    return {sorted_rule_map_, lower_bound, sorted_rule_map_.end()};
+    auto lower_bound = sorted_rule_map_.lower_bound(rule->priority());
+    return {sorted_rule_map_, sorted_rule_map_.begin(), lower_bound};
 }
 
 RuleRange Table::lowerRules(RulePtr rule)
 {
     auto upper_bound = sorted_rule_map_.upper_bound(rule->priority());
-    return {sorted_rule_map_, sorted_rule_map_.begin(), upper_bound};
+
+    // DEBUG LOG
+    /*std::cout<<"lowerRules("<<rule->id()<<") = "
+    for (auto& it : sorted_rule_map_.begin();
+    it != )
+
+    std::cout<<std::endl;*/
+
+    return {sorted_rule_map_, upper_bound, sorted_rule_map_.end()};
 }
 
 Port::Port(SwitchId switch_id, PortId id):

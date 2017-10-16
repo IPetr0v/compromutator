@@ -18,9 +18,9 @@ public:
     explicit NetworkSpace(const HeaderSpace& header);
     NetworkSpace(PortId in_port, const HeaderSpace& header);
     
-    inline PortId inPort() const {return in_port_;}
-    inline HeaderSpace header() const {return header_;}
-    inline bool empty() const {
+    PortId inPort() const {return in_port_;}
+    HeaderSpace header() const {return header_;}
+    bool empty() const {
         return in_port_ == SpecialPort::NONE || header_.empty();
     }
     
@@ -43,6 +43,8 @@ public:
     
     NetworkSpace apply(NetworkSpace domain) const;
     NetworkSpace inverse(NetworkSpace domain) const;
+
+    HeaderChanger headerChanger() const {return header_changer_;}
 
 private:
     PortId src_port_;

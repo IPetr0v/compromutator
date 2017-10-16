@@ -20,10 +20,6 @@ NetworkSpace::NetworkSpace(PortId in_port, const HeaderSpace& header):
 
 NetworkSpace& NetworkSpace::operator-=(const NetworkSpace& right)
 {
-    // TODO: remove this hook and make correct port subtraction
-    // (ANY - some_port)
-    if (in_port_ == right.in_port_ || right.in_port_ == SpecialPort::ANY)
-        in_port_ = SpecialPort::NONE;
     header_ -= right.header_;
     return *this;
 }

@@ -20,7 +20,6 @@ public:
     // that will be needed if I will use smart pointers
     explicit HeaderSpace(int length);
     explicit HeaderSpace(const char* str);
-    explicit HeaderSpace(struct hs* hs);
     HeaderSpace(const HeaderSpace& other);
     ~HeaderSpace();
     
@@ -35,15 +34,17 @@ public:
     
     // TODO: check correctness and make more optimal empty()
     // (do not compact every time)
-    inline bool empty() const {return !hs_compact(hs_);}
+    bool empty() const {return !hs_compact(hs_);}
     
-    inline int length() const {return length_;}
+    int length() const {return length_;}
     
     friend std::ostream& operator<<(std::ostream& os,
                                     const HeaderSpace& header);
     friend class HeaderChanger;
 
 private:
+    HeaderSpace(struct hs* hs, int length);
+
     int length_;
     struct hs* hs_;
     

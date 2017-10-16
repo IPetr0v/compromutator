@@ -8,8 +8,14 @@ Rule::Rule(SwitchId switch_id, TableId table_id, uint16_t priority,
     id_ = RuleIdGenerator::getId();
 
     // DEBUG LOG
-    std::cout<<"Rule "<<id_ <<" at "
-                      <<switch_id_<<"("<<(int)table_id_<<")"<<std::endl;
+    std::cout<<"----- Rule "
+             <<id_ <<" at "
+             <<switch_id_<<"("<<(int)table_id_<<") H("
+             <<domain.header()<<") P("
+             <<priority_<<") -> "
+             //<<action_list[0].transfer.headerChanger()<<"} P{"
+             <<action_list[0].port_id
+             <<std::endl;
 }
 
 Rule::~Rule()
@@ -20,7 +26,7 @@ Rule::~Rule()
 // TODO: Delete this temporary solution
 NetworkSpace Rule::outDomain() const
 {
-    return action_list_[1].transfer.apply(domain_);
+    return action_list_[0].transfer.apply(domain_);
 }
 
 Dependency::Dependency(RulePtr _src_rule, RulePtr _dst_rule,
@@ -64,9 +70,9 @@ bool RuleIterator::operator!=(const RuleIterator& other)
     bool other_end = (other.iterator_ == other.sorted_rule_map_.end());
 
     if (this_end && other_end)
-        return true;
-    else if (this_end || other_end)
         return false;
+    else if (this_end || other_end)
+        return true;
     else {
         RulePtr rule = rule_map_iterator_->second;
         RulePtr other_rule = other.rule_map_iterator_->second;

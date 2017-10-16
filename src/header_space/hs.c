@@ -305,6 +305,8 @@ hs_cmpl (struct hs *hs)
     return;
   }
 
+  hs_compact(hs);
+
   struct hs_vec *v = &hs->list, new_list = {0};
   for (int i = 0; i < v->used; i++) {
     struct hs_vec tmp = {0};

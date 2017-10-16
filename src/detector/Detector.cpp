@@ -52,7 +52,8 @@ void Detector::deleteRule(RuleInfo rule_info)
 void Detector::addLink(SwitchId src_switch_id, PortId src_port_id,
                        SwitchId dst_switch_id, PortId dst_port_id)
 {
-    
+    dependency_graph_.addLink(src_switch_id, src_port_id,
+                              dst_switch_id, dst_port_id);
 }
 
 void Detector::deleteLink(SwitchId src_switch_id, PortId src_port_id,

@@ -25,17 +25,18 @@ HeaderSpace::HeaderSpace(const char* str):
     hs_add(hs_, array_from_str(str));
 }
 
-HeaderSpace::HeaderSpace(struct hs* hs):
-    length_(hs->len)
-{
-    hs_ = hs_create(hs->len);
-    hs_copy(hs_, hs);
-}
-
-HeaderSpace::HeaderSpace(const HeaderSpace& other): length_(other.length_)
+HeaderSpace::HeaderSpace(const HeaderSpace& other):
+    length_(other.length_)
 {
     hs_ = hs_create(other.length_);
     hs_copy(hs_, other.hs_);
+}
+
+HeaderSpace::HeaderSpace(struct hs* hs, int length):
+    length_(length)
+{
+    hs_ = hs_create(length_);
+    if (hs) hs_copy(hs_, hs);
 }
 
 HeaderSpace::~HeaderSpace()
@@ -65,7 +66,8 @@ HeaderSpace& HeaderSpace::operator|=(const HeaderSpace& right) {
 HeaderSpace& HeaderSpace::operator&=(const HeaderSpace& right)
 {
     struct hs* tmp = hs_;
-    hs_copy(hs_, hs_isect_a(tmp, right.hs_));
+    struct hs* intersection = hs_isect_a(tmp, right.hs_);
+    if (intersection) hs_copy(hs_, intersection);
     hs_free(tmp);
     return *this;
 }
@@ -78,26 +80,30 @@ HeaderSpace& HeaderSpace::operator-=(const HeaderSpace& right)
 
 HeaderSpace HeaderSpace::operator|(const HeaderSpace& right)
 {
-    HeaderSpace header(hs_);
+    HeaderSpace header(hs_, length_);
     header |= right;
     return header;
 }
 
 HeaderSpace HeaderSpace::operator&(const HeaderSpace& right)
 {
-    return HeaderSpace(hs_isect_a(hs_, right.hs_));
+    return HeaderSpace(hs_isect_a(hs_, right.hs_), length_);
 }
 
 HeaderSpace HeaderSpace::operator-(const HeaderSpace& right)
 {
-    HeaderSpace header(hs_);
+    HeaderSpace header(hs_, length_);
     header -= right;
     return header;
 }
 
 std::ostream& operator<<(std::ostream& os, const HeaderSpace& header)
 {
-    os << hs_to_str(header.hs_);
+    // TODO: free char* after hs_to_str!!!
+    struct hs* output_hs = hs_create(header.length_);
+    hs_copy(output_hs, header.hs_);
+    hs_compact(output_hs);
+    os << hs_to_str(output_hs);
     return os;
 }
 

@@ -3,6 +3,7 @@
 #include "../Common.hpp"
 #include "../NetworkSpace.hpp"
 
+#include <list>
 #include <map>
 #include <memory>
 #include <vector>
@@ -18,7 +19,7 @@ typedef std::shared_ptr<Dependency> DependencyPtr;
 
 typedef std::map<RuleId, RulePtr> RuleMap;
 typedef std::map<RuleId, Priority> PriorityMap;
-typedef std::map<Priority, RuleMap> SortedRuleMap;
+typedef std::map<Priority, RuleMap, std::greater<Priority>> SortedRuleMap;
 
 enum class RuleType
 {
@@ -67,11 +68,11 @@ private:
     NetworkSpace domain_;
     std::vector<Action> action_list_;
     
-    std::vector<DependencyPtr> in_table_dependency_list_;
-    std::vector<DependencyPtr> out_table_dependency_list_;
+    std::list<DependencyPtr> in_table_dependency_list_;
+    std::list<DependencyPtr> out_table_dependency_list_;
     
-    std::vector<DependencyPtr> in_dependency_list_;
-    std::vector<DependencyPtr> out_dependency_list_;
+    std::list<DependencyPtr> in_dependency_list_;
+    std::list<DependencyPtr> out_dependency_list_;
 
 };
 

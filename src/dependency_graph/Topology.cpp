@@ -31,7 +31,7 @@ bool Topology::addLink(SwitchId src_switch_id, PortId src_port_id,
 {
     TopoId src_id{src_switch_id, src_port_id};
     TopoId dst_id{dst_switch_id, dst_port_id};
-    
+
     // Check for port loopback
     if (src_id == dst_id) {
         return false;
@@ -46,7 +46,7 @@ bool Topology::addLink(SwitchId src_switch_id, PortId src_port_id,
         port_map_[dst_id] = src_id;
 
         // DEBUG LOG
-        std::cout<<"Link "<<src_switch_id<<":"<<src_port_id
+        std::cout<<"Link "<<src_switch_id<<":"<<src_port_id<<" <-> "
                           <<dst_switch_id<<":"<<dst_port_id<<std::endl;
     }
     else {
