@@ -162,7 +162,7 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
                  <<lower_rule->id()
                  <<" ("<<lower_rule->domain().header()<<")"<<std::endl;
 
-        // Update table dependencies
+        // Update old table dependencies
         auto& in_table_list = lower_rule->in_table_dependency_list_;
         //for (auto& lower_table_dependency : in_table_list) {
         for (auto dependency_it = in_table_list.begin();
@@ -171,20 +171,20 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
             RulePtr upper_rule = lower_table_dependency->src_rule;
             if (upper_rule->priority() < new_rule->priority()) continue;
             
-            NetworkSpace inter_domain = lower_domain & 
-                                        lower_table_dependency->domain;
-            lower_domain -= lower_table_dependency->domain;
+            NetworkSpace traverse_domain = lower_domain &
+                                           lower_table_dependency->domain;
+            ///lower_domain -= lower_table_dependency->domain;
 
             // DEBUG LOG
             std::cout<<"        "<<upper_rule->id()<<"->"
                      <<new_rule->id()<<"->"<<lower_rule->id()
-                     <<" ("<<inter_domain.header()<<")"
+                     <<" ("<<traverse_domain.header()<<")"
                      <<") # "<<upper_rule->id()<<"->"
                      <<lower_table_dependency->dst_rule->id()
                      <<" ("<<lower_table_dependency->domain.header()<<")"
                      <<std::endl;
             
-            lower_table_dependency->domain -= inter_domain;
+            lower_table_dependency->domain -= traverse_domain;
 
             // DEBUG LOG
             std::cout<<"        / ("<<lower_domain.header()
@@ -193,9 +193,9 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
             if (lower_table_dependency->domain.empty())
                 empty_dependencies.push_back(lower_table_dependency);
             
-            if (!inter_domain.empty()) {
-                add_table_dependency(upper_rule, new_rule, inter_domain);
-                add_table_dependency(new_rule, lower_rule, inter_domain);
+            if (!traverse_domain.empty()) {
+                add_table_dependency(upper_rule, new_rule, traverse_domain);
+                ///add_table_dependency(new_rule, lower_rule, inter_domain);
             }
         }
 
@@ -215,19 +215,19 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
              dependency_it != in_list.end();) {
             auto& lower_dependency = *dependency_it++;
             RulePtr prev_rule = lower_dependency->src_rule;
-            
-            NetworkSpace inter_domain = lower_domain & 
-                                        lower_dependency->domain;
+
+            NetworkSpace incoming_domain = lower_domain &
+                                           lower_dependency->domain;
 
             // DEBUG LOG
             std::cout<<"        "<<new_rule->id()<<"->"<<lower_rule->id()
-                     <<" ("<<inter_domain.header()
+                     <<" ("<<incoming_domain.header()
                      <<") # "<<prev_rule->id()<<"->"
                      <<lower_dependency->dst_rule->id()
                      <<" ("<<lower_dependency->domain.header()<<")"
                      <<std::endl;
             
-            lower_dependency->domain -= inter_domain;
+            lower_dependency->domain -= incoming_domain;
 
             // DEBUG LOG
             std::cout<<"        / ("<<lower_domain.header()
@@ -236,11 +236,16 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
             if (lower_dependency->domain.empty())
                 empty_dependencies.push_back(lower_dependency);
             
-            if (!inter_domain.empty()) {
-                add_dependency(prev_rule, new_rule, inter_domain);
-                add_table_dependency(new_rule, lower_rule, inter_domain);
+            if (!incoming_domain.empty()) {
+                add_dependency(prev_rule, new_rule, incoming_domain);
+                ///add_table_dependency(new_rule, lower_rule, inter_domain);
             }
         }
+
+        // Create new table dependency
+        NetworkSpace inter_domain = lower_domain & lower_rule->domain();
+        add_table_dependency(new_rule, lower_rule, inter_domain);
+        lower_domain -= lower_rule->domain();
 
         // Delete empty dependencies
         for (auto& empty_dependency : empty_dependencies) {
