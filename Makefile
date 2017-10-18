@@ -20,7 +20,7 @@ DEPENDENCY_GRAPH_SRC += $(DEPENDENCY_GRAPH_PATH)/Network.cpp
 DEPENDENCY_GRAPH_SRC += $(DEPENDENCY_GRAPH_PATH)/Rule.cpp
 DEPENDENCY_GRAPH_SRC += $(DEPENDENCY_GRAPH_PATH)/Topology.cpp
 
-all: ./src/Main.cpp $(HEADER_SPACE_SRC) $(NETWORK_SPACE_SRC) $(DETECTOR_SRC) $(DEPENDENCY_GRAPH_SRC) headerspace.o
+all: ./src/Main.cpp ./src/Test.cpp $(HEADER_SPACE_SRC) $(NETWORK_SPACE_SRC) $(DETECTOR_SRC) $(DEPENDENCY_GRAPH_SRC) headerspace.o
 	g++ -std=c++11 -g -o $(TARGET) $^
 	#rm -rf *.o
 

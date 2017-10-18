@@ -20,7 +20,7 @@ class Table
 {
 public:
     Table(SwitchId switch_id, TableId id);
-    
+
     RulePtr getRule(RuleId id);
     RulePtr addRule(uint16_t priority, NetworkSpace& domain,
                     std::vector<Action>& action_list);
@@ -72,13 +72,15 @@ public:
     PortPtr addPort(PortId port_id);
     PortPtr getPort(PortId port_id);
     void deletePort(PortId id);
-    
+
     TablePtr getTable(TableId id);
     TablePtr getFrontTable();
     TablePtr addTable(TableId table_id);
     void deleteTable(TableId id);
-    
-    const std::vector<PortId>& ports();
+
+    // TODO: maybe make it const, but how to optimally return ports?
+    std::vector<PortId>& ports();
+    std::vector<TablePtr> tables();
     inline SwitchId id() const {return id_;}
 
 private:
@@ -105,15 +107,13 @@ public:
     void deleteTable(SwitchId switch_id, TableId table_id);
     
     // Rule management
-    RulePtr getRule(SwitchId switch_id,
-                    TableId table_id,
-                    RuleId rule_id);
+    RulePtr getRule(SwitchId switch_id, TableId table_id, RuleId rule_id);
     RulePtr addRule(SwitchId switch_id, TableId table_id,
                     uint16_t priority, NetworkSpace& domain,
                     std::vector<Action>& action_list);
-    void deleteRule(SwitchId switch_id,
-                    TableId table_id,
-                    RuleId rule_id);
+    void deleteRule(SwitchId switch_id, TableId table_id, RuleId rule_id);
+    // TODO: use RuleRange
+    std::vector<RulePtr> rules();
 
     static bool isSpecialPort(PortId id);
 

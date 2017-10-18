@@ -362,109 +362,32 @@ void DependencyUpdater::deleteLink(SwitchId src_switch_id, PortId src_port_id,
 
 }
 
-/*void DependencyGraph::addLink(SwitchId src_switch_id,
-                              PortId src_port_id,
-                              SwitchId dst_switch_id,
-                              PortId dst_port_id)
+std::map<std::pair<RuleId, RuleId>, DependencyPtr>
+DependencyUpdater::dependencies()
 {
-    for (auto& src_rule : topology_.outRules(src_switch_id, src_port_id)) {
-        add_dependencies(src_rule, dst_switch_id, dst_port_id);
-    }
-}
-
-void DependencyGraph::deleteLink(SwitchId src_switch_id,
-                                 PortId src_port_id,
-                                 SwitchId dst_switch_id,
-                                 PortId dst_port_id)
-{
-    
-}*/
-
-/*Transfer DependencyGraph::transfer(RulePtr rule,
-                                   NetworkSpace in_domain = NetworkSpace())
-{
-    // Domain changes on SET actions iteratively
-    Transfer transfer(rule->inPort());
-    NetworkSpace current_domain = in_domain;
-    
-    for (auto& action : rule->actionList()) {
-        switch (action.type) {
-        case ActionType::SET:
-            HeaderChanger header_changer = action.header_changer;
-            current_domain = header_changer.apply(current_domain);
-            transfer.add(header_changer);
-            break;
-        case ActionType::OUTPUT:
-            switch (action.port) {
-            case PortAction::DROP:
-                break;
-            case PortAction::CONTROLLER:
-                break;
-            case PortAction::IN_PORT:
-            case PortAction::ALL:
-                // In this case every port may be an output port
-                transfer.add(dst_port = SpecialPort::ALL);
-                break;
-            default: // Normal port
-                // Check port existence
-                // TODO: Different switches may have same PortId!
-                PortId next_port = topology_.adjacentPort(action.port);
-                if (next_port) {
-                    transfer.add(dst_port = next_port);
-                    addDependencies(rule, topology_.inRules(next_port),
-                                    transfer);
-                }
-                else {
-                    // Port doesn't have connected link
-                    disconnected_out_port_map_.emplace({action.port,
-                                                        transfer});
-                }
-                break;
-            }
-            break;
-        case ActionType::TABLE:
-            addDependencies(rule, action.table_id, transfer);
-            break;
-        case ActionType::GROUP:
-            break;
-        default:
-            // TODO: Error, undefined action,
-            // or may be enum class prevents this
-            break;
+    // TODO: refactor this in a more optimal way! (or maybe not)
+    std::map<std::pair<RuleId, RuleId>, DependencyPtr> dependency_map;
+    for (const auto& rule : network_.rules()) {
+        for (const auto& dependency : rule->in_table_dependency_list_) {
+            auto src_rule_id = dependency->src_rule->id();
+            auto dst_rule_id = dependency->dst_rule->id();
+            dependency_map[{src_rule_id, dst_rule_id}] = dependency;
+        }
+        for (const auto& dependency : rule->out_table_dependency_list_) {
+            auto src_rule_id = dependency->src_rule->id();
+            auto dst_rule_id = dependency->dst_rule->id();
+            dependency_map[{src_rule_id, dst_rule_id}] = dependency;
+        }
+        for (const auto& dependency : rule->in_dependency_list_) {
+            auto src_rule_id = dependency->src_rule->id();
+            auto dst_rule_id = dependency->dst_rule->id();
+            dependency_map[{src_rule_id, dst_rule_id}] = dependency;
+        }
+        for (const auto& dependency : rule->out_dependency_list_) {
+            auto src_rule_id = dependency->src_rule->id();
+            auto dst_rule_id = dependency->dst_rule->id();
+            dependency_map[{src_rule_id, dst_rule_id}] = dependency;
         }
     }
+    return dependency_map;
 }
-
-RulePtr getRule(vertex_descriptor vertex)
-{
-    return 
-}
-
-DependencyRange inTableDependencies(RulePtr rule)
-{
-    Graph& graph = table_dependency_graph_;
-    vertex_descriptor& vertex = rule->table_dependency_vertex_;
-    return DependencyRange(graph, boost::in_edges(vertex, graph));
-}
-
-DependencyRange outTableDependencies(RulePtr rule)
-{
-    Graph& graph = table_dependency_graph_;
-    vertex_descriptor& vertex = rule->table_dependency_vertex_;
-    return DependencyRange(graph, boost::out_edges(vertex, graph));
-}
-
-DependencyRange inDependencies(RulePtr rule)
-{
-    Graph& graph = rule_dependency_graph_;
-    vertex_descriptor& vertex = rule->rule_dependency_vertex_;
-    return DependencyRange(graph, boost::in_edges(vertex, graph));
-}
-
-DependencyRange outDependencies(RulePtr rule)
-{
-    Graph& graph = rule_dependency_graph_;
-    vertex_descriptor& vertex = rule->rule_dependency_vertex_;
-    return DependencyRange(graph, boost::out_edges(vertex, graph));
-}
-*/

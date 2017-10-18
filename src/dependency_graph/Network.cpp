@@ -102,14 +102,6 @@ RuleRange Table::upperRules(RulePtr rule)
 RuleRange Table::lowerRules(RulePtr rule)
 {
     auto upper_bound = sorted_rule_map_.upper_bound(rule->priority());
-
-    // DEBUG LOG
-    /*std::cout<<"lowerRules("<<rule->id()<<") = "
-    for (auto& it : sorted_rule_map_.begin();
-    it != )
-
-    std::cout<<std::endl;*/
-
     return {sorted_rule_map_, upper_bound, sorted_rule_map_.end()};
 }
 
@@ -194,9 +186,18 @@ void Switch::deleteTable(TableId id)
     table_map_.erase(id);
 }
 
-const std::vector<PortId>& Switch::ports()
+std::vector<PortId>& Switch::ports()
 {
     return ports_;
+}
+
+std::vector<TablePtr> Switch::tables()
+{
+    std::vector<TablePtr> table_list;
+    for (const auto& table_pair : table_map_) {
+        table_list.push_back(table_pair.second);
+    }
+    return table_list;
 }
 
 SwitchPtr Network::getSwitch(SwitchId id)
@@ -238,9 +239,20 @@ void Network::deleteTable(SwitchId switch_id, TableId table_id)
     if (sw) sw->deleteTable(table_id);
 }
 
-RulePtr Network::getRule(SwitchId switch_id,
-                         TableId table_id,
-                         RuleId rule_id)
+std::vector<RulePtr> Network::rules()
+{
+    std::vector<RulePtr> rule_list;
+    for (const auto& switch_pair : switch_map_) {
+        for (const auto& table : switch_pair.second->tables()) {
+            for (const auto& rule : table->rules()) {
+                rule_list.push_back(rule);
+            }
+        }
+    }
+    return rule_list;
+}
+
+RulePtr Network::getRule(SwitchId switch_id, TableId table_id, RuleId rule_id)
 {
     SwitchPtr sw = getSwitch(switch_id);
     TablePtr table = sw ? sw->getTable(table_id) : nullptr;
@@ -258,9 +270,7 @@ RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
                  : nullptr;
 }
 
-void Network::deleteRule(SwitchId switch_id,
-                         TableId table_id,
-                         RuleId rule_id)
+void Network::deleteRule(SwitchId switch_id, TableId table_id, RuleId rule_id)
 {
     SwitchPtr sw = getSwitch(switch_id);
     TablePtr table = sw ? sw->getTable(table_id) : nullptr;

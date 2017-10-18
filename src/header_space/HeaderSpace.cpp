@@ -44,6 +44,17 @@ HeaderSpace::~HeaderSpace()
     hs_free(hs_);
 }
 
+bool HeaderSpace::operator==(const HeaderSpace &other) const
+{
+    // TODO: maybe compare it in another way?
+    return (*this - other).empty() && (other - *this).empty();
+}
+
+bool HeaderSpace::operator!=(const HeaderSpace &other) const
+{
+    return !(*this == other);
+}
+
 HeaderSpace& HeaderSpace::operator=(const HeaderSpace& other)
 {
     hs_free(hs_);
@@ -65,10 +76,14 @@ HeaderSpace& HeaderSpace::operator|=(const HeaderSpace& right) {
 
 HeaderSpace& HeaderSpace::operator&=(const HeaderSpace& right)
 {
-    struct hs* tmp = hs_;
-    struct hs* intersection = hs_isect_a(tmp, right.hs_);
-    if (intersection) hs_copy(hs_, intersection);
-    hs_free(tmp);
+    struct hs* intersection = hs_isect_a(hs_, right.hs_);
+    if (intersection) {
+        hs_copy(hs_, intersection);
+    }
+    else {
+        hs_free(hs_);
+        hs_ = hs_create(length_);
+    }
     return *this;
 }
 
@@ -78,19 +93,19 @@ HeaderSpace& HeaderSpace::operator-=(const HeaderSpace& right)
     return *this;
 }
 
-HeaderSpace HeaderSpace::operator|(const HeaderSpace& right)
+HeaderSpace HeaderSpace::operator|(const HeaderSpace& right) const
 {
     HeaderSpace header(hs_, length_);
     header |= right;
     return header;
 }
 
-HeaderSpace HeaderSpace::operator&(const HeaderSpace& right)
+HeaderSpace HeaderSpace::operator&(const HeaderSpace& right) const
 {
     return HeaderSpace(hs_isect_a(hs_, right.hs_), length_);
 }
 
-HeaderSpace HeaderSpace::operator-(const HeaderSpace& right)
+HeaderSpace HeaderSpace::operator-(const HeaderSpace& right) const
 {
     HeaderSpace header(hs_, length_);
     header -= right;

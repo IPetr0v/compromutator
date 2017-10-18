@@ -50,9 +50,7 @@ RulePtr DependencyGraph::addRule(SwitchId switch_id, TableId table_id,
 void DependencyGraph::deleteRule(SwitchId switch_id, TableId table_id,
                                  RuleId rule_id)
 {
-    network_.deleteRule(switch_id,
-                        table_id,
-                        rule_id);
+    network_.deleteRule(switch_id, table_id, rule_id);
 }
 
 void DependencyGraph::addLink(SwitchId src_switch_id, PortId src_port_id,
@@ -76,4 +74,10 @@ void DependencyGraph::deleteLink(SwitchId src_switch_id, PortId src_port_id,
                                  SwitchId dst_switch_id, PortId dst_port_id)
 {
     
+}
+
+std::map<std::pair<RuleId, RuleId>, DependencyPtr>
+DependencyGraph::dependencies()
+{
+    return dependency_updater_.dependencies();
 }

@@ -26,6 +26,8 @@ public:
     void deleteLink(SwitchId src_switch_id, PortId src_port_id,
                     SwitchId dst_switch_id, PortId dst_port_id);
 
+    std::map<std::pair<RuleId, RuleId>, DependencyPtr> dependencies();
+
 private:
     Network network_;
     Topology topology_;

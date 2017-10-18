@@ -22,15 +22,17 @@ public:
     explicit HeaderSpace(const char* str);
     HeaderSpace(const HeaderSpace& other);
     ~HeaderSpace();
-    
+
+    bool operator==(const HeaderSpace &other) const;
+    bool operator!=(const HeaderSpace &other) const;
     HeaderSpace& operator=(const HeaderSpace& other);
     HeaderSpace& operator~();
     HeaderSpace& operator|=(const HeaderSpace& right);
     HeaderSpace& operator&=(const HeaderSpace& right);
     HeaderSpace& operator-=(const HeaderSpace& right);
-    HeaderSpace operator|(const HeaderSpace& right);
-    HeaderSpace operator&(const HeaderSpace& right);
-    HeaderSpace operator-(const HeaderSpace& right);
+    HeaderSpace operator|(const HeaderSpace& right) const;
+    HeaderSpace operator&(const HeaderSpace& right) const;
+    HeaderSpace operator-(const HeaderSpace& right) const;
     
     // TODO: check correctness and make more optimal empty()
     // (do not compact every time)
