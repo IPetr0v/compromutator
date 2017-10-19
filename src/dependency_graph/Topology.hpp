@@ -18,7 +18,7 @@ class Topology
 {
 public:
     explicit Topology(Network& network);
-    
+
     TopoId adjacentPort(SwitchId switch_id, PortId port_id) const;
     bool addLink(SwitchId src_switch_id, PortId src_port_id,
                  SwitchId dst_switch_id, PortId dst_port_id);
@@ -28,8 +28,10 @@ public:
     void addRule(RulePtr new_rule);
     
     // TODO: may be not optimal, can we return references?
-    std::vector<RulePtr> outRules(SwitchId switch_id, PortId port_id) const;
-    std::vector<RulePtr> inRules(SwitchId switch_id, PortId port_id) const;
+    // Rules that send packets to the port connected to the port_id
+    std::vector<RulePtr> srcRules(SwitchId switch_id, PortId port_id) const;
+    // Rules that listen packets from the port connected to the port_id
+    std::vector<RulePtr> dstRules(SwitchId switch_id, PortId port_id) const;
 
 private:
     Network& network_;

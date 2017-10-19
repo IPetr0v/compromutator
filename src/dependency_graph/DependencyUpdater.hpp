@@ -39,11 +39,15 @@ private:
     void add_dependencies(RulePtr src_rule, SwitchId src_switch_id,
                           PortId src_port_id);
     void add_dependencies(RulePtr src_rule, TableId dst_table_id);
+    void add_dependencies(std::vector<RulePtr>& src_rules, RulePtr dst_rule);
     void add_dependencies(RulePtr src_rule, std::vector<RulePtr>& dst_rules);
     void add_dependencies(RulePtr src_rule, RuleRange& dst_rules);
     
     void add_table_dependencies(RulePtr new_rule);
     void delete_table_dependencies(RulePtr old_rule);
+
+    void add_in_dependencies(RulePtr new_rule);
+    void delete_in_dependencies(RulePtr old_rule);
     
     void add_out_dependencies(RulePtr new_rule);
     void delete_out_dependencies(RulePtr old_rule);

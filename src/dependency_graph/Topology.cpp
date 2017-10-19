@@ -82,7 +82,7 @@ void Topology::addRule(RulePtr new_rule)
 {
     SwitchId switch_id = new_rule->switchId();
     SwitchPtr sw = network_.getSwitch(switch_id);
-    auto sw_ports = sw->ports();
+    auto& sw_ports = sw->portIdList();
     
     // Compute out port dependency
     for (auto& action : new_rule->actions()) {
@@ -121,15 +121,11 @@ void Topology::addRule(RulePtr new_rule)
             break;
         case ActionType::GROUP:
             break;
-        default:
-            // TODO: Error, undefined action,
-            // or may be enum class prevents this
-            break;
         }
     }
     
     // Compute in port dependency
-    if (new_rule->tableId() == sw->getFrontTable()->id()) {
+    if (new_rule->tableId() == sw->frontTable()->id()) {
         PortId in_port = new_rule->inPort();
         switch (in_port) {
         case SpecialPort::NONE:
@@ -158,22 +154,32 @@ void Topology::addRule(RulePtr new_rule)
     }
 }
 
-std::vector<RulePtr> Topology::outRules(SwitchId switch_id,
+std::vector<RulePtr> Topology::srcRules(SwitchId switch_id,
                                         PortId port_id) const
 {
-    TopoId topo_id{switch_id, port_id};
-    auto it = out_port_dependency_.find(topo_id);
-    return it != out_port_dependency_.end()
-           ? it->second
-           : std::vector<RulePtr>();
+    TopoId prev_port = adjacentPort(switch_id, port_id);
+    if (prev_port.port_id) {
+        auto it = out_port_dependency_.find(prev_port);
+        return it != out_port_dependency_.end()
+               ? it->second
+               : std::vector<RulePtr>();
+    }
+    else {
+        return {network_.sourceRule(switch_id, port_id)};
+    }
 }
 
-std::vector<RulePtr> Topology::inRules(SwitchId switch_id,
+std::vector<RulePtr> Topology::dstRules(SwitchId switch_id,
                                        PortId port_id) const
 {
-    TopoId topo_id{switch_id, port_id};
-    auto it = in_port_dependency_.find(topo_id);
-    return it != in_port_dependency_.end()
-           ? it->second
-           : std::vector<RulePtr>();
+    TopoId next_port = adjacentPort(switch_id, port_id);
+    if (next_port.port_id) {
+        auto it = in_port_dependency_.find(next_port);
+        return it != in_port_dependency_.end()
+               ? it->second
+               : std::vector<RulePtr>();
+    }
+    else {
+        return {network_.sinkRule(switch_id, port_id)};
+    }
 }

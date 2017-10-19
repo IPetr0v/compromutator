@@ -25,7 +25,8 @@ public:
     RulePtr addRule(uint16_t priority, NetworkSpace& domain,
                     std::vector<Action>& action_list);
     void deleteRule(RuleId id);
-    
+
+    RulePtr tableMissRule() {return table_miss_rule_;}
     RuleRange rules() {return RuleRange(sorted_rule_map_);}
     RuleRange upperRules(RulePtr rule);
     RuleRange lowerRules(RulePtr rule);
@@ -36,6 +37,8 @@ public:
 private:
     SwitchId switch_id_;
     TableId id_;
+
+    RulePtr table_miss_rule_;
 
     // These maps are used in order to have a list of rules
     // that is already sorted by priority, and to have a map
@@ -50,8 +53,8 @@ class Port
 public:
     Port(SwitchId switch_id, PortId id);
 
-    RulePtr getSourceRule() const {return source_rule_;}
-    RulePtr getSinkRule() const {return sink_rule_;}
+    RulePtr sourceRule() const {return source_rule_;}
+    RulePtr sinkRule() const {return sink_rule_;}
 
     SwitchId switchId() const {return switch_id_;}
     PortId id() const {return id_;}
@@ -68,20 +71,22 @@ class Switch
 {
 public:
     Switch(SwitchId id, std::vector<PortId>& port_list);
-    
-    PortPtr addPort(PortId port_id);
+
     PortPtr getPort(PortId port_id);
+    PortPtr addPort(PortId port_id);
     void deletePort(PortId id);
 
     TablePtr getTable(TableId id);
-    TablePtr getFrontTable();
     TablePtr addTable(TableId table_id);
     void deleteTable(TableId id);
 
+    TablePtr frontTable() const {return front_table_;}
+
     // TODO: maybe make it const, but how to optimally return ports?
-    std::vector<PortId>& ports();
+    std::vector<PortId>& portIdList();
+    std::vector<PortPtr> ports();
     std::vector<TablePtr> tables();
-    inline SwitchId id() const {return id_;}
+    SwitchId id() const {return id_;}
 
 private:
     SwitchId id_;
@@ -89,12 +94,14 @@ private:
     std::map<PortId, PortPtr> port_map_;
     std::map<TableId, TablePtr> table_map_;
 
+    TablePtr front_table_;
+
 };
 
 class Network
 {
 public:
-    Network() = default;
+    Network();
     
     // Switch management
     SwitchPtr getSwitch(SwitchId id);
@@ -112,6 +119,12 @@ public:
                     uint16_t priority, NetworkSpace& domain,
                     std::vector<Action>& action_list);
     void deleteRule(SwitchId switch_id, TableId table_id, RuleId rule_id);
+    RulePtr dropRule() {return drop_rule_;}
+    RulePtr controllerRule() {return controller_rule_;}
+    RulePtr sourceRule(SwitchId switch_id, PortId port_id);
+    RulePtr sinkRule(SwitchId switch_id, PortId port_id);
+    RulePtr tableMissRule(SwitchId switch_id, TableId table_id);
+
     // TODO: use RuleRange
     std::vector<RulePtr> rules();
 
@@ -121,7 +134,7 @@ private:
     std::map<SwitchId, SwitchPtr> switch_map_;
 
     // Special rules
-    RulePtr drop_;
-    RulePtr controller_;
+    RulePtr drop_rule_;
+    RulePtr controller_rule_;
 
 };

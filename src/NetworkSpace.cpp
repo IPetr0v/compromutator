@@ -6,6 +6,12 @@ NetworkSpace::NetworkSpace():
 
 }
 
+NetworkSpace::NetworkSpace(PortId in_port):
+    in_port_(in_port), header_(HEADER_LENGTH)
+{
+
+}
+
 NetworkSpace::NetworkSpace(const HeaderSpace& header):
     in_port_(SpecialPort::ANY), header_(header)
 {

@@ -76,26 +76,16 @@ void DependencyUpdater::add_dependencies(RulePtr src_rule,
 {
     // DEBUG LOG
     std::cout<<"    From "<<src_switch_id<<":"<<src_port_id<<" to ";
-
-    // TODO: do something with TopoId
     TopoId next_port = topology_.adjacentPort(src_switch_id, src_port_id);
     if (next_port.port_id) {
-        // DEBUG LOG
         std::cout<<next_port.switch_id<<":"<<next_port.port_id<<std::endl;
-
-        // TODO: return RuleRange from inRules()
-        auto dst_rules = topology_.inRules(next_port.switch_id,
-                                           next_port.port_id);
-        add_dependencies(src_rule, dst_rules);
     }
     else {
-        // DEBUG LOG
         std::cout<<"nowhere"<<std::endl;
-
-        // Port doesn't have connected link, connect to the sink rule
-        ///RulePtr sink_rule = network_.getSinkRule(src_switch_id, src_port_id);
-        ///add_dependency(src_rule, sink_rule);
     }
+
+    auto dst_rules = topology_.dstRules(src_switch_id, src_port_id);
+    add_dependencies(src_rule, dst_rules);
 }
 
 void DependencyUpdater::add_dependencies(RulePtr src_rule, TableId dst_table_id)
@@ -103,6 +93,24 @@ void DependencyUpdater::add_dependencies(RulePtr src_rule, TableId dst_table_id)
     TablePtr dst_table = network_.getTable(src_rule->switchId(), dst_table_id);
     auto table_rules = dst_table->rules();
     add_dependencies(src_rule, table_rules);
+}
+
+void DependencyUpdater::add_dependencies(std::vector<RulePtr>& src_rules,
+                                         RulePtr dst_rule)
+{
+    NetworkSpace input_domain = dst_rule->domain();
+
+    // Create dependencies
+    for (auto& src_rule : src_rules) {
+        NetworkSpace dependency_domain = src_rule->outDomain() &
+                                         dst_rule->domain();
+
+        // DEBUG LOG
+        std::cout<<"        "<<src_rule->id()<<"->"<<dst_rule->id()
+                 <<" ("<<dependency_domain.header()<<")"<<std::endl;
+
+        add_dependency(src_rule, dst_rule, dependency_domain);
+    }
 }
 
 void DependencyUpdater::add_dependencies(RulePtr src_rule,
@@ -113,7 +121,7 @@ void DependencyUpdater::add_dependencies(RulePtr src_rule,
     
     // Create dependencies
     for (auto& dst_rule : dst_rules) {
-        NetworkSpace dependency_domain = dst_rule->domain() & output_domain;
+        NetworkSpace dependency_domain = output_domain & dst_rule->domain();
         output_domain -= dependency_domain;
 
         // DEBUG LOG
@@ -131,7 +139,7 @@ void DependencyUpdater::add_dependencies(RulePtr src_rule, RuleRange& dst_rules)
     
     // Create dependencies
     for (auto& dst_rule : dst_rules) {
-        NetworkSpace dependency_domain = dst_rule->domain() & output_domain;
+        NetworkSpace dependency_domain = output_domain & dst_rule->domain();
         output_domain -= dependency_domain;
 
         // DEBUG LOG
@@ -164,7 +172,6 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
 
         // Update old table dependencies
         auto& in_table_list = lower_rule->in_table_dependency_list_;
-        //for (auto& lower_table_dependency : in_table_list) {
         for (auto dependency_it = in_table_list.begin();
              dependency_it != in_table_list.end();) {
             auto& lower_table_dependency = *dependency_it++;
@@ -173,7 +180,6 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
             
             NetworkSpace traverse_domain = lower_domain &
                                            lower_table_dependency->domain;
-            ///lower_domain -= lower_table_dependency->domain;
 
             // DEBUG LOG
             std::cout<<"        "<<upper_rule->id()<<"->"
@@ -193,10 +199,8 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
             if (lower_table_dependency->domain.empty())
                 empty_dependencies.push_back(lower_table_dependency);
             
-            if (!traverse_domain.empty()) {
+            if (!traverse_domain.empty())
                 add_table_dependency(upper_rule, new_rule, traverse_domain);
-                ///add_table_dependency(new_rule, lower_rule, inter_domain);
-            }
         }
 
         // DEBUG LOG
@@ -210,7 +214,6 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
         
         // Update rule dependencies
         auto& in_list = lower_rule->in_dependency_list_;
-        //for (auto& lower_dependency : in_list) {
         for (auto dependency_it = in_list.begin();
              dependency_it != in_list.end();) {
             auto& lower_dependency = *dependency_it++;
@@ -236,10 +239,8 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
             if (lower_dependency->domain.empty())
                 empty_dependencies.push_back(lower_dependency);
             
-            if (!incoming_domain.empty()) {
+            if (!incoming_domain.empty())
                 add_dependency(prev_rule, new_rule, incoming_domain);
-                ///add_table_dependency(new_rule, lower_rule, inter_domain);
-            }
         }
 
         // Create new table dependency
@@ -268,13 +269,49 @@ void DependencyUpdater::delete_table_dependencies(RulePtr old_rule)
     old_rule->in_dependency_list_.clear();
 }
 
+void DependencyUpdater::add_in_dependencies(RulePtr new_rule)
+{
+    SwitchPtr sw = network_.getSwitch(new_rule->switchId());
+    SwitchId switch_id = new_rule->switchId();
+
+    switch (new_rule->domain().inPort()) {
+    case SpecialPort::NONE:
+        // Do nothing
+        break;
+    case SpecialPort::ANY:
+        for (auto& port_id : sw->portIdList()) {
+            auto src_rules = topology_.srcRules(switch_id, port_id);
+            add_dependencies(src_rules, new_rule);
+        }
+        break;
+    default: {
+            // TODO: make different alignment
+            auto src_rules = topology_.srcRules(switch_id,
+                                                new_rule->domain().inPort());
+            add_dependencies(src_rules, new_rule);
+        }
+        break;
+    }
+}
+
+
+void DependencyUpdater::delete_in_dependencies(RulePtr old_rule)
+{
+    // TODO: do this in a more optimal way!
+    auto in_list = old_rule->in_dependency_list_;
+    for (auto dependency_it = in_list.begin();
+         dependency_it != in_list.end();) {
+        delete_dependency(*dependency_it++);
+    }
+}
+
 void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
 {
     SwitchPtr sw = network_.getSwitch(new_rule->switchId());
     SwitchId switch_id = new_rule->switchId();
 
     // DEBUG LOG
-    std::cout<<"Out dependencies "<<new_rule->id()
+    std::cout<<"Add out dependencies "<<new_rule->id()
              <<" ("<<new_rule->domain().header()<<")"<<std::endl;
 
     for (auto& action : new_rule->actions()) {
@@ -282,17 +319,19 @@ void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
         case ActionType::PORT:
             switch (action.port_id) {
             case PortAction::DROP:
-                ///add_dependency(new_rule, drop_, new_rule->outDomain());
+                add_dependency(new_rule, network_.dropRule(),
+                               new_rule->outDomain());
                 break;
             case PortAction::CONTROLLER:
-                ///add_dependency(new_rule, controller_, new_rule->outDomain());
+                add_dependency(new_rule, network_.controllerRule(),
+                               new_rule->outDomain());
                 break;
             case PortAction::IN_PORT:
             case PortAction::ALL:
                 // In this case every port may be an output port
                 // TODO: do it later with multiple actions and transfers
                 // TODO: if new port is added, should we add new dependencies?
-                for (auto& port_id : sw->ports()) {
+                for (auto& port_id : sw->portIdList()) {
                     add_dependencies(new_rule, switch_id, port_id);
                 }
                 break;
@@ -307,10 +346,6 @@ void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
             break;
         case ActionType::GROUP:
             break;
-        default:
-            // TODO: error, undefined action,
-            // TODO: or may be enum class prevents this
-            break;
         }
     }
 }
@@ -318,19 +353,11 @@ void DependencyUpdater::add_out_dependencies(RulePtr new_rule)
 void DependencyUpdater::delete_out_dependencies(RulePtr old_rule)
 {
     // TODO: do this in a more optimal way!
-    auto& out_list = old_rule->out_dependency_list_;
-    for (auto& dependency : out_list) {
-        auto is_from_old_rule = [old_rule] (const DependencyPtr& dep)
-        {
-            return dep->src_rule->id() == old_rule->id();
-        };
-
-        out_list.erase(std::remove_if(out_list.begin(),
-                                      out_list.end(),
-                                      is_from_old_rule),
-                       out_list.end());
+    auto out_list = old_rule->out_dependency_list_;
+    for (auto dependency_it = out_list.begin();
+         dependency_it != out_list.end();) {
+        delete_dependency(*dependency_it++);
     }
-    out_list.clear();
 }
 
 RulePtr DependencyUpdater::addRule(RulePtr new_rule)
@@ -339,7 +366,11 @@ RulePtr DependencyUpdater::addRule(RulePtr new_rule)
     add_out_dependencies(new_rule);
     
     // Update input dependencies and internal table dependencies
-    add_table_dependencies(new_rule);
+    auto table = network_.getTable(new_rule->switchId(), new_rule->tableId());
+    if (new_rule->id() == table->tableMissRule()->id())
+        add_in_dependencies(new_rule);
+    else
+        add_table_dependencies(new_rule);
     
     return new_rule;
 }
@@ -353,10 +384,20 @@ void DependencyUpdater::deleteRule(RulePtr old_rule)
 void DependencyUpdater::addLink(SwitchId src_switch_id, PortId src_port_id,
                                 SwitchId dst_switch_id, PortId dst_port_id)
 {
+    // Delete old source/sink dependencies
+    auto src_source_rule = network_.sourceRule(src_switch_id, src_port_id);
+    auto src_sink_rule = network_.sinkRule(src_switch_id, src_port_id);
+    auto dst_source_rule = network_.sourceRule(dst_switch_id, dst_port_id);
+    auto dst_sink_rule = network_.sinkRule(dst_switch_id, dst_port_id);
+    delete_out_dependencies(src_source_rule);
+    delete_in_dependencies(src_sink_rule);
+    delete_out_dependencies(dst_source_rule);
+    delete_in_dependencies(dst_sink_rule);
+
     // TODO: check if return value is a reference
-    auto src_rules = topology_.outRules(src_switch_id, src_port_id);
+    auto src_rules = topology_.srcRules(dst_switch_id, dst_port_id);
     for (auto& src_rule : src_rules) {
-        auto dst_rules = topology_.inRules(dst_switch_id, dst_port_id);
+        auto dst_rules = topology_.dstRules(src_switch_id, src_port_id);
         add_dependencies(src_rule, dst_rules);
     }
 }

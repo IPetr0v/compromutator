@@ -38,8 +38,7 @@ RuleInfo Detector::addRule(SwitchId switch_id, TableId table_id,
     flow_predictor_.addRule(rule);
     
     // TODO: create error codes for RuleInfo
-    return rule ? RuleInfo{switch_id, table_id, rule->id()}
-                : RuleInfo{0, 0, 0};
+    return rule ? RuleInfo{switch_id, table_id, rule->id()} : RuleInfo{0, 0, 0};
 }
 
 void Detector::deleteRule(RuleInfo rule_info)

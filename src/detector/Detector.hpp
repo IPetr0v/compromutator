@@ -22,9 +22,8 @@ public:
     TableId addTable(SwitchId switch_id, TableId table_id);
     void deleteTable(SwitchId switch_id, TableId table_id);
     
-    RuleInfo addRule(SwitchId switch_id, TableId table_id,
-                     uint16_t priority, NetworkSpace& domain,
-                     std::vector<Action>& action_list);
+    RuleInfo addRule(SwitchId switch_id, TableId table_id, uint16_t priority,
+                     NetworkSpace& domain, std::vector<Action>& action_list);
     void deleteRule(RuleInfo rule_info);
     
     void addLink(SwitchId src_switch_id, PortId src_port_id,

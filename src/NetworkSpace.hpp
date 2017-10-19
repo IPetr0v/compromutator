@@ -15,6 +15,7 @@ class NetworkSpace
 {
 public:
     NetworkSpace();
+    explicit NetworkSpace(PortId in_port);
     explicit NetworkSpace(const HeaderSpace& header);
     NetworkSpace(PortId in_port, const HeaderSpace& header);
     
@@ -65,9 +66,7 @@ enum class ActionType
 {
     PORT,
     TABLE,
-    GROUP,
-    CONTROLLER,
-    DROP
+    GROUP
 };
 
 struct Action
