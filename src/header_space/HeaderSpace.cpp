@@ -63,6 +63,13 @@ HeaderSpace& HeaderSpace::operator=(const HeaderSpace& other)
     return *this;
 }
 
+HeaderSpace& HeaderSpace::operator=(HeaderSpace&& other) noexcept
+{
+    hs_free(hs_);
+    hs_ = other.hs_;
+    return *this;
+}
+
 HeaderSpace& HeaderSpace::operator~()
 {
     hs_cmpl(hs_);

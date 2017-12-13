@@ -21,6 +21,9 @@ public:
     void deleteLink(SwitchId src_switch_id, PortId src_port_id,
                     SwitchId dst_switch_id, PortId dst_port_id);
 
+    DependencyPtr getDependency(RuleId src_rule_id, RuleId dst_rule_id);
+    std::list<DependencyPtr> inDependencies(RulePtr rule);
+    std::list<DependencyPtr> outDependencies(RulePtr rule);
     std::map<std::pair<RuleId, RuleId>, DependencyPtr> dependencies();
 
 private:

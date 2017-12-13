@@ -123,6 +123,22 @@ RulePtr DependencyGraph::tableMissRule(SwitchId switch_id, TableId table_id)
     return network_.tableMissRule(switch_id, table_id);
 }
 
+DependencyPtr DependencyGraph::getDependency(RuleId src_rule_id,
+                                             RuleId dst_rule_id)
+{
+    return dependency_updater_.getDependency(src_rule_id, dst_rule_id);
+}
+
+std::list<DependencyPtr> DependencyGraph::inDependencies(RulePtr rule)
+{
+    return dependency_updater_.outDependencies(rule);
+}
+
+std::list<DependencyPtr> DependencyGraph::outDependencies(RulePtr rule)
+{
+    return dependency_updater_.outDependencies(rule);
+}
+
 std::map<std::pair<RuleId, RuleId>, DependencyPtr>
 DependencyGraph::dependencies()
 {

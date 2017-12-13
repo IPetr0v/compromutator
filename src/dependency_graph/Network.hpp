@@ -114,6 +114,7 @@ public:
     void deleteTable(SwitchId switch_id, TableId table_id);
     
     // Rule management
+    RulePtr getRule(RuleId rule_id);
     RulePtr getRule(SwitchId switch_id, TableId table_id, RuleId rule_id);
     RulePtr addRule(SwitchId switch_id, TableId table_id,
                     uint16_t priority, NetworkSpace& domain,

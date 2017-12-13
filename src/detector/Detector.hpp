@@ -16,14 +16,14 @@ class Detector
 public:
     Detector();
     
-    SwitchId addSwitch(SwitchId id, std::vector<PortId> port_list);
+    SwitchId addSwitch(SwitchId switch_id, std::vector<PortId> ports);
     void deleteSwitch(SwitchId id);
     
     TableId addTable(SwitchId switch_id, TableId table_id);
     void deleteTable(SwitchId switch_id, TableId table_id);
     
     RuleInfo addRule(SwitchId switch_id, TableId table_id, uint16_t priority,
-                     NetworkSpace& domain, std::vector<Action>& action_list);
+                     NetworkSpace& domain, std::vector<Action>& actions);
     void deleteRule(RuleInfo rule_info);
     
     void addLink(SwitchId src_switch_id, PortId src_port_id,

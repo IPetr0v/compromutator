@@ -6,6 +6,12 @@ NetworkSpace::NetworkSpace():
 
 }
 
+NetworkSpace::NetworkSpace(const NetworkSpace& other):
+    in_port_(other.inPort()), header_(other.header())
+{
+
+}
+
 NetworkSpace::NetworkSpace(PortId in_port):
     in_port_(in_port), header_(HEADER_LENGTH)
 {
@@ -24,10 +30,24 @@ NetworkSpace::NetworkSpace(PortId in_port, const HeaderSpace& header):
     
 }
 
+NetworkSpace& NetworkSpace::operator=(NetworkSpace&& other) noexcept
+{
+    in_port_ = other.in_port_;
+    header_ = std::move(other.header_);
+    return *this;
+}
+
 NetworkSpace& NetworkSpace::operator-=(const NetworkSpace& right)
 {
     header_ -= right.header_;
     return *this;
+}
+
+NetworkSpace NetworkSpace::operator-(const NetworkSpace& right)
+{
+    NetworkSpace domain(in_port_, header());
+    domain -= right;
+    return domain;
 }
 
 NetworkSpace NetworkSpace::operator&(const NetworkSpace& right)

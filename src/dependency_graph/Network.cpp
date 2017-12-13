@@ -39,7 +39,8 @@ RulePtr Table::getRule(RuleId id)
 RulePtr Table::addRule(uint16_t priority, NetworkSpace& domain,
                        std::vector<Action>& action_list)
 {
-    RulePtr new_rule = std::make_shared<Rule>(switchId(), this->id(), priority,
+    RulePtr new_rule = std::make_shared<Rule>(RuleType::FLOW, switchId(),
+                                              this->id(), priority,
                                               domain, action_list);
     auto rule_id = new_rule->id();
 
@@ -118,8 +119,10 @@ Port::Port(SwitchId switch_id, PortId id):
 {
     NetworkSpace domain; // Whole network space
     std::vector<Action> actions = {};
-    source_rule_ = std::make_shared<Rule>(switch_id_, 0, 0, domain, actions);
-    sink_rule_ = std::make_shared<Rule>(switch_id_, 0, 0, domain, actions);
+    source_rule_ = std::make_shared<Rule>(RuleType::SOURCE, switch_id_,
+                                          0, 0, domain, actions);
+    sink_rule_ = std::make_shared<Rule>(RuleType::SINK, switch_id_,
+                                        0, 0, domain, actions);
 }
 
 Switch::Switch(SwitchId id, std::vector<PortId>& port_list):
@@ -218,8 +221,10 @@ Network::Network()
     // Create special rules
     NetworkSpace domain; // Whole network space
     std::vector<Action> actions = {};
-    drop_rule_ = std::make_shared<Rule>(0, 0, 0, domain, actions);
-    controller_rule_ = std::make_shared<Rule>(0, 0, 0, domain, actions);
+    drop_rule_ = std::make_shared<Rule>(RuleType::SINK, 0, 0, 0,
+                                        domain, actions);
+    controller_rule_ = std::make_shared<Rule>(RuleType::SINK, 0, 0, 0,
+                                              domain, actions);
 }
 
 SwitchPtr Network::getSwitch(SwitchId id)
@@ -281,6 +286,20 @@ std::vector<RulePtr> Network::rules()
     return rule_list;
 }
 
+RulePtr Network::getRule(RuleId rule_id)
+{
+    // TODO: CRITICAL rewrite without brute-force
+    for (const auto sw_it : switch_map_) {
+        const auto sw = sw_it.second;
+        for (const auto table : sw->tables()) {
+            auto rule = table->getRule(rule_id);
+            if (nullptr != rule) {
+                return rule;
+            }
+        }
+    }
+}
+
 RulePtr Network::getRule(SwitchId switch_id, TableId table_id, RuleId rule_id)
 {
     SwitchPtr sw = getSwitch(switch_id);
@@ -295,8 +314,7 @@ RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
     // Create rule
     SwitchPtr sw = getSwitch(switch_id);
     TablePtr table = sw ? sw->getTable(table_id) : nullptr;
-    return table ? table->addRule(priority, domain, action_list)
-                 : nullptr;
+    return table ? table->addRule(priority, domain, action_list) : nullptr;
 }
 
 void Network::deleteRule(SwitchId switch_id, TableId table_id, RuleId rule_id)

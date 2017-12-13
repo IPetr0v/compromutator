@@ -26,6 +26,8 @@ public:
     bool operator==(const HeaderSpace &other) const;
     bool operator!=(const HeaderSpace &other) const;
     HeaderSpace& operator=(const HeaderSpace& other);
+    HeaderSpace& operator=(HeaderSpace&& other) noexcept;
+
     HeaderSpace& operator~();
     HeaderSpace& operator|=(const HeaderSpace& right);
     HeaderSpace& operator&=(const HeaderSpace& right);

@@ -32,6 +32,10 @@ public:
     RulePtr sourceRule(SwitchId switch_id, PortId port_id);
     RulePtr sinkRule(SwitchId switch_id, PortId port_id);
     RulePtr tableMissRule(SwitchId switch_id, TableId table_id);
+
+    DependencyPtr getDependency(RuleId src_rule_id, RuleId dst_rule_id);
+    std::list<DependencyPtr> inDependencies(RulePtr rule);
+    std::list<DependencyPtr> outDependencies(RulePtr rule);
     std::map<std::pair<RuleId, RuleId>, DependencyPtr> dependencies();
 
 private:

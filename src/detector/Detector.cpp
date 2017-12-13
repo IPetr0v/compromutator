@@ -3,12 +3,25 @@
 Detector::Detector():
     flow_predictor_(dependency_graph_)
 {
-    
+    flow_predictor_.addRule(dependency_graph_.dropRule());
+    flow_predictor_.addRule(dependency_graph_.controllerRule());
 }
 
-SwitchId Detector::addSwitch(SwitchId id, std::vector<PortId> port_list)
+SwitchId Detector::addSwitch(SwitchId switch_id, std::vector<PortId> ports)
 {
-    return dependency_graph_.addSwitch(id, port_list);
+    dependency_graph_.addSwitch(switch_id, ports);
+
+    // Add special rules to the flow predictor
+    for (auto port_id : ports) {
+        auto src_rule = dependency_graph_.sourceRule(switch_id, port_id);
+        auto dst_rule = dependency_graph_.sinkRule(switch_id, port_id);
+        flow_predictor_.addRule(src_rule);
+        flow_predictor_.addRule(dst_rule);
+    }
+    auto table_miss_rule = dependency_graph_.tableMissRule(switch_id, 0);
+    flow_predictor_.addRule(table_miss_rule);
+
+    return switch_id;
 }
 
 void Detector::deleteSwitch(SwitchId id)
@@ -18,7 +31,13 @@ void Detector::deleteSwitch(SwitchId id)
 
 TableId Detector::addTable(SwitchId switch_id, TableId table_id)
 {
-    return dependency_graph_.addTable(switch_id, table_id);
+    dependency_graph_.addTable(switch_id, table_id);
+
+    // Add special rule to the flow predictor
+    auto table_miss_rule = dependency_graph_.tableMissRule(switch_id, table_id);
+    flow_predictor_.addRule(table_miss_rule);
+
+    return table_id;
 }
 
 void Detector::deleteTable(SwitchId switch_id, TableId table_id)
@@ -28,13 +47,13 @@ void Detector::deleteTable(SwitchId switch_id, TableId table_id)
 
 RuleInfo Detector::addRule(SwitchId switch_id, TableId table_id,
                            uint16_t priority, NetworkSpace& domain,
-                           std::vector<Action>& action_list)
+                           std::vector<Action>& actions)
 {
     // Create rule data
-    RulePtr rule = dependency_graph_.addRule(switch_id, table_id, priority,
-                                             domain, action_list);
+    auto rule = dependency_graph_.addRule(switch_id, table_id,
+                                          priority, domain, actions);
     
-    // Insert rule data in the flow predictor
+    // Insert rule in the flow predictor
     flow_predictor_.addRule(rule);
     
     // TODO: create error codes for RuleInfo

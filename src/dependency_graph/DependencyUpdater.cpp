@@ -408,6 +408,29 @@ void DependencyUpdater::deleteLink(SwitchId src_switch_id, PortId src_port_id,
 
 }
 
+DependencyPtr DependencyUpdater::getDependency(RuleId src_rule_id,
+                                               RuleId dst_rule_id)
+{
+    // TODO: CRITICAL - rewrite without brute-force!!!
+    auto src_rule = network_.getRule(src_rule_id);
+    for (auto dependency : src_rule->out_dependency_list_) {
+        if (dependency->dst_rule->id() == dst_rule_id) {
+            return dependency;
+        }
+    }
+    return nullptr;
+}
+
+std::list<DependencyPtr> DependencyUpdater::inDependencies(RulePtr rule)
+{
+    return rule->in_dependency_list_;
+}
+
+std::list<DependencyPtr> DependencyUpdater::outDependencies(RulePtr rule)
+{
+    return rule->out_dependency_list_;
+}
+
 std::map<std::pair<RuleId, RuleId>, DependencyPtr>
 DependencyUpdater::dependencies()
 {

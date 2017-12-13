@@ -15,6 +15,7 @@ class NetworkSpace
 {
 public:
     NetworkSpace();
+    NetworkSpace(const NetworkSpace& other);
     explicit NetworkSpace(PortId in_port);
     explicit NetworkSpace(const HeaderSpace& header);
     NetworkSpace(PortId in_port, const HeaderSpace& header);
@@ -24,8 +25,11 @@ public:
     bool empty() const {
         return in_port_ == SpecialPort::NONE || header_.empty();
     }
+
+    NetworkSpace& operator=(NetworkSpace&& other) noexcept;
     
     NetworkSpace& operator-=(const NetworkSpace& right);
+    NetworkSpace operator-(const NetworkSpace& right);
     NetworkSpace operator&(const NetworkSpace& right);
 
 private:

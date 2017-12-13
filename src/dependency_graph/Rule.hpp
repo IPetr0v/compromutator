@@ -23,19 +23,20 @@ typedef std::map<Priority, RuleMap, std::greater<Priority>> SortedRuleMap;
 
 enum class RuleType
 {
-    TABLE,
+    FLOW,
     GROUP,
+    BUCKET,
     SOURCE,
-    SINK,
-    CONTROLLER,
-    DROP
+    SINK
 };
 
 class Rule
 {
 public:
-    Rule(SwitchId switch_id, TableId table_id, uint16_t priority,
-         NetworkSpace& domain, std::vector<Action>& action_list);
+    Rule(RuleType type, SwitchId switch_id,
+         TableId table_id, uint16_t priority,
+         NetworkSpace& domain,
+         std::vector<Action> action_list);
     ~Rule();
 
     RuleType type() const {return type_;}
@@ -51,6 +52,7 @@ public:
     std::vector<Action> actions() const {return action_list_;}
     
     PortId inPort() const {domain_.inPort();}
+    uint16_t multiplier() const;
     NetworkSpace outDomain() const;
     
     friend class DependencyUpdater;
@@ -63,6 +65,8 @@ private:
     TableId table_id_;
     GroupId group_id_;
     RuleId id_;
+
+    static IdGenerator<RuleId> id_generator_;
     
     uint16_t priority_;
     NetworkSpace domain_;
@@ -85,24 +89,6 @@ struct Dependency
     RulePtr dst_rule;
     NetworkSpace domain;
     //TransferPtr transfer;
-};
-
-// Singleton for rule id generation
-class RuleIdGenerator
-{
-public:
-    static RuleId getId();
-    static void releaseId(RuleId id);
-
-    RuleIdGenerator(RuleIdGenerator const&) = delete;
-    RuleIdGenerator& operator= (RuleIdGenerator const&) = delete;
-
-private:
-    RuleIdGenerator();
-    ~RuleIdGenerator() = default;
-
-    RuleId last_id_;
-
 };
 
 class RuleIterator

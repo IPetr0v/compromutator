@@ -1,12 +1,15 @@
 #include "Rule.hpp"
 
-Rule::Rule(SwitchId switch_id, TableId table_id, uint16_t priority,
-           NetworkSpace& domain, std::vector<Action>& action_list):
-    switch_id_(switch_id), table_id_(table_id), priority_(priority),
-    domain_(domain), action_list_(action_list)
-{
-    id_ = RuleIdGenerator::getId();
+IdGenerator<RuleId> Rule::id_generator_;
 
+Rule::Rule(RuleType type, SwitchId switch_id,
+           TableId table_id, uint16_t priority,
+           NetworkSpace& domain,
+           std::vector<Action> action_list):
+    type_(type), switch_id_(switch_id), table_id_(table_id),
+    priority_(priority), domain_(domain), action_list_(action_list),
+    id_(id_generator_.getId())
+{
     // DEBUG LOG
     if (!action_list_.empty())
         std::cout<<"----- Rule "
@@ -28,12 +31,17 @@ Rule::Rule(SwitchId switch_id, TableId table_id, uint16_t priority,
 
 Rule::~Rule()
 {
-    RuleIdGenerator::releaseId(id_);
+    id_generator_.releaseId(id_);
 }
 
-// TODO: Delete this temporary solution
+uint16_t Rule::multiplier() const
+{
+    return action_list_.size();
+}
+
 NetworkSpace Rule::outDomain() const
 {
+    // TODO: Delete this temporary solution
     if (!action_list_.empty())
         return action_list_[0].transfer.apply(domain_);
     else
@@ -49,22 +57,6 @@ Dependency::Dependency(RulePtr _src_rule, RulePtr _dst_rule,
     // DEBUG LOG
     std::cout<<"Dependency "<<src_rule->id()<<"->"<<dst_rule->id()
              <<" ("<<domain.header()<<")"<<std::endl;
-}
-
-RuleIdGenerator::RuleIdGenerator()
-{
-    last_id_ = 1;
-}
-
-RuleId RuleIdGenerator::getId()
-{
-    static RuleIdGenerator generator;
-    return generator.last_id_++;
-}
-
-void RuleIdGenerator::releaseId(RuleId id)
-{
-    // TODO: implement release id
 }
 
 RuleIterator::RuleIterator(SortedRuleMap::iterator iterator,
