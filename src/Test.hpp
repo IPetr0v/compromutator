@@ -24,12 +24,12 @@ struct Link
 };
 using LinkList = std::vector<Link>;
 
-class Test
+class TestScenario
 {
 
 };
 
-class DependencyGraphTest : public Test
+class DependencyGraphTest
 {
 public:
     DependencyGraphTest() = default;

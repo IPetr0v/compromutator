@@ -8,6 +8,15 @@
 #include <algorithm>
 #include <vector>
 
+struct DependencyDiff
+{
+    void clear();
+
+    std::vector<std::pair<RuleId, RuleId>> new_edges;
+    std::vector<std::pair<RuleId, RuleId>> changed_edges;
+    std::vector<std::pair<RuleId, RuleId>> removed_edges;
+};
+
 class DependencyUpdater
 {
 public:
@@ -26,9 +35,13 @@ public:
     std::list<DependencyPtr> outDependencies(RulePtr rule);
     std::map<std::pair<RuleId, RuleId>, DependencyPtr> dependencies();
 
+    const DependencyDiff& getLatestDiff() const {return latest_diff_;}
+
 private:
     Network& network_;
     Topology& topology_;
+
+    DependencyDiff latest_diff_;
 
     // TODO: add SOURCE and TARGET rules
     

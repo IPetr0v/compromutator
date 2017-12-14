@@ -98,6 +98,11 @@ void DependencyGraph::deleteLink(SwitchId src_switch_id, PortId src_port_id,
     
 }
 
+const DependencyDiff& DependencyGraph::getLatestDiff() const
+{
+    return dependency_updater_.getLatestDiff();
+}
+
 RulePtr DependencyGraph::dropRule()
 {
     return network_.dropRule();

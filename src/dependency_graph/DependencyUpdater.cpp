@@ -1,5 +1,12 @@
 #include "DependencyUpdater.hpp"
 
+void DependencyDiff::clear()
+{
+    new_edges.clear();
+    changed_edges.clear();
+    removed_edges.clear();
+}
+
 DependencyUpdater::DependencyUpdater(Network& network, Topology& topology):
     network_(network), topology_(topology)
 {
@@ -37,6 +44,8 @@ DependencyPtr DependencyUpdater::add_dependency(RulePtr src_rule,
     // TODO: push_front is a hack for iteration and addition at the same time!
     src_rule->out_dependency_list_.push_front(dependency);
     dst_rule->in_dependency_list_.push_front(dependency);
+
+    latest_diff_.new_edges.emplace_back(src_rule->id(), dst_rule->id());
     return dependency;
 }
 
@@ -44,6 +53,8 @@ void DependencyUpdater::delete_dependency(DependencyPtr dependency)
 {
     RulePtr src_rule = dependency->src_rule;
     RulePtr dst_rule = dependency->dst_rule;
+    latest_diff_.removed_edges.emplace_back(src_rule->id(), dst_rule->id());
+
     std::list<DependencyPtr>& out_list = src_rule->out_dependency_list_;
     std::list<DependencyPtr>& in_list = dst_rule->in_dependency_list_;
 
@@ -231,6 +242,8 @@ void DependencyUpdater::add_table_dependencies(RulePtr new_rule)
                      <<std::endl;
             
             lower_dependency->domain -= incoming_domain;
+            latest_diff_.changed_edges.emplace_back(prev_rule->id(),
+                                                    new_rule->id());
 
             // DEBUG LOG
             std::cout<<"        / ("<<lower_domain.header()
@@ -362,6 +375,8 @@ void DependencyUpdater::delete_out_dependencies(RulePtr old_rule)
 
 RulePtr DependencyUpdater::addRule(RulePtr new_rule)
 {
+    latest_diff_.clear();
+
     // Create dependencies from the new rule to output tables
     add_out_dependencies(new_rule);
     
@@ -377,6 +392,8 @@ RulePtr DependencyUpdater::addRule(RulePtr new_rule)
 
 void DependencyUpdater::deleteRule(RulePtr old_rule)
 {
+    latest_diff_.clear();
+
     delete_table_dependencies(old_rule);
     delete_out_dependencies(old_rule);
 }
@@ -384,6 +401,8 @@ void DependencyUpdater::deleteRule(RulePtr old_rule)
 void DependencyUpdater::addLink(SwitchId src_switch_id, PortId src_port_id,
                                 SwitchId dst_switch_id, PortId dst_port_id)
 {
+    latest_diff_.clear();
+
     // Delete old source/sink dependencies
     auto src_source_rule = network_.sourceRule(src_switch_id, src_port_id);
     auto src_sink_rule = network_.sinkRule(src_switch_id, src_port_id);
@@ -405,7 +424,7 @@ void DependencyUpdater::addLink(SwitchId src_switch_id, PortId src_port_id,
 void DependencyUpdater::deleteLink(SwitchId src_switch_id, PortId src_port_id,
                                    SwitchId dst_switch_id, PortId dst_port_id)
 {
-
+    latest_diff_.clear();
 }
 
 DependencyPtr DependencyUpdater::getDependency(RuleId src_rule_id,

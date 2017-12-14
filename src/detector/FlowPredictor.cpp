@@ -1,6 +1,31 @@
 #include "FlowPredictor.hpp"
 
+#include <algorithm>
 #include <queue>
+
+InterceptorDiff& InterceptorDiff::operator+=(const InterceptorDiff& other)
+{
+    // Delete nonexisting rules
+    auto it = std::remove_if(rules_to_add.begin(),
+                             rules_to_add.end(),
+                             [other](RulePtr rule) {
+                                 for (const auto id : other.rules_to_delete) {
+                                     if (id == rule->id()) {
+                                         return true;
+                                     }
+                                 }
+                                 return false;
+                             });
+    rules_to_add.erase(it, rules_to_add.end());
+
+    rules_to_add.insert(rules_to_add.end(),
+                        other.rules_to_add.begin(),
+                        other.rules_to_add.end());
+    rules_to_delete.insert(rules_to_delete.end(),
+                           other.rules_to_delete.begin(),
+                           other.rules_to_delete.end());
+    return *this;
+}
 
 FlowPredictor::FlowPredictor(DependencyGraph& dependency_graph):
     dependency_graph_(dependency_graph)
@@ -8,7 +33,7 @@ FlowPredictor::FlowPredictor(DependencyGraph& dependency_graph):
     
 }
 
-InterceptorDiff FlowPredictor::updatePathScan(const Diff& diff)
+InterceptorDiff FlowPredictor::updatePathScan(const DependencyDiff& diff)
 {
     for (const auto& removed_edge : diff.removed_edges) {
         delete_subtrees(removed_edge);
@@ -47,30 +72,6 @@ void FlowPredictor::delete_subtrees(std::pair<RuleId, RuleId> edge)
     auto nodes_to_delete = path_scan_.getNodes(src_rule_id);
     for (const auto& node : nodes_to_delete) {
         delete_subtree(node);
-    }
-}
-
-std::vector<RulePtr> FlowPredictor::addRule(RulePtr new_rule)
-{
-    if (new_rule->type() == RuleType::SINK) {
-        auto new_root = path_scan_.addRootNode(new_rule);
-        add_subtree(new_root);
-    }
-    else {
-        for (const auto& edge : dependency_graph_.outDependencies(new_rule)) {
-            auto dst_rule = edge->dst_rule;
-
-            // If the destination rule has been already added
-            auto dst_nodes = path_scan_.getNodes(dst_rule->id());
-            for (auto dst_node : dst_nodes) {
-                auto result = add_child_node(dst_node, edge->domain, new_rule);
-                auto success = result.second;
-                if (success) {
-                    auto new_child = result.first;
-                    add_subtree(new_child);
-                }
-            }
-        }
     }
 }
 

@@ -67,6 +67,7 @@ HeaderSpace& HeaderSpace::operator=(HeaderSpace&& other) noexcept
 {
     hs_free(hs_);
     hs_ = other.hs_;
+    other.hs_ = nullptr;
     return *this;
 }
 

@@ -27,6 +27,8 @@ public:
     void deleteLink(SwitchId src_switch_id, PortId src_port_id,
                     SwitchId dst_switch_id, PortId dst_port_id);
 
+    const DependencyDiff& getLatestDiff() const;
+
     RulePtr dropRule();
     RulePtr controllerRule();
     RulePtr sourceRule(SwitchId switch_id, PortId port_id);
