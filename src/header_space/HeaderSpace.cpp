@@ -41,7 +41,12 @@ HeaderSpace::HeaderSpace(struct hs* hs, int length):
 
 HeaderSpace::~HeaderSpace()
 {
-    hs_free(hs_);
+    this->clear();
+}
+
+void HeaderSpace::clear()
+{
+    if (hs_ != nullptr) hs_free(hs_);
 }
 
 bool HeaderSpace::operator==(const HeaderSpace &other) const
@@ -57,7 +62,7 @@ bool HeaderSpace::operator!=(const HeaderSpace &other) const
 
 HeaderSpace& HeaderSpace::operator=(const HeaderSpace& other)
 {
-    hs_free(hs_);
+    this->clear();
     hs_ = hs_create(other.length_);
     hs_copy(hs_, other.hs_);
     return *this;
@@ -65,7 +70,7 @@ HeaderSpace& HeaderSpace::operator=(const HeaderSpace& other)
 
 HeaderSpace& HeaderSpace::operator=(HeaderSpace&& other) noexcept
 {
-    hs_free(hs_);
+    this->clear();
     hs_ = other.hs_;
     other.hs_ = nullptr;
     return *this;
@@ -89,7 +94,7 @@ HeaderSpace& HeaderSpace::operator&=(const HeaderSpace& right)
         hs_copy(hs_, intersection);
     }
     else {
-        hs_free(hs_);
+        this->clear();
         hs_ = hs_create(length_);
     }
     return *this;

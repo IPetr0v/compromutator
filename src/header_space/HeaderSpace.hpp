@@ -48,6 +48,7 @@ public:
 
 private:
     HeaderSpace(struct hs* hs, int length);
+    void clear();
 
     int length_;
     struct hs* hs_;
