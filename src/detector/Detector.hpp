@@ -26,11 +26,11 @@ public:
                             uint16_t priority, NetworkSpace& domain,
                             std::vector<Action>& actions);
     InterceptorDiff deleteRule(RuleInfo rule_info);
-    
-    void addLink(SwitchId src_switch_id, PortId src_port_id,
-                 SwitchId dst_switch_id, PortId dst_port_id);
-    void deleteLink(SwitchId src_switch_id, PortId src_port_id,
-                    SwitchId dst_switch_id, PortId dst_port_id);
+
+    InterceptorDiff addLink(SwitchId src_switch_id, PortId src_port_id,
+                            SwitchId dst_switch_id, PortId dst_port_id);
+    InterceptorDiff deleteLink(SwitchId src_switch_id, PortId src_port_id,
+                               SwitchId dst_switch_id, PortId dst_port_id);
 
 private:
     DependencyGraph dependency_graph_;

@@ -51,7 +51,7 @@ public:
     NetworkSpace domain() const {return domain_;}
     std::vector<Action> actions() const {return action_list_;}
     
-    PortId inPort() const {domain_.inPort();}
+    PortId inPort() const {return domain_.inPort();}
     uint16_t multiplier() const;
     NetworkSpace outDomain() const;
     
@@ -65,12 +65,12 @@ private:
     TableId table_id_;
     GroupId group_id_;
     RuleId id_;
-
-    static IdGenerator<RuleId> id_generator_;
     
     uint16_t priority_;
     NetworkSpace domain_;
     std::vector<Action> action_list_;
+
+    static IdGenerator<RuleId> id_generator_;
     
     std::list<DependencyPtr> in_table_dependency_list_;
     std::list<DependencyPtr> out_table_dependency_list_;

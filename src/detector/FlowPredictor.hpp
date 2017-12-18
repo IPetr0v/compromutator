@@ -28,25 +28,21 @@ class FlowPredictor
 public:
     explicit FlowPredictor(DependencyGraph& dependency_graph);
 
-    InterceptorDiff updatePathScan(const DependencyDiff& diff);
-    void deleteRule(RulePtr rule);
-
+    InterceptorDiff update(const DependencyDiff& dependency_diff);
     uint64_t getCounter(RulePtr rule);
+
+    friend class Test;
 
 private:
     DependencyGraph& dependency_graph_;
     PathScan path_scan_;
 
-    /*NodeGraph node_graph_;
-    std::map<RuleId, std::vector<NodePtr>> node_map_;
-    std::map<RuleId, uint64_t> counter_map_;*/
-
     std::vector<NodePtr> add_root(RulePtr rule);
     std::pair<NodeDescriptor, bool> add_child_node(NodeDescriptor parent,
                                                    NetworkSpace edge_domain,
                                                    RulePtr rule);
-    void add_subtrees(std::pair<RuleId, RuleId> edge);
-    void delete_subtrees(std::pair<RuleId, RuleId> edge);
+    InterceptorDiff add_subtrees(std::pair<RuleId, RuleId> edge);
+    InterceptorDiff delete_subtrees(std::pair<RuleId, RuleId> edge);
     InterceptorDiff add_subtree(NodeDescriptor root);
     InterceptorDiff delete_subtree(NodeDescriptor root);
 

@@ -105,7 +105,7 @@ public:
     //VertexDescriptor addVertex(VertexDataType data = VertexDataType());
     VertexDescriptor addVertex(VertexDataType&& data)
     {
-        vertex_list_.emplace_back(std::move(data));
+        return vertex_list_.emplace(vertex_list_.end(), std::move(data));
     }
 
     void clearVertex(VertexDescriptor vertex)
@@ -137,6 +137,7 @@ public:
         auto edge = edge_list_.emplace(edge_list_.end(), std::move(data));
         src_vertex->out_adjacency_list.emplace_back(dst_vertex, edge);
         dst_vertex->in_adjacency_list.emplace_back(src_vertex, edge);
+        return edge;
     }
 
     void deleteEdge(VertexDescriptor src_vertex,

@@ -13,7 +13,7 @@ InterceptorDiff Detector::addSwitch(SwitchId switch_id,
     dependency_graph_.addSwitch(switch_id, ports);
 
     auto diff = dependency_graph_.getLatestDiff();
-    return flow_predictor_.updatePathScan(diff);
+    return flow_predictor_.update(diff);
 }
 
 InterceptorDiff Detector::deleteSwitch(SwitchId id)
@@ -21,7 +21,7 @@ InterceptorDiff Detector::deleteSwitch(SwitchId id)
     dependency_graph_.deleteSwitch(id);
 
     auto diff = dependency_graph_.getLatestDiff();
-    return flow_predictor_.updatePathScan(diff);
+    return flow_predictor_.update(diff);
 }
 
 InterceptorDiff Detector::addTable(SwitchId switch_id, TableId table_id)
@@ -31,7 +31,7 @@ InterceptorDiff Detector::addTable(SwitchId switch_id, TableId table_id)
     // Add special rule to the flow predictor
     //auto table_miss_rule = dependency_graph_.tableMissRule(switch_id, table_id);
     auto diff = dependency_graph_.getLatestDiff();
-    return flow_predictor_.updatePathScan(diff);
+    return flow_predictor_.update(diff);
 }
 
 InterceptorDiff Detector::deleteTable(SwitchId switch_id, TableId table_id)
@@ -39,7 +39,7 @@ InterceptorDiff Detector::deleteTable(SwitchId switch_id, TableId table_id)
     dependency_graph_.deleteTable(switch_id, table_id);
 
     auto diff = dependency_graph_.getLatestDiff();
-    return flow_predictor_.updatePathScan(diff);
+    return flow_predictor_.update(diff);
 }
 
 InterceptorDiff Detector::addRule(SwitchId switch_id, TableId table_id,
@@ -52,7 +52,7 @@ InterceptorDiff Detector::addRule(SwitchId switch_id, TableId table_id,
     
     // Insert rule in the flow predictor
     auto diff = dependency_graph_.getLatestDiff();
-    return flow_predictor_.updatePathScan(diff);
+    return flow_predictor_.update(diff);
 }
 
 InterceptorDiff Detector::deleteRule(RuleInfo rule_info)
@@ -61,18 +61,23 @@ InterceptorDiff Detector::deleteRule(RuleInfo rule_info)
                                  rule_info.table_id,
                                  rule_info.rule_id);
     auto diff = dependency_graph_.getLatestDiff();
-    return flow_predictor_.updatePathScan(diff);
+    return flow_predictor_.update(diff);
 }
 
-void Detector::addLink(SwitchId src_switch_id, PortId src_port_id,
-                       SwitchId dst_switch_id, PortId dst_port_id)
+InterceptorDiff Detector::addLink(SwitchId src_switch_id, PortId src_port_id,
+                                  SwitchId dst_switch_id, PortId dst_port_id)
 {
     dependency_graph_.addLink(src_switch_id, src_port_id,
                               dst_switch_id, dst_port_id);
+    auto diff = dependency_graph_.getLatestDiff();
+    return flow_predictor_.update(diff);
 }
 
-void Detector::deleteLink(SwitchId src_switch_id, PortId src_port_id,
-                          SwitchId dst_switch_id, PortId dst_port_id)
+InterceptorDiff Detector::deleteLink(SwitchId src_switch_id, PortId src_port_id,
+                                     SwitchId dst_switch_id, PortId dst_port_id)
 {
-    
+    dependency_graph_.deleteLink(src_switch_id, src_port_id,
+                                 dst_switch_id, dst_port_id);
+    auto diff = dependency_graph_.getLatestDiff();
+    return flow_predictor_.update(diff);
 }

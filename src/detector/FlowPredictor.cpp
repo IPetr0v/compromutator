@@ -33,24 +33,27 @@ FlowPredictor::FlowPredictor(DependencyGraph& dependency_graph):
     
 }
 
-InterceptorDiff FlowPredictor::updatePathScan(const DependencyDiff& diff)
+InterceptorDiff FlowPredictor::update(const DependencyDiff& dependency_diff)
 {
-    for (const auto& removed_edge : diff.removed_edges) {
-        delete_subtrees(removed_edge);
+    InterceptorDiff diff;
+    for (const auto& removed_edge : dependency_diff.removed_edges) {
+        diff += delete_subtrees(removed_edge);
     }
 
-    for (const auto& changed_edge : diff.changed_edges) {
-        delete_subtrees(changed_edge);
-        add_subtrees(changed_edge);
+    for (const auto& changed_edge : dependency_diff.changed_edges) {
+        diff += delete_subtrees(changed_edge);
+        diff += add_subtrees(changed_edge);
     }
 
-    for (const auto& new_edge : diff.new_edges) {
-        add_subtrees(new_edge);
+    for (const auto& new_edge : dependency_diff.new_edges) {
+        diff += add_subtrees(new_edge);
     }
+    return diff;
 }
 
-void FlowPredictor::add_subtrees(std::pair<RuleId, RuleId> edge)
+InterceptorDiff FlowPredictor::add_subtrees(std::pair<RuleId, RuleId> edge)
 {
+    InterceptorDiff diff;
     auto dst_rule_id = edge.second;
     auto dst_nodes = path_scan_.getNodes(dst_rule_id);
     auto new_edge_ptr = dependency_graph_.getDependency(edge.first,
@@ -61,18 +64,21 @@ void FlowPredictor::add_subtrees(std::pair<RuleId, RuleId> edge)
         auto success = result.second;
         if (success) {
             auto new_child = result.first;
-            add_subtree(new_child);
+            diff += add_subtree(new_child);
         }
     }
+    return diff;
 }
 
-void FlowPredictor::delete_subtrees(std::pair<RuleId, RuleId> edge)
+InterceptorDiff FlowPredictor::delete_subtrees(std::pair<RuleId, RuleId> edge)
 {
+    InterceptorDiff diff;
     auto src_rule_id = edge.first;
     auto nodes_to_delete = path_scan_.getNodes(src_rule_id);
     for (const auto& node : nodes_to_delete) {
-        delete_subtree(node);
+        diff += delete_subtree(node);
     }
+    return diff;
 }
 
 std::pair<NodeDescriptor, bool>
@@ -101,6 +107,8 @@ FlowPredictor::add_child_node(NodeDescriptor parent,
 
 InterceptorDiff FlowPredictor::add_subtree(NodeDescriptor root)
 {
+    InterceptorDiff diff;
+
     std::queue<NodeDescriptor> node_queue;
     node_queue.push(root);
     while (not node_queue.empty()) {
@@ -120,16 +128,20 @@ InterceptorDiff FlowPredictor::add_subtree(NodeDescriptor root)
                     node_queue.push(new_child);
                 }
                 else {
-                    split_base_nodes(new_child);
+                    diff += split_base_nodes(new_child);
                 }
             }
         }
         node_queue.pop();
     }
+
+    return diff;
 }
 
 InterceptorDiff FlowPredictor::delete_subtree(NodeDescriptor root)
 {
+    InterceptorDiff diff;
+
     std::queue<NodeDescriptor> node_queue;
     node_queue.push(root);
     while (not node_queue.empty()) {
@@ -143,7 +155,7 @@ InterceptorDiff FlowPredictor::delete_subtree(NodeDescriptor root)
                 if (child_rule->type() != RuleType::SOURCE) {
                     node_queue.push(child);
                 } else {
-                    unite_base_nodes(child);
+                    diff += unite_base_nodes(child);
                 }
             }
         }
@@ -152,6 +164,8 @@ InterceptorDiff FlowPredictor::delete_subtree(NodeDescriptor root)
         path_scan_.deleteNode(parent_node);
         node_queue.pop();
     }
+
+    return diff;
 }
 
 InterceptorDiff FlowPredictor::split_base_nodes(NodeDescriptor new_source_node)
@@ -159,6 +173,8 @@ InterceptorDiff FlowPredictor::split_base_nodes(NodeDescriptor new_source_node)
     InterceptorDiff diff;
 
     auto source_rule = path_scan_[new_source_node].rule;
+    assert(source_rule->type() == RuleType::SOURCE);
+
     auto base_nodes = path_scan_.getBaseNodes(source_rule->id());
     for (auto base_node : base_nodes) {
         auto domain = path_scan_[base_node].domain &
@@ -166,9 +182,9 @@ InterceptorDiff FlowPredictor::split_base_nodes(NodeDescriptor new_source_node)
         if (not domain.empty()) {
             auto diff_domain = path_scan_[base_node].domain -
                                path_scan_[new_source_node].domain;
-            // TODO: check if diff_domain is empty
+            // New node occupies the whole domain
             if (diff_domain.empty()) {
-
+                path_scan_.addEdge(base_node, new_source_node);
             }
             else {
                 auto old_rule = path_scan_[base_node].rule;
@@ -226,18 +242,6 @@ InterceptorDiff FlowPredictor::unite_base_nodes(NodeDescriptor old_source_node)
     return diff;
 }
 
-void FlowPredictor::deleteRule(RulePtr rule)
-{
-    /*auto it = node_map_.find(rule->id());
-    if (it == node_map_.end()) {
-        auto nodes = it->second;
-        for (auto node : nodes) {
-
-        }
-        delete_nodes(rule);
-    }*/
-}
-
 void FlowPredictor::delete_nodes(RulePtr rule)
 {
 
@@ -286,6 +290,7 @@ uint64_t FlowPredictor::getCounter(RulePtr rule)
         }
     }
     return counter;*/
+    return 0;
 }
 
 void FlowPredictor::update_counter(NodePtr node)

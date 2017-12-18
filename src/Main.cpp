@@ -16,8 +16,12 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-    DependencyGraphTest graph_test;
+    Test simple_test;
 
     // Run tests
-    graph_test.simpleDependencyTest();
+    //simple_test.simpleDependencyTest();
+    std::cout<<"latestDiffTest = "
+             <<simple_test.latestDiffTest()<<std::endl;
+    std::cout<<"simpleFlowPredictorTest = "
+             <<simple_test.simpleFlowPredictorTest()<<std::endl;
 }

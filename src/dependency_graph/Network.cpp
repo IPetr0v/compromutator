@@ -289,15 +289,25 @@ std::vector<RulePtr> Network::rules()
 RulePtr Network::getRule(RuleId rule_id)
 {
     // TODO: CRITICAL rewrite without brute-force
+    auto controller = this->controller_rule_;
+    if (rule_id == controller->id()) return controller;
+    auto drop = this->drop_rule_;
+    if (rule_id == drop->id()) return drop;
+
     for (const auto sw_it : switch_map_) {
         const auto sw = sw_it.second;
         for (const auto table : sw->tables()) {
             auto rule = table->getRule(rule_id);
-            if (nullptr != rule) {
-                return rule;
-            }
+            if (nullptr != rule) return rule;
+        }
+        for (const auto port : sw->ports()) {
+            auto source = port->sourceRule();
+            if (rule_id == source->id()) return source;
+            auto sink = port->sinkRule();
+            if (rule_id == sink->id()) return sink;
         }
     }
+    return nullptr;
 }
 
 RulePtr Network::getRule(SwitchId switch_id, TableId table_id, RuleId rule_id)

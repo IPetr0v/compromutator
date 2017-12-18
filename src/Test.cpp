@@ -1,119 +1,14 @@
 #include "Test.hpp"
 
-void DependencyGraphTest::create_switches(SwitchList switches, PortList ports)
-{
-    for (auto switch_id : switches) {
-        graph_.addSwitch(switch_id, ports);
-    }
-}
-
-void DependencyGraphTest::create_topology(LinkList links)
-{
-    for (auto link : links) {
-        topology_[{link.src_switch_id, link.dst_switch_id}] = link.src_port_id;
-        topology_[{link.dst_switch_id, link.src_switch_id}] = link.dst_port_id;
-        graph_.addLink(link.src_switch_id, link.src_port_id,
-                       link.dst_switch_id, link.dst_port_id);
-    }
-}
-
-RuleId DependencyGraphTest::add_forward_rule(SwitchId src_switch_id,
-                                             SwitchId dst_switch_id,
-                                             Priority priority,
-                                             HeaderSpace header)
-{
-    // Define forward rule
-    NetworkSpace domain;
-    ActionList actions;
-    actions.emplace_back(Action());
-    actions[0].type = ActionType::PORT;
-
-    // Add forward rule
-    domain = NetworkSpace(1, header);
-    actions[0].port_id = topology_[{src_switch_id, dst_switch_id}];
-    auto rule = graph_.addRule(src_switch_id, front_table, priority,
-                               domain, actions);
-    return rule->id();
-}
-
-RuleId DependencyGraphTest::add_end_rule(SwitchId switch_id,
-                                         Priority priority,
-                                         HeaderSpace header)
-{
-    // Define end rule
-    NetworkSpace domain;
-    ActionList actions;
-    actions.emplace_back(Action());
-    actions[0].type = ActionType::PORT;
-    actions[0].port_id = 1;
-
-    // Add end rule
-    domain = NetworkSpace(header);
-    auto rule = graph_.addRule(switch_id, front_table, priority,
-                               domain, actions);
-    return rule->id();
-}
-
-bool DependencyGraphTest::simpleDependencyTest()
-{
-    SwitchList switches = {1,2,3,4};
-    PortList ports = {1,2,3,4};
-    LinkList links = {{1,2, 3,2},
-                      {1,3, 4,3},
-                      {1,4, 2,4},
-                      {2,3, 3,3},
-                      {2,2, 4,2},
-                      {4,4, 3,4}};
-    std::map<int, RuleId> rules;
-    std::map<RuleId, int> inverse_rule_map;
-
-    std::cout<<"Construct dependency graph"<<std::endl;
-
-    // Create network
-    create_switches(switches, ports);
-    create_topology(links);
-
-    // Add table miss rules
-    rules[1] = graph_.tableMissRule(1, 0)->id();
-    rules[2] = graph_.tableMissRule(2, 0)->id();
-    rules[3] = graph_.tableMissRule(3, 0)->id();
-    rules[4] = graph_.tableMissRule(4, 0)->id();
-
-    // Add forward rules
-    // 1 -> 3
-    rules[5] = add_forward_rule(1, 3, 1, HeaderSpace("1111xxxx"));
-    // 1 -> 4
-    rules[6] = add_forward_rule(1, 4, 1, HeaderSpace("0000xxxx"));
-    // 1 -> 2
-    rules[7] = add_forward_rule(1, 2, 1, HeaderSpace("0011xxxx"));
-    // 2 -> 3
-    rules[8] = add_forward_rule(2, 3, 1, HeaderSpace("001111xx"));
-    // 2 -> 4
-    rules[9] = add_forward_rule(2, 4, 1, HeaderSpace("001100xx"));
-
-    // Add end rules
-    // 3 priority(3)
-    rules[10] = add_end_rule(3, 3, HeaderSpace("xx11000x"));
-    // 3 priority(2)
-    rules[11] = add_end_rule(3, 2, HeaderSpace("xx11111x"));
-    // 3 priority(1)
-    rules[12] = add_end_rule(3, 1, HeaderSpace("1111xxxx"));
-
-    // Get special rules
-    rules[13] = graph_.dropRule()->id();
-    rules[14] = graph_.sourceRule(1, 1)->id();
-    rules[15] = graph_.sourceRule(2, 1)->id();
-    rules[16] = graph_.sourceRule(3, 1)->id();
-    rules[17] = graph_.sourceRule(4, 1)->id();
-    rules[18] = graph_.sinkRule(3, 1)->id();
-
-    for (const auto& rule_pair : rules) {
-        inverse_rule_map[rule_pair.second] = rule_pair.first;
-    }
-    std::cout<<"Construction finished"<<std::endl;
-
-    // Define anticipated dependencies
-    std::map<std::pair<RuleId, RuleId>, HeaderSpace> anticipated_dependencies =
+SwitchList switches = {1,2,3,4};
+PortList ports = {1,2,3,4};
+LinkList links = {{1,2, 3,2},
+                  {1,3, 4,3},
+                  {1,4, 2,4},
+                  {2,3, 3,3},
+                  {2,2, 4,2},
+                  {4,4, 3,4}};
+std::map<std::pair<RuleId, RuleId>, HeaderSpace> anticipated_dependencies =
     {
         // Dependencies
         // 1 -> 3
@@ -190,6 +85,110 @@ bool DependencyGraphTest::simpleDependencyTest()
         {{12, 18}, HeaderSpace("1111xxxx")},
     };
 
+void Test::create_switches(SwitchList switches, PortList ports)
+{
+    for (auto switch_id : switches) {
+        graph_.addSwitch(switch_id, ports);
+    }
+}
+
+void Test::create_topology(LinkList links)
+{
+    for (auto link : links) {
+        topology_[{link.src_switch_id, link.dst_switch_id}] = link.src_port_id;
+        topology_[{link.dst_switch_id, link.src_switch_id}] = link.dst_port_id;
+        graph_.addLink(link.src_switch_id, link.src_port_id,
+                       link.dst_switch_id, link.dst_port_id);
+    }
+}
+
+RuleId Test::add_forward_rule(SwitchId src_switch_id,
+                              SwitchId dst_switch_id,
+                              Priority priority,
+                              HeaderSpace header)
+{
+    // Define forward rule
+    NetworkSpace domain;
+    ActionList actions;
+    actions.emplace_back(Action());
+    actions[0].type = ActionType::PORT;
+
+    // Add forward rule
+    domain = NetworkSpace(1, header);
+    actions[0].port_id = topology_[{src_switch_id, dst_switch_id}];
+    auto rule = graph_.addRule(src_switch_id, front_table, priority,
+                               domain, actions);
+    return rule->id();
+}
+
+RuleId Test::add_end_rule(SwitchId switch_id,
+                          Priority priority,
+                          HeaderSpace header)
+{
+    // Define end rule
+    NetworkSpace domain;
+    ActionList actions;
+    actions.emplace_back(Action());
+    actions[0].type = ActionType::PORT;
+    actions[0].port_id = 1;
+
+    // Add end rule
+    domain = NetworkSpace(header);
+    auto rule = graph_.addRule(switch_id, front_table, priority,
+                               domain, actions);
+    return rule->id();
+}
+
+bool Test::simpleDependencyTest()
+{
+    std::map<int, RuleId> rules;
+    std::map<RuleId, int> inverse_rule_map;
+
+    std::cout<<"Construct dependency graph"<<std::endl;
+
+    // Create network
+    create_switches(switches, ports);
+    create_topology(links);
+
+    // Add table miss rules
+    rules[1] = graph_.tableMissRule(1, 0)->id();
+    rules[2] = graph_.tableMissRule(2, 0)->id();
+    rules[3] = graph_.tableMissRule(3, 0)->id();
+    rules[4] = graph_.tableMissRule(4, 0)->id();
+
+    // Add forward rules
+    // 1 -> 3
+    rules[5] = add_forward_rule(1, 3, 1, HeaderSpace("1111xxxx"));
+    // 1 -> 4
+    rules[6] = add_forward_rule(1, 4, 1, HeaderSpace("0000xxxx"));
+    // 1 -> 2
+    rules[7] = add_forward_rule(1, 2, 1, HeaderSpace("0011xxxx"));
+    // 2 -> 3
+    rules[8] = add_forward_rule(2, 3, 1, HeaderSpace("001111xx"));
+    // 2 -> 4
+    rules[9] = add_forward_rule(2, 4, 1, HeaderSpace("001100xx"));
+
+    // Add end rules
+    // 3 priority(3)
+    rules[10] = add_end_rule(3, 3, HeaderSpace("xx11000x"));
+    // 3 priority(2)
+    rules[11] = add_end_rule(3, 2, HeaderSpace("xx11111x"));
+    // 3 priority(1)
+    rules[12] = add_end_rule(3, 1, HeaderSpace("1111xxxx"));
+
+    // Get special rules
+    rules[13] = graph_.dropRule()->id();
+    rules[14] = graph_.sourceRule(1, 1)->id();
+    rules[15] = graph_.sourceRule(2, 1)->id();
+    rules[16] = graph_.sourceRule(3, 1)->id();
+    rules[17] = graph_.sourceRule(4, 1)->id();
+    rules[18] = graph_.sinkRule(3, 1)->id();
+
+    for (const auto& rule_pair : rules) {
+        inverse_rule_map[rule_pair.second] = rule_pair.first;
+    }
+    std::cout<<"Construction finished"<<std::endl;
+
     std::cout<<"Start dependency check"<<std::endl;
 
     // Check dependencies
@@ -246,4 +245,79 @@ bool DependencyGraphTest::simpleDependencyTest()
         std::cout<<"Dependency check success"<<std::endl;
     else
         std::cout<<"Dependency check failed"<<std::endl;
+
+    return dependency_check_success;
+}
+
+bool Test::latestDiffTest()
+{
+    bool success = true;
+    FlowPredictor flow_predictor(graph_);
+    InterceptorDiff diff;
+
+    create_switches({1}, {1,2});
+    diff = flow_predictor.update(graph_.getLatestDiff());
+    success &= checkDomains(diff.rules_to_add, {HeaderSpace("xxxxxxxx")});
+
+    add_end_rule(1, 1, HeaderSpace("xxxx0000"));
+    diff = flow_predictor.update(graph_.getLatestDiff());
+    success &= checkDomains(diff.rules_to_add,
+                            {HeaderSpace("xxxx0000"),
+                             HeaderSpace("xxxxxxxx") - HeaderSpace("xxxx0000")});
+
+    return success;
+}
+
+bool Test::simpleFlowPredictorTest()
+{
+    bool success = true;
+    InterceptorDiff diff;
+    std::map<int, RuleId> rules;
+    FlowPredictor flow_predictor(graph_);
+
+    create_switches({1,2}, {1,2});
+    create_topology({{1,2, 2,2}});
+    auto deps = graph_.dependencies();
+    DependencyDiff initial_diff;
+    for (auto dep : deps) {
+        initial_diff.new_edges.push_back(dep.first);
+    }
+    diff = flow_predictor.update(graph_.getLatestDiff());
+
+    rules[1] = graph_.sourceRule(1, 1)->id();
+    rules[2] = graph_.sinkRule(2, 1)->id();
+    rules[3] = graph_.dropRule()->id();
+    rules[4] = graph_.tableMissRule(1, 0)->id();
+    rules[5] = graph_.tableMissRule(2, 0)->id();
+
+    rules[6] = add_forward_rule(1, 2, 2, HeaderSpace("00000011"));
+    diff = flow_predictor.update(graph_.getLatestDiff());
+
+    rules[7] = add_forward_rule(1, 2, 1, HeaderSpace("000000xx"));
+    diff = flow_predictor.update(graph_.getLatestDiff());
+
+    rules[8] = add_end_rule(2, 1, HeaderSpace("0000001x"));
+    diff = flow_predictor.update(graph_.getLatestDiff());
+
+    return success;
+}
+
+bool Test::checkDomains(std::vector<RulePtr> rules,
+                        std::vector<HeaderSpace> domains) const
+{
+    for (auto rules_it = rules.begin(); rules_it != rules.end();) {
+        const auto& first_domain = (*rules_it)->domain().header();
+        auto second_it = std::find_if(domains.begin(), domains.end(),
+            [first_domain](const HeaderSpace& second_domain) -> bool {
+                return first_domain == second_domain;
+            });
+        if (second_it != domains.end())
+            rules.erase(rules_it);
+        else
+            return false;
+    }
+    if (rules.empty())
+        return true;
+    else
+        return false;
 }

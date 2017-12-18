@@ -2,7 +2,7 @@
 
 Node::Node(RulePtr rule, NetworkSpace domain, uint16_t multiplier) :
     rule(rule), domain(domain), multiplier(multiplier), counter(0),
-    descriptor_(NodeDescriptor()), is_interceptor_(false)
+    descriptor_(NodeDescriptor()), is_base_(false)
 {
 
 }
@@ -10,7 +10,7 @@ Node::Node(RulePtr rule, NetworkSpace domain, uint16_t multiplier) :
 Node::Node(Node&& other) noexcept :
     rule(other.rule), domain(std::move(other.domain)),
     multiplier(other.multiplier), counter(other.counter),
-    descriptor_(other.descriptor_), is_interceptor_(other.is_interceptor_)
+    descriptor_(other.descriptor_), is_base_(other.is_base_)
 {
 
 }
@@ -22,7 +22,7 @@ Node& Node::operator=(Node&& other) noexcept
     multiplier = other.multiplier;
     counter = other.counter;
     descriptor_ = other.descriptor_;
-    is_interceptor_ = other.is_interceptor_;
+    is_base_ = other.is_base_;
     return *this;
 }
 
@@ -64,7 +64,8 @@ NodeDescriptor PathScan::addChildNode(NodeDescriptor parent, RulePtr rule,
 NodeDescriptor PathScan::addBaseNode(RulePtr rule, NetworkSpace domain)
 {
     auto new_base_node = add_node(rule, domain, 1);
-    node_graph_[new_base_node].is_interceptor_ = true;
+    node_graph_[new_base_node].is_base_ = true;
+    base_node_map_[rule->id()].push_back(new_base_node);
     return new_base_node;
 }
 
@@ -80,10 +81,28 @@ NodeDescriptor PathScan::add_node(RulePtr rule, NetworkSpace domain,
     return descriptor;
 }
 
-void PathScan::deleteNode(NodeDescriptor node)
+void PathScan::deleteNode(NodeDescriptor node_desc)
 {
-    delete_from_node_map(node);
-    node_graph_.deleteVertex(node);
+    // TODO: implement MapToVector struct
+    auto& node = node_graph_[node_desc];
+    if (node.is_base_) {
+        auto it = base_node_map_.find(node.rule->id());
+        if (it != base_node_map_.end()) {
+            auto& node_list = it->second;
+            node_list.erase(std::remove_if(node_list.begin(),
+                                           node_list.end(),
+            [node_desc](const NodeDescriptor& existing_node) -> bool {
+                return node_desc == existing_node;
+            }),
+                            node_list.end());
+
+            if (node_list.empty()) {
+                base_node_map_.erase(it);
+            }
+        }
+    }
+    delete_from_node_map(node_desc);
+    node_graph_.deleteVertex(node_desc);
 }
 
 Node& PathScan::operator[](NodeDescriptor desc)
@@ -119,7 +138,7 @@ void PathScan::delete_from_node_map(NodeDescriptor old_node)
     auto node_map_it = node_map_.find(rule_id);
     if (node_map_it != node_map_.end()) {
         auto node_list = node_map_it->second;
-        auto if_node = [old_node](NodeDescriptor node) {
+        auto if_node = [old_node](NodeDescriptor node) -> bool {
             return node == old_node;
         };
         node_list.erase(std::remove_if(node_list.begin(),

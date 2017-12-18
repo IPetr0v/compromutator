@@ -30,7 +30,7 @@ DependencyPtr DependencyUpdater::add_table_dependency(RulePtr src_rule,
 DependencyPtr DependencyUpdater::add_dependency(RulePtr src_rule,
                                                 RulePtr dst_rule)
 {
-    add_dependency(src_rule, dst_rule, src_rule->outDomain());
+    return add_dependency(src_rule, dst_rule, src_rule->outDomain());
 }
 
 DependencyPtr DependencyUpdater::add_dependency(RulePtr src_rule,

@@ -29,13 +29,15 @@ class TestScenario
 
 };
 
-class DependencyGraphTest
+class Test
 {
 public:
-    DependencyGraphTest() = default;
+    Test() = default;
 
     // Tests
     bool simpleDependencyTest();
+    bool latestDiffTest();
+    bool simpleFlowPredictorTest();
 
 private:
     void create_switches(SwitchList switches, PortList ports);
@@ -45,6 +47,9 @@ private:
                             Priority priority, HeaderSpace domain);
     RuleId add_end_rule(SwitchId src_switch_id, Priority priority,
                         HeaderSpace header);
+
+    bool checkDomains(std::vector<RulePtr> rules,
+                      std::vector<HeaderSpace> domains) const;
 
     DependencyGraph graph_;
     std::map<std::pair<SwitchId, SwitchId>, PortId> topology_;

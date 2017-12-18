@@ -7,8 +7,9 @@ Rule::Rule(RuleType type, SwitchId switch_id,
            NetworkSpace& domain,
            std::vector<Action> action_list):
     type_(type), switch_id_(switch_id), table_id_(table_id),
-    priority_(priority), domain_(domain), action_list_(action_list),
-    id_(id_generator_.getId())
+    id_(id_generator_.getId()), priority_(priority), domain_(domain),
+    action_list_(action_list)
+
 {
     // DEBUG LOG
     if (!action_list_.empty())
@@ -91,6 +92,7 @@ const RuleIterator& RuleIterator::operator++()
         iterator_++;
         set_rule_map_iterator();
     }
+    return *this;
 }
 
 RulePtr& RuleIterator::operator*() const

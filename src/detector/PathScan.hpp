@@ -33,7 +33,7 @@ public:
 
 private:
     NodeDescriptor descriptor_;
-    bool is_interceptor_;
+    bool is_base_;
 };
 
 class PathScan
@@ -45,7 +45,7 @@ public:
     NodeDescriptor addChildNode(NodeDescriptor parent, RulePtr rule,
                                 NetworkSpace domain, uint16_t multiplier);
     NodeDescriptor addBaseNode(RulePtr rule, NetworkSpace domain);
-    void deleteNode(NodeDescriptor node);
+    void deleteNode(NodeDescriptor node_desc);
 
     Node& operator[](NodeDescriptor desc);
     NodeRange parentNodes(NodeDescriptor node);
@@ -55,6 +55,8 @@ public:
                  NodeDescriptor dst_node_desc);
     void deleteEdge(NodeDescriptor src_node_desc,
                     NodeDescriptor dst_node_desc);
+
+    friend class Test;
 
 private:
     NodeGraph node_graph_;
