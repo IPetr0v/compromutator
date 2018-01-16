@@ -7,21 +7,14 @@
 #include <string.h>
 #include <vector>
 
-#include "Common.hpp"
+#include "openflow/Types.hpp"
 #include "NetworkSpace.hpp"
-#include "./detector/Detector.hpp"
-#include "Test.hpp"
+#include "./Detector.hpp"
+#include "./test/Test.hpp"
 
 using namespace std;
 
 int main(int argc, char* argv[])
 {
-    Test simple_test;
-
-    // Run tests
-    //simple_test.simpleDependencyTest();
-    std::cout<<"latestDiffTest = "
-             <<simple_test.latestDiffTest()<<std::endl;
-    std::cout<<"simpleFlowPredictorTest = "
-             <<simple_test.simpleFlowPredictorTest()<<std::endl;
+    return 0;
 }

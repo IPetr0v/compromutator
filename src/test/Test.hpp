@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Common.hpp"
-#include "NetworkSpace.hpp"
-#include "./detector/Detector.hpp"
+#include "../openflow/Types.hpp"
+#include "../NetworkSpace.hpp"
+#include "../Detector.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -10,7 +10,7 @@
 #include <map>
 #include <cstring>
 #include <vector>
-
+/*
 using SwitchList = std::vector<SwitchId>;
 using PortList = std::vector<PortId>;
 using ActionList = std::vector<Action>;
@@ -57,3 +57,4 @@ private:
     const TableId front_table = 0;
 
 };
+*/

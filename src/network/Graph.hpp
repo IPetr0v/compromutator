@@ -102,37 +102,20 @@ public:
         EdgeIterator end() { return EdgeIterator(this->end_); }
     };
 
-    //VertexDescriptor addVertex(VertexDataType data = VertexDataType());
     VertexDescriptor addVertex(VertexDataType&& data)
     {
         return vertex_list_.emplace(vertex_list_.end(), std::move(data));
     }
 
-    void clearVertex(VertexDescriptor vertex)
-    {
-        for (auto adjacency_pair : vertex->out_adjacency_list) {
-            auto dst_vertex = adjacency_pair.first;
-            auto edge = adjacency_pair.second;
-            auto& dst_in_list = dst_vertex->in_adjacency_list;
-            delete_from_list(edge, dst_in_list);
-        }
-        for (auto adjacency_pair : vertex->in_adjacency_list) {
-            auto src_vertex = adjacency_pair.first;
-            auto edge = adjacency_pair.second;
-            auto& src_out_list = src_vertex->out_adjacency_list;
-            delete_from_list(edge, src_out_list);
-        }
-    }
-
     void deleteVertex(VertexDescriptor vertex)
     {
-        clearVertex(vertex);
+        deleteEdges(vertex);
         vertex_list_.erase(vertex);
     }
 
     EdgeDescriptor addEdge(VertexDescriptor src_vertex,
                            VertexDescriptor dst_vertex,
-                           EdgeDataType data = EdgeDataType())
+                           EdgeDataType&& data = EdgeDataType())
     {
         auto edge = edge_list_.emplace(edge_list_.end(), std::move(data));
         src_vertex->out_adjacency_list.emplace_back(dst_vertex, edge);
@@ -143,21 +126,12 @@ public:
     void deleteEdge(VertexDescriptor src_vertex,
                     VertexDescriptor dst_vertex)
     {
-        auto& out_list = src_vertex->out_adjacency_list;
-        auto& in_list = dst_vertex->in_adjacency_list;
-
-        out_list.erase(std::remove_if(out_list.begin(),
-                                      out_list.end(),
-                                      [dst_vertex](AdjacencyPair pair) {
-                                          return pair.first == dst_vertex;
-                                      }),
-                       out_list.end());
-        in_list.erase(std::remove_if(in_list.begin(),
-                                     in_list.end(),
-                                     [src_vertex](AdjacencyPair pair) {
-                                         return pair.first == src_vertex;
-                                     }),
-                      in_list.end());
+        auto edge_pair = edge(src_vertex, dst_vertex);
+        bool edge_exists = edge_pair.second;
+        if (edge_exists) {
+            auto edge = edge_pair.first;
+            deleteEdge(edge);
+        }
     }
 
     void deleteEdge(EdgeDescriptor edge)
@@ -173,27 +147,81 @@ public:
         edge_list_.erase(edge);
     }
 
-    // TODO: get rid of this operators
-    VertexDataType& operator[](VertexDescriptor vertex_desc)
+    void deleteOutEdges(VertexDescriptor vertex)
     {
-        return vertex(vertex_desc);
+        for (auto adjacency_pair : vertex->out_adjacency_list) {
+            auto dst_vertex = adjacency_pair.first;
+            auto edge = adjacency_pair.second;
+
+            // Delete the edge from the adjacency list
+            auto& dst_in_list = dst_vertex->in_adjacency_list;
+            delete_from_list(edge, dst_in_list);
+
+            // Delete the edge
+            edge_list_.erase(edge);
+        }
+        vertex->out_adjacency_list.clear();
     }
 
-    EdgeDataType& operator[](EdgeDescriptor edge_desc)
+    void deleteInEdges(VertexDescriptor vertex)
     {
-        return edge(edge_desc);
+        for (auto adjacency_pair : vertex->in_adjacency_list) {
+            auto src_vertex = adjacency_pair.first;
+            auto edge = adjacency_pair.second;
+
+            // Delete the edge from the adjacency list
+            auto& src_out_list = src_vertex->out_adjacency_list;
+            delete_from_list(edge, src_out_list);
+
+            // Delete the edge
+            edge_list_.erase(edge);
+        }
+        vertex->in_adjacency_list.clear();
     }
 
-    VertexDataType& vertex(VertexDescriptor vertex_desc)
+    void deleteEdges(VertexDescriptor vertex)
+    {
+        deleteOutEdges(vertex);
+        deleteInEdges(vertex);
+    }
+
+    VertexDataType& vertexData(VertexDescriptor vertex_desc)
     {
         return vertex_desc->data;
     }
 
-    EdgeDataType& edge(EdgeDescriptor edge_desc)
+    EdgeDataType& edgeData(EdgeDescriptor edge_desc)
     {
         return edge_desc->data;
     }
 
+    std::pair<EdgeDescriptor, bool> edge(VertexDescriptor src_vertex,
+                                         VertexDescriptor dst_vertex)
+    {
+        auto& src_out_list = src_vertex->out_adjacency_list;
+        auto it = std::find_if(src_out_list.begin(), src_out_list.end(),
+            [dst_vertex](AdjacencyPair pair) -> bool {
+                return pair.first == dst_vertex;
+            }
+        );
+        if (it != src_out_list.end()) {
+            auto found_edge = it->second;
+            return {found_edge, true};
+        }
+        return {EdgeDescriptor(nullptr), false};
+    }
+
+    VertexDescriptor srcVertex(EdgeDescriptor edge_desc)
+    {
+        return edge_desc->src_vertex;
+    }
+
+    VertexDescriptor dstVertex(EdgeDescriptor edge_desc)
+    {
+        return edge_desc->dst_vertex;
+    }
+
+    // TODO: return descriptors
     const std::list<Vertex>& vertices() {return vertex_list_;}
 
     VertexRange outVertices(VertexDescriptor vertex)
@@ -224,9 +252,8 @@ private:
 
     void delete_from_list(EdgeDescriptor edge, AdjacencyList list)
     {
-        list.erase(std::remove_if(list.begin(),
-                                  list.end(),
-                                  [edge](AdjacencyPair pair) {
+        list.erase(std::remove_if(list.begin(), list.end(),
+                                  [edge](AdjacencyPair pair) -> bool {
                                       return pair.second == edge;
                                   }),
                    list.end());

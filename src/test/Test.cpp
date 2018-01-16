@@ -1,5 +1,5 @@
 #include "Test.hpp"
-
+/*
 SwitchList switches = {1,2,3,4};
 PortList ports = {1,2,3,4};
 LinkList links = {{1,2, 3,2},
@@ -150,7 +150,7 @@ bool Test::simpleDependencyTest()
     create_switches(switches, ports);
     create_topology(links);
 
-    // Add table miss rules
+    // Add getTable miss rules
     rules[1] = graph_.tableMissRule(1, 0)->id();
     rules[2] = graph_.tableMissRule(2, 0)->id();
     rules[3] = graph_.tableMissRule(3, 0)->id();
@@ -321,3 +321,4 @@ bool Test::checkDomains(std::vector<RulePtr> rules,
     else
         return false;
 }
+*/

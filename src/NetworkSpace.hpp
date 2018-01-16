@@ -1,9 +1,7 @@
 #pragma once
 
-#include "./header_space/HeaderSpace.hpp"
-#include "Common.hpp"
-
-typedef uint32_t PortId;
+#include "header_space/HeaderSpace.hpp"
+#include "openflow/Types.hpp"
 
 enum SpecialPort: PortId
 {
@@ -14,21 +12,26 @@ enum SpecialPort: PortId
 class NetworkSpace
 {
 public:
-    NetworkSpace();
-    NetworkSpace(const NetworkSpace& other);
-    explicit NetworkSpace(PortId in_port);
+    explicit NetworkSpace(std::string str);
     explicit NetworkSpace(const HeaderSpace& header);
     NetworkSpace(PortId in_port, const HeaderSpace& header);
-    
+    NetworkSpace(const NetworkSpace& other) = default;
+    NetworkSpace(NetworkSpace&& other) noexcept = default;
+    static NetworkSpace emptySpace();
+    static NetworkSpace wholeSpace();
+
     PortId inPort() const {return in_port_;}
     HeaderSpace header() const {return header_;}
     bool empty() const {
         return in_port_ == SpecialPort::NONE || header_.empty();
     }
 
-    NetworkSpace& operator=(NetworkSpace&& other) noexcept;
-    
+    NetworkSpace& operator=(const NetworkSpace& other) = default;
+    NetworkSpace& operator=(NetworkSpace&& other) noexcept = default;
+
+    NetworkSpace& operator+=(const NetworkSpace& right);
     NetworkSpace& operator-=(const NetworkSpace& right);
+    NetworkSpace operator+(const NetworkSpace& right);
     NetworkSpace operator-(const NetworkSpace& right);
     NetworkSpace operator&(const NetworkSpace& right);
 
@@ -41,43 +44,25 @@ private:
 class Transfer
 {
 public:
-    Transfer();
     explicit Transfer(const HeaderChanger& header_changer);
     Transfer(PortId src_port, PortId dst_port,
-             const HeaderChanger& header_changer);
+             HeaderChanger&& header_changer);
+    Transfer(const Transfer& other) = default;
+    Transfer(Transfer&& other) noexcept = default;
+    static Transfer identityTransfer();
+
+    Transfer& operator=(const Transfer& other) = default;
+    Transfer& operator=(Transfer&& other) = default;
+
+    // Transfer superposition
+    Transfer operator*(const Transfer& right) const;
     
     NetworkSpace apply(NetworkSpace domain) const;
     NetworkSpace inverse(NetworkSpace domain) const;
-
-    HeaderChanger headerChanger() const {return header_changer_;}
 
 private:
     PortId src_port_;
     PortId dst_port_;
     HeaderChanger header_changer_;
 
-};
-
-enum PortAction: PortId
-{
-    DROP       = 0x00000000,
-    IN_PORT    = 0xfffffff8,
-    ALL        = 0xfffffffc,
-    CONTROLLER = 0xfffffffd
-};
-
-enum class ActionType
-{
-    PORT,
-    TABLE,
-    GROUP
-};
-
-struct Action
-{
-    ActionType type;
-    Transfer transfer;
-    PortId port_id;
-    TableId table_id;
-    GroupId group_id;
 };
