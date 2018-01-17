@@ -54,12 +54,15 @@ vec_sum (struct hs_vec *dst, const struct hs_vec *src, int len)
 {
     for (int i = 0; i < src->used; i++) {
         bool diff = src->diff && src->diff[i].used;
-        vec_append(dst, src->elems[i], false);
+        array_t* element = array_copy(src->elems[i], len);
+        vec_append(dst, element, false);
         int idx = dst->used - 1;
         struct hs_vec *dst_diff = &dst->diff[idx];
         if (diff) {
-            for(int j = 0; j < src->diff[i].used; j++)
-                vec_append(dst_diff, src->diff[i].elems[j], true);
+            for(int j = 0; j < src->diff[i].used; j++) {
+                array_t* diff_element = array_copy(src->diff[i].elems[j], len);
+                vec_append(dst_diff, diff_element, true);
+            }
         }
     }
 }

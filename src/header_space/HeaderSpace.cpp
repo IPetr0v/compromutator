@@ -10,8 +10,9 @@ int get_len(const char* str) {
 }
 
 HeaderSpace::HeaderSpace(std::string str):
-    length_((int)str.length())
+    length_((int)str.length()/8)
 {
+    assert(length_ > 0);
     hs_ = hs_create(length_);
     hs_add(hs_, array_from_str(str.c_str()));
 }
