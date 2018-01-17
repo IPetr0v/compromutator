@@ -1,7 +1,8 @@
 add_subdirectory(third_party)
 
 add_executable(unit_test
-        Main.cpp)
+        MainTest.cpp
+        HeaderSpaceTest.cpp)
 
 target_link_libraries(unit_test
         detector
