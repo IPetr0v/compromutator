@@ -6,18 +6,22 @@ class HeaderSpaceTest : public ::testing::Test
 {
 protected:
     using H = HeaderSpace;
+    using T = HeaderChanger;
 
     virtual HeaderSpace empty() const {
-        return HeaderSpace::emptySpace(header_length_);
+        return H::emptySpace(header_length_);
     }
     virtual HeaderSpace zeros() const {
-        return HeaderSpace("00000000");
+        return H("00000000");
     }
     virtual HeaderSpace ones() const {
-        return HeaderSpace("11111111");
+        return H("11111111");
     }
     virtual HeaderSpace whole() const {
-        return HeaderSpace::wholeSpace(header_length_);
+        return H::wholeSpace(header_length_);
+    }
+    virtual HeaderChanger identity() const {
+        return T::identityHeaderChanger(header_length_);
     }
 
     const int header_length_ = 1;
@@ -32,17 +36,25 @@ TEST_F(HeaderSpaceTest, CreationTest)
     EXPECT_FALSE(ones().empty());
     EXPECT_FALSE(whole().empty());
 
-    EXPECT_TRUE(H(empty()).empty());
-    EXPECT_TRUE(H(std::move(empty())).empty());
-    EXPECT_FALSE(H(zeros()).empty());
-    EXPECT_FALSE(H(std::move(zeros())).empty());
-    EXPECT_FALSE(H(whole()).empty());
-    EXPECT_FALSE(H(std::move(whole())).empty());
+    auto empty_header = empty();
+    EXPECT_TRUE(H(empty_header).empty());
+    EXPECT_TRUE(H(std::move(empty_header)).empty());
 
-    EXPECT_TRUE((zeros() = empty()).empty());
-    EXPECT_TRUE((zeros() = std::move(empty())).empty());
-    EXPECT_FALSE((empty() = whole()).empty());
-    EXPECT_FALSE((empty() = std::move(whole())).empty());
+    auto zero_header = zeros();
+    EXPECT_FALSE(H(zero_header).empty());
+    EXPECT_FALSE(H(std::move(zero_header)).empty());
+
+    auto whole_header = whole();
+    EXPECT_FALSE(H(whole_header).empty());
+    EXPECT_FALSE(H(std::move(whole_header)).empty());
+
+    empty_header = empty();
+    EXPECT_TRUE((zeros() = empty_header).empty());
+    EXPECT_TRUE((zeros() = std::move(empty_header)).empty());
+
+    whole_header = whole();
+    EXPECT_FALSE((empty() = whole_header).empty());
+    EXPECT_FALSE((empty() = std::move(whole_header)).empty());
 }
 
 TEST_F(HeaderSpaceTest, EqualityTest)
@@ -70,28 +82,51 @@ TEST_F(HeaderSpaceTest, EqualityTest)
     EXPECT_EQ(ones(), H(std::move(ones())));
     EXPECT_EQ(whole(), H(std::move(whole())));
 
-    EXPECT_EQ(empty(), whole() = empty());
+    auto empty_header = empty();
+    auto zero_header = zeros();
+    auto one_header = ones();
+    auto whole_header = whole();
+    EXPECT_EQ(empty(), whole() = empty_header);
+    EXPECT_EQ(zeros(), whole() = std::move(zero_header));
     EXPECT_EQ(zeros(), whole() = zeros());
     EXPECT_EQ(ones(), whole() = ones());
     EXPECT_EQ(whole(), empty() = whole());
-    EXPECT_EQ(empty(), whole() = std::move(empty()));
-    EXPECT_EQ(zeros(), whole() = std::move(zeros()));
-    EXPECT_EQ(ones(), whole() = std::move(ones()));
-    EXPECT_EQ(whole(), empty() = std::move(whole()));
+    EXPECT_EQ(ones(), whole() = std::move(one_header));
+    EXPECT_EQ(whole(), empty() = std::move(whole_header));
 }
-#include <iostream>
+
 TEST_F(HeaderSpaceTest, UnionTest)
 {
     EXPECT_EQ(empty(), empty() + empty());
     EXPECT_EQ(zeros(), zeros() + empty());
     EXPECT_EQ(ones() , ones()  + empty());
     EXPECT_EQ(whole(), whole() + empty());
+
+    EXPECT_EQ(whole(), H("xxxxxxx0") + H("xxxxxxx1"));
+    EXPECT_EQ(H("0000000x"), zeros() + H("00000001"));
+    EXPECT_EQ(H("xx0011xx"), H("xx001100") + H("xx001101") +
+                             H("xx001110") + H("xx001111"));
 }
 
 TEST_F(HeaderSpaceTest, IntersectionTest)
 {
-    EXPECT_EQ(empty(), empty() & empty());
+    EXPECT_EQ(empty(), empty() &  empty());
     EXPECT_EQ(empty(), empty() &= empty());
+    EXPECT_EQ(empty(), zeros() &  ones() );
+    EXPECT_EQ(empty(), zeros() &= ones() );
+    EXPECT_EQ(zeros(), zeros() &  zeros());
+    EXPECT_EQ(zeros(), zeros() &= zeros());
+    EXPECT_EQ(zeros(), zeros() &  whole());
+    EXPECT_EQ(zeros(), zeros() &= whole());
+    EXPECT_EQ(ones() , ones()  &  whole());
+    EXPECT_EQ(ones() , ones()  &= whole());
+    EXPECT_EQ(whole(), whole() &  whole());
+    EXPECT_EQ(whole(), whole() &= whole());
+
+    EXPECT_EQ(zeros(), H("0000xxxx") & H("xxxx0000"));
+    EXPECT_EQ(zeros(), H("0000xxxx") & H("xxxxxx00") & H("xxxx00xx"));
+    EXPECT_EQ(H("xx0011xx"), whole() & H("xx00xxxx") & H("xxxx11xx"));
+    EXPECT_EQ(empty(), H("0000xxxx") & H("1111xxxx"));
 }
 
 TEST_F(HeaderSpaceTest, MinusTest)
@@ -125,4 +160,40 @@ TEST_F(HeaderSpaceTest, MinusTest)
     EXPECT_EQ(zeros(), H("0000000x") - H("xxxxxxx1"));
     EXPECT_EQ(zeros(), H("000000xx") - H("xxxxxxx1") - H("xxxxxx1x"));
     EXPECT_EQ(H("0000000x") - H("xxxxxxx1"), H("x0000000") - H("10000000"));
+}
+
+TEST_F(HeaderSpaceTest, ComplementTest)
+{
+    EXPECT_EQ(empty(), ~whole());
+    EXPECT_EQ(whole(), ~empty());
+    EXPECT_EQ(H("xxxxxxx1"), ~H("xxxxxxx0"));
+    EXPECT_EQ(H("xxxxxxx1") + H("xxxxxx1x"),
+              ~H("xxxxxxx0") + ~H("xxxxxx0x"));
+    EXPECT_EQ(H("xxxxxxx1") + H("xxxxxx1x"),
+              ~(H("xxxxxxx0") & H("xxxxxx0x")));
+    EXPECT_EQ(H("xxxxxx11"), ~(H("xxxxxxx0") + H("xxxxxx0x")));
+    EXPECT_EQ(H("xxxxxxx0"), ~(whole() - H("xxxxxxx0")));
+}
+
+TEST_F(HeaderSpaceTest, ChangerCreationTest)
+{
+    auto identity_header = identity();
+    EXPECT_EQ(T("zzzzzzzz"), identity_header);
+    EXPECT_EQ(identity(), T(identity_header));
+    EXPECT_EQ(identity(), T(std::move(identity_header)));
+    EXPECT_EQ(T("zz0011xx"), T("zz0011xx"));
+}
+
+#include <iostream>
+TEST_F(HeaderSpaceTest, ChangerOperationTest)
+{
+    EXPECT_EQ(identity(), identity() *= identity());
+    EXPECT_EQ(T("zz0011xx"), T("zz0011xx") *= identity());
+
+    EXPECT_EQ(zeros(), T("zzzz0000").apply(H("000011zz")));
+    EXPECT_EQ(ones(), T("zz1111zz").apply(H("1100xx11")));
+    EXPECT_EQ(whole(), T("xxxxzzzz").apply(H("0011xxxx")));
+
+    auto transfer = T("zz00zzzz") *= T("00zzzzzz") *= T("zzzz0000");
+    EXPECT_EQ(zeros(), transfer.apply(H("11111111")));
 }

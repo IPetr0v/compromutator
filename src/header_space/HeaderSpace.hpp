@@ -28,10 +28,11 @@ public:
     static HeaderSpace wholeSpace(int length);
     ~HeaderSpace();
 
-    bool operator==(const HeaderSpace &other) const;
-    bool operator!=(const HeaderSpace &other) const;
     HeaderSpace& operator=(const HeaderSpace& other);
     HeaderSpace& operator=(HeaderSpace&& other) noexcept;
+
+    bool operator==(const HeaderSpace &other) const;
+    bool operator!=(const HeaderSpace &other) const;
 
     HeaderSpace& operator~();
     HeaderSpace& operator+=(const HeaderSpace& right);
@@ -72,6 +73,9 @@ public:
 
     HeaderChanger& operator=(const HeaderChanger& other);
     HeaderChanger& operator=(HeaderChanger&& other) noexcept;
+
+    bool operator==(const HeaderChanger &other) const;
+    bool operator!=(const HeaderChanger &other) const;
 
     // HeaderChanger superposition
     HeaderChanger operator*=(const HeaderChanger& right);
