@@ -33,6 +33,9 @@ public:
     bool operator==(const NetworkSpace& other) const {
         return in_port_ == other.in_port_ && header_ == other.header_;
     }
+    bool operator!=(const NetworkSpace &other) const {
+        return !(*this == other);
+    }
 
     NetworkSpace& operator+=(const NetworkSpace& right);
     NetworkSpace& operator-=(const NetworkSpace& right);

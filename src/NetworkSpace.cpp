@@ -26,7 +26,7 @@ NetworkSpace::NetworkSpace(PortId in_port, const HeaderSpace& header):
 
 NetworkSpace NetworkSpace::emptySpace()
 {
-    return NetworkSpace(SpecialPort::ANY,
+    return NetworkSpace(SpecialPort::NONE,
                         HeaderSpace::emptySpace(HEADER_LENGTH));
 }
 
@@ -77,8 +77,11 @@ NetworkSpace NetworkSpace::operator&(const NetworkSpace& right)
     else
         new_in_port = (in_port_ == right.in_port_) ? in_port_
                                                    : SpecialPort::NONE;
-    
-    return NetworkSpace(new_in_port, header_ & right.header_);
+    HeaderSpace new_domain = header_ & right.header_;
+
+    bool is_empty = new_in_port == SpecialPort::NONE || new_domain.empty();
+    return is_empty ? NetworkSpace::emptySpace()
+                    : NetworkSpace(new_in_port, header_ & right.header_);
 }
 
 std::ostream& operator<<(std::ostream& os, const NetworkSpace& domain)
