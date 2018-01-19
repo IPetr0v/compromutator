@@ -44,27 +44,28 @@ void Table::deleteRule(RuleId id)
 
 RuleRange Table::upperRules(RulePtr rule)
 {
-    auto it = rule_map_.lower_bound(rule->id());
-    auto lower_bound = std::find_if(it, rule_map_.end(),
+    auto it = rule_map_.upper_bound(rule->id());
+    RuleMap::reverse_iterator reverse_it(it);
+    auto upper_bound = std::find_if(reverse_it, rule_map_.rbegin(),
         [rule](const std::pair<RuleId, RulePtr>& rule_pair) -> bool {
-            auto lower_rule = rule_pair.second;
-            return lower_rule->priority() < rule->priority();
+            auto upper_rule = rule_pair.second;
+            return rule->priority() < upper_rule->priority();
         }
     );
-    return {rule_map_, rule_map_.begin(), lower_bound};
+    return {rule_map_, rule_map_.begin(), upper_bound.base()};
 }
 
 RuleRange Table::lowerRules(RulePtr rule)
 {
-    auto it = rule_map_.upper_bound(rule->id());
-    auto upper_bound = std::find_if(it, rule_map_.end(),
+    auto it = rule_map_.lower_bound(rule->id());
+    auto lower_bound = std::find_if(it, rule_map_.end(),
         [rule](const std::pair<RuleId, RulePtr>& rule_pair) -> bool {
-            auto upper_rule = rule_pair.second;
-            return upper_rule->priority() > rule->priority();
+            auto lower_rule = rule_pair.second;
+            return rule->priority() > lower_rule->priority();
         }
     );
     // TODO: CRITICAL - check std::greater<> with upper/lower bounds
-    return {rule_map_, upper_bound, rule_map_.end()};
+    return {rule_map_, lower_bound, rule_map_.end()};
 }
 
 Port::Port(SwitchPtr sw, PortId id):
@@ -73,7 +74,7 @@ Port::Port(SwitchPtr sw, PortId id):
     source_rule_ = new Rule(RuleType::SOURCE, sw_, nullptr, LOW_PRIORITY,
                             NetworkSpace::wholeSpace(), Actions::noActions());
     sink_rule_ = new Rule(RuleType::SINK, sw_, nullptr, LOW_PRIORITY,
-                          NetworkSpace::wholeSpace(), Actions::noActions());
+                          NetworkSpace(id), Actions::noActions());
 }
 
 Port::~Port()

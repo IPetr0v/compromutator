@@ -32,8 +32,17 @@ SwitchPtr Network::getSwitch(SwitchId id) const
 SwitchPtr Network::addSwitch(SwitchId id, std::vector<PortId> ports,
                              uint8_t table_number)
 {
-    auto sw = getSwitch(id);
-    return sw ? sw : new Switch(id, ports, table_number);
+    auto existing_sw = getSwitch(id);
+    if (not existing_sw) {
+        auto sw = switch_map_[id] = new Switch(id, ports, table_number);
+        for (auto table : sw->tables()) {
+            add_rule_to_topology(table->tableMissRule());
+        }
+        return sw;
+    }
+    else {
+        return existing_sw;
+    }
 }
 
 void Network::deleteSwitch(SwitchId id)
@@ -217,7 +226,7 @@ std::pair<bool, Actions> Network::get_actions(SwitchPtr sw,
             auto port = getPort({sw->id(), port_id});
             if (port) {
                 PortAction port_action(std::move(port_action_base), port);
-                actions_base.port_actions.emplace_back(std::move(port_action));
+                actions.port_actions.emplace_back(std::move(port_action));
             }
             else {
                 return std::make_pair(false, std::move(actions));
@@ -225,7 +234,7 @@ std::pair<bool, Actions> Network::get_actions(SwitchPtr sw,
         }
         else {
             PortAction port_action(std::move(port_action_base), nullptr);
-            actions_base.port_actions.emplace_back(std::move(port_action));
+            actions.port_actions.emplace_back(std::move(port_action));
         }
     }
     for (auto& table_action_base : actions_base.table_actions) {
@@ -233,7 +242,7 @@ std::pair<bool, Actions> Network::get_actions(SwitchPtr sw,
         auto table = getTable(sw->id(), table_id);
         if (table) {
             TableAction table_action(std::move(table_action_base), table);
-            actions_base.table_actions.emplace_back(std::move(table_action));
+            actions.table_actions.emplace_back(std::move(table_action));
         }
         else {
             return std::make_pair(false, std::move(actions));

@@ -16,7 +16,7 @@ struct PortAction : public PortActionBase
     PortAction(PortActionBase&& base, PortPtr port = nullptr):
         PortActionBase(std::move(base)), port(port) {
         // If the port type is normal then the getPort pointer should not be null
-        assert(port_type != PortType::NORMAL && port != nullptr);
+        assert(port_type != PortType::NORMAL || port != nullptr);
     }
     PortAction(const PortAction& other) = default;
     PortAction(PortAction&& other) noexcept = default;

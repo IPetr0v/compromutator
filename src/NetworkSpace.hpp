@@ -13,6 +13,7 @@ class NetworkSpace
 {
 public:
     explicit NetworkSpace(std::string str);
+    explicit NetworkSpace(PortId in_port);
     explicit NetworkSpace(const HeaderSpace& header);
     NetworkSpace(PortId in_port, const HeaderSpace& header);
     NetworkSpace(const NetworkSpace& other) = default;
@@ -29,11 +30,18 @@ public:
     NetworkSpace& operator=(const NetworkSpace& other) = default;
     NetworkSpace& operator=(NetworkSpace&& other) noexcept = default;
 
+    bool operator==(const NetworkSpace& other) const {
+        return in_port_ == other.in_port_ && header_ == other.header_;
+    }
+
     NetworkSpace& operator+=(const NetworkSpace& right);
     NetworkSpace& operator-=(const NetworkSpace& right);
     NetworkSpace operator+(const NetworkSpace& right);
     NetworkSpace operator-(const NetworkSpace& right);
     NetworkSpace operator&(const NetworkSpace& right);
+
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const NetworkSpace& domain);
 
 private:
     PortId in_port_;

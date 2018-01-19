@@ -40,8 +40,12 @@ struct PortActionBase : public Action
                    PortId port_id = SpecialPort::NONE):
         Action(ActionType::PORT, std::move(transfer)),
         port_type(port_type), port_id(port_id) {
-        assert(port_type != PortType::NORMAL && port_id != SpecialPort::NONE);
+        assert(port_type != PortType::NORMAL || port_id != SpecialPort::NONE);
     }
+    PortActionBase(PortId port_id):
+        PortActionBase(Transfer::identityTransfer(),
+                       PortType::NORMAL, port_id) {}
+
     PortActionBase(const PortActionBase& other) = default;
     PortActionBase(PortActionBase&& other) noexcept = default;
 
@@ -61,6 +65,9 @@ struct TableActionBase : public Action
     TableActionBase(Transfer transfer, TableId table_id):
         Action(ActionType::TABLE, std::move(transfer)),
         table_id(table_id) {}
+    TableActionBase(TableId table_id):
+        TableActionBase(Transfer::identityTransfer(), table_id) {}
+
     TableActionBase(const TableActionBase& other) = default;
     TableActionBase(TableActionBase&& other) noexcept = default;
 
@@ -92,6 +99,16 @@ struct ActionsBase
     static ActionsBase controllerAction() {
         ActionsBase actions;
         actions.port_actions.emplace_back(PortActionBase::controllerAction());
+        return actions;
+    }
+    static ActionsBase portAction(PortId port_id) {
+        ActionsBase actions;
+        actions.port_actions.emplace_back(port_id);
+        return actions;
+    }
+    static ActionsBase tableAction(TableId table_id) {
+        ActionsBase actions;
+        actions.port_actions.emplace_back(table_id);
         return actions;
     }
 };

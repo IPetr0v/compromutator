@@ -15,10 +15,6 @@ Rule::Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
     vertex_(VertexDescriptor(nullptr)),
     rule_mapping_(RuleMappingDescriptor(nullptr))
 {
-    assert(nullptr != sw);
-    // If the rule is a flow then the getTable and getSwitch pointers
-    // should not be null
-    assert(type != RuleType::FLOW && (table != nullptr && sw != nullptr));
     TableId table_id = table_ ? table_->id() : (TableId)-1;
     SwitchId switch_id = sw_ ? sw_->id() : (SwitchId)-1;
     id_ = RuleId{switch_id, table_id, priority, id_generator_.getId()};

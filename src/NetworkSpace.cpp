@@ -6,6 +6,12 @@ NetworkSpace::NetworkSpace(std::string str):
 
 }
 
+NetworkSpace::NetworkSpace(PortId in_port):
+    in_port_(in_port), header_(HeaderSpace::wholeSpace(HEADER_LENGTH))
+{
+
+}
+
 NetworkSpace::NetworkSpace(const HeaderSpace& header):
     in_port_(SpecialPort::ANY), header_(header)
 {
@@ -73,6 +79,12 @@ NetworkSpace NetworkSpace::operator&(const NetworkSpace& right)
                                                    : SpecialPort::NONE;
     
     return NetworkSpace(new_in_port, header_ & right.header_);
+}
+
+std::ostream& operator<<(std::ostream& os, const NetworkSpace& domain)
+{
+    os << "(" << domain.in_port_ << " | " << domain.header_ << ")";
+    return os;
 }
 
 Transfer::Transfer(const HeaderChanger& header_changer):
