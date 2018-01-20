@@ -148,9 +148,8 @@ public:
         auto& out_list = src_vertex->out_adjacency_list;
         auto& in_list = dst_vertex->in_adjacency_list;
 
-        for (auto& list : {out_list, in_list}) {
-            delete_from_list(edge, list);
-        }
+        delete_from_list(edge, out_list);
+        delete_from_list(edge, in_list);
         edge_list_.erase(edge);
     }
 
@@ -257,7 +256,7 @@ private:
     std::list<Vertex> vertex_list_;
     std::list<Edge> edge_list_;
 
-    void delete_from_list(EdgeDescriptor edge, AdjacencyList list)
+    void delete_from_list(EdgeDescriptor edge, AdjacencyList& list)
     {
         list.erase(std::remove_if(list.begin(), list.end(),
                                   [edge](AdjacencyPair pair) -> bool {

@@ -8,16 +8,18 @@
 class ExampleNetwork
 {
 protected:
+    using H = HeaderSpace;
+    using N = NetworkSpace;
+
     virtual void initNetwork() = 0;
     virtual void destroyNetwork() = 0;
+
+    std::shared_ptr<Network> network;
 };
 
 class SimpleTwoSwitchNetwork : public ExampleNetwork
 {
 protected:
-    using H = HeaderSpace;
-    using N = NetworkSpace;
-
     void initNetwork() override {
         network = std::make_shared<Network>();
         std::vector<PortId> ports{1,2};
@@ -42,7 +44,6 @@ protected:
         network.reset();
     }
 
-    std::shared_ptr<Network> network;
     SwitchPtr sw1, sw2;
     PortPtr port11, port12, port21, port22;
     RulePtr rule1, rule2;
@@ -52,9 +53,6 @@ protected:
 class TwoSwitchNetwork : public ExampleNetwork
 {
 protected:
-    using H = HeaderSpace;
-    using N = NetworkSpace;
-
     void initNetwork() override {
         network = std::make_shared<Network>();
         std::vector<PortId> ports{1,2};
@@ -94,7 +92,6 @@ protected:
         network.reset();
     }
 
-    std::shared_ptr<Network> network;
     SwitchPtr sw1, sw2;
     PortPtr port11, port12, port21, port22;
     Link link;
