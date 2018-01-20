@@ -72,7 +72,7 @@ Port::Port(SwitchPtr sw, PortId id):
     id_(id), sw_(sw), switch_id_(sw->id())
 {
     source_rule_ = new Rule(RuleType::SOURCE, sw_, nullptr, LOW_PRIORITY,
-                            NetworkSpace::wholeSpace(), Actions::noActions());
+                            NetworkSpace(id), Actions::noActions());
     sink_rule_ = new Rule(RuleType::SINK, sw_, nullptr, LOW_PRIORITY,
                           NetworkSpace(id), Actions::noActions());
 }

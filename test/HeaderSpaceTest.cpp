@@ -1,12 +1,14 @@
 #include "gtest/gtest.h"
 
 #include "../src/header_space/HeaderSpace.hpp"
+#include "../src/NetworkSpace.hpp"
 
 class HeaderSpaceTest : public ::testing::Test
 {
 protected:
     using H = HeaderSpace;
     using T = HeaderChanger;
+    using N = NetworkSpace;
 
     virtual HeaderSpace empty() const {
         return H::emptySpace(header_length_);
@@ -196,4 +198,18 @@ TEST_F(HeaderSpaceTest, ChangerOperationTest)
 
     auto transfer = T("zz00zzzz") *= T("00zzzzzz") *= T("zzzz0000");
     EXPECT_EQ(zeros(), transfer.apply(H("11111111")));
+}
+
+TEST_F(HeaderSpaceTest, NetworkSpaceTest)
+{
+    EXPECT_EQ(N(1, whole()), N(1, whole()));
+    EXPECT_NE(N(1, whole()), N(2, whole()));
+    EXPECT_NE(N(1, whole()), N(1, zeros()));
+    EXPECT_NE(N(1, whole()), N(1, empty()));
+
+    EXPECT_EQ(N(1, zeros()), N(whole()) & N(1, zeros()));
+    EXPECT_EQ(N(1, zeros()), N(1, whole()) & N(1, zeros()));
+    EXPECT_EQ(N::emptySpace(), N(1, whole()) & N(2, whole()));
+    EXPECT_EQ(N::emptySpace(), N(whole()) & N(1, empty()));
+    EXPECT_EQ(N::emptySpace(), N(zeros()) & N(1, ones()));
 }

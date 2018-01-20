@@ -28,7 +28,7 @@ struct TableAction : public TableActionBase
 {
     explicit TableAction(TableActionBase&& base, TablePtr table):
         TableActionBase(std::move(base)), table(table) {
-        assert(table == nullptr);
+        assert(table != nullptr);
     }
     TableAction(const TableAction& other) = default;
     TableAction(TableAction&& other) noexcept = default;
@@ -40,7 +40,7 @@ struct GroupAction : public GroupActionBase
 {
     GroupAction(GroupActionBase&& base, GroupPtr group):
         GroupActionBase(std::move(base)), group(group) {
-        assert(group == nullptr);
+        assert(group != nullptr);
     }
     GroupAction(const GroupAction& other) = default;
     GroupAction(GroupAction&& other) noexcept = default;
@@ -73,6 +73,13 @@ struct Actions
     static Actions controllerAction() {
         Actions actions;
         actions.port_actions.emplace_back(PortActionBase::controllerAction());
+        return actions;
+    }
+    static Actions portAction(PortId port_id, PortPtr port) {
+        Actions actions;
+        actions.port_actions.emplace_back(
+            PortAction(PortActionBase(port_id), port)
+        );
         return actions;
     }
     static Actions noActions() {

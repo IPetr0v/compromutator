@@ -12,6 +12,11 @@ struct EdgeDiff
     std::vector<EdgeDescriptor> changed_edges;
     std::vector<std::pair<RulePtr, RulePtr>> removed_edges;
 
+    bool empty() const {
+        return new_edges.empty() &&
+               changed_edges.empty() &&
+               removed_edges.empty();
+    }
     void clear() {
         new_edges.clear();
         changed_edges.clear();

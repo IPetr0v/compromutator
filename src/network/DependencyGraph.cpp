@@ -147,51 +147,66 @@ void DependencyGraph::add_in_edges(RulePtr dst_rule)
     std::map<RulePtr, EdgeData, Rule::PtrComparator> new_edges;
 
     auto dst_rule_domain = dst_rule->domain();
+    auto sw = dst_rule->sw();
     auto table = dst_rule->table();
-    if (not table) {
-        // Dst rule is not a getTable rule
+    if (not sw || not table) {
+        // Dst rule is not a table rule
         return;
     }
 
-    // Move edges from lower rules to the dst rule
-    for (auto low_dst_rule : table->lowerRules(dst_rule)) {
-        auto fallthrough_domain = NetworkSpace::emptySpace();
-        for (auto edge : graph_->inEdges(low_dst_rule->vertex_)) {
-            auto src_vertex = graph_->srcVertex(edge);
-            auto src_rule = graph_->vertexData(src_vertex).rule;
-            const auto& edge_transfer = graph_->edgeData(edge).transfer;
-            auto edge_domain = graph_->edgeData(edge).domain;
+    bool is_table_miss = table->tableMissRule()->id() == dst_rule->id();
+    bool is_in_front_table = sw->isFrontTable(table);
+    if (is_table_miss && is_in_front_table) {
+        // Create edges from source rules
+        for (auto port : sw->ports()) {
+            auto source_rule = port->sourceRule();
+            auto edge_domain = dst_rule->domain() & NetworkSpace(port->id());
+            new_edges.emplace(std::make_pair(
+                source_rule,
+                EdgeData{Transfer::identityTransfer(), edge_domain}
+            ));
+        }
+    }
+    else {
+        // Move edges from lower rules to the dst rule
+        for (auto low_dst_rule : table->lowerRules(dst_rule)) {
+            auto fallthrough_domain = NetworkSpace::emptySpace();
+            for (auto edge : graph_->inEdges(low_dst_rule->vertex_)) {
+                auto src_vertex = graph_->srcVertex(edge);
+                auto src_rule = graph_->vertexData(src_vertex).rule;
+                const auto &edge_transfer = graph_->edgeData(edge).transfer;
+                auto edge_domain = graph_->edgeData(edge).domain;
 
-            auto domain_intersection = dst_rule_domain & low_dst_rule->domain();
-            if (not domain_intersection.empty()) {
-                fallthrough_domain += domain_intersection;
+                auto domain_intersection = dst_rule_domain & edge_domain;
+                if (not domain_intersection.empty()) {
+                    fallthrough_domain += domain_intersection;
 
-                // Save new edge
-                auto it = new_edges.find(src_rule);
-                if (it != new_edges.end()) {
-                    auto& new_edge_domain = it->second.domain;
-                    new_edge_domain += domain_intersection;
-                }
-                else {
-                    new_edges.emplace(std::make_pair(
-                        src_rule, EdgeData{edge_transfer, domain_intersection}
-                    ));
-                }
+                    // Save new edge
+                    auto it = new_edges.find(src_rule);
+                    if (it != new_edges.end()) {
+                        auto &new_edge_domain = it->second.domain;
+                        new_edge_domain += domain_intersection;
+                    } else {
+                        new_edges.emplace(std::make_pair(
+                            src_rule,
+                            EdgeData{edge_transfer, domain_intersection}
+                        ));
+                    }
 
-                // Change edge domain
-                edge_domain -= domain_intersection;
-                if (not edge_domain.empty()) {
-                    set_edge_domain(edge, edge_domain);
-                }
-                else {
-                    delete_edge(src_rule, dst_rule);
+                    // Change edge domain
+                    edge_domain -= domain_intersection;
+                    if (not edge_domain.empty()) {
+                        set_edge_domain(edge, edge_domain);
+                    } else {
+                        delete_edge(src_rule, low_dst_rule);
+                    }
                 }
             }
-        }
 
-        // Adjust dst rule domain as it goes through lower rules
-        dst_rule_domain -= fallthrough_domain;
-        if (dst_rule_domain.empty()) break;
+            // Adjust dst rule domain as it goes through lower rules
+            dst_rule_domain -= fallthrough_domain;
+            if (dst_rule_domain.empty()) break;
+        }
     }
 
     // Add new edges
@@ -301,8 +316,10 @@ void DependencyGraph::add_edges(RulePtr src_rule, RuleRange dst_rules,
     // Create edges
     for (const auto& dst_rule : dst_rules) {
         NetworkSpace edge_domain = output_domain & dst_rule->domain();
-        output_domain -= edge_domain;
-        add_edge(src_rule, dst_rule, transfer, edge_domain);
+        if (not edge_domain.empty()) {
+            output_domain -= edge_domain;
+            add_edge(src_rule, dst_rule, transfer, edge_domain);
+        }
     }
 }
 

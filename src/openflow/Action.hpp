@@ -108,7 +108,7 @@ struct ActionsBase
     }
     static ActionsBase tableAction(TableId table_id) {
         ActionsBase actions;
-        actions.port_actions.emplace_back(table_id);
+        actions.table_actions.emplace_back(table_id);
         return actions;
     }
 };

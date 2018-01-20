@@ -25,7 +25,12 @@ public:
 
     struct Edge
     {
-        explicit Edge(EdgeDataType&& data) : data(std::move(data)) {}
+        explicit Edge(VertexDescriptor src_vertex,
+                      VertexDescriptor dst_vertex,
+                      EdgeDataType&& data):
+            src_vertex(src_vertex),
+            dst_vertex(dst_vertex),
+            data(std::move(data)) {}
 
         VertexDescriptor src_vertex;
         VertexDescriptor dst_vertex;
@@ -117,7 +122,9 @@ public:
                            VertexDescriptor dst_vertex,
                            EdgeDataType&& data = EdgeDataType())
     {
-        auto edge = edge_list_.emplace(edge_list_.end(), std::move(data));
+        auto edge = edge_list_.emplace(edge_list_.end(),
+            src_vertex, dst_vertex, std::move(data)
+        );
         src_vertex->out_adjacency_list.emplace_back(dst_vertex, edge);
         dst_vertex->in_adjacency_list.emplace_back(src_vertex, edge);
         return edge;

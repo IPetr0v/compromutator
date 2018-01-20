@@ -8,7 +8,7 @@
 #include <set>
 #include <vector>
 
-TEST(BasicSwitchTest, CreationTest)
+TEST(InitSwitchTest, CreationTest)
 {
     auto sw = new Switch(1, {1,2}, 3);
     ASSERT_NE(nullptr, sw);
@@ -39,7 +39,7 @@ protected:
 
 TEST_F(SwitchTest, PortTest)
 {
-    int port_number = 1;
+    uint32_t port_number = 1;
     EXPECT_NE(nullptr, sw->port(port_number));
     ASSERT_NE(sw->tables().begin(), sw->tables().end());
     for (auto port : sw->ports()) {
@@ -47,7 +47,7 @@ TEST_F(SwitchTest, PortTest)
 
         auto source_rule = port->sourceRule();
         ASSERT_NE(nullptr, source_rule);
-        EXPECT_EQ(N::wholeSpace(), source_rule->domain());
+        EXPECT_EQ(N(port_number), source_rule->domain());
         const auto& source_actions = source_rule->actions();
         EXPECT_TRUE(source_actions.port_actions.empty());
 
@@ -108,7 +108,22 @@ protected:
 
 TEST_F(NetworkTest, LinkTest)
 {
+    auto link_pair = network->link({1,2}, {2,1});
+    bool success = link_pair.second;
+    EXPECT_TRUE(success);
+    auto link = link_pair.first;
+    ASSERT_NE(nullptr, link.src_port);
+    ASSERT_NE(nullptr, link.dst_port);
+    EXPECT_EQ(port12->id(), link.src_port->id());
+    EXPECT_EQ(port21->id(), link.dst_port->id());
+    EXPECT_EQ(port12->id(), network->adjacentPort(link.dst_port)->id());
+    EXPECT_EQ(port21->id(), network->adjacentPort(link.src_port)->id());
 
+    network->deleteLink({1,2}, {2,1});
+    bool deleted_link_found = network->link({1,2}, {2,1}).second;
+    EXPECT_FALSE(deleted_link_found);
+    EXPECT_EQ(nullptr, network->adjacentPort(link.dst_port));
+    EXPECT_EQ(nullptr, network->adjacentPort(link.src_port));
 }
 
 TEST_F(NetworkTest, TableRuleTest)
@@ -166,4 +181,11 @@ TEST_F(NetworkTest, PortRuleTest)
         expected_port12_rules.erase(it);
     }
     EXPECT_TRUE(expected_port12_rules.empty());
+
+    network->deleteRule(new_rule0->id());
+    network->deleteRule(rule1->id());
+    network->deleteRule(rule2->id());
+    network->deleteRule(rule3->id());
+    network->deleteRule(rule4->id());
+    EXPECT_FALSE(port11->srcRules().begin() != port11->srcRules().end());
 }
