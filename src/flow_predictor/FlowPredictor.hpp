@@ -73,7 +73,7 @@ private:
 
     void predict_subtree(NodeDescriptor root);
 
-    void process_queries(std::list<StatsPtr>&& queries);
+    void process_stats_list(std::list<StatsPtr>&& stats_list);
     void process_rule_query(const RuleStatsPtr& query);
     void process_path_query(const PathStatsPtr& query);
     void process_link_query(const LinkStatsPtr& query);

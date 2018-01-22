@@ -11,9 +11,9 @@ Node::Node(NodeId id, RulePtr rule, NetworkSpace&& domain,
 
 }
 
-DomainPath::DomainPath(NodeDescriptor source, NodeDescriptor sink,
+DomainPath::DomainPath(PathId id, NodeDescriptor source, NodeDescriptor sink,
                        Timestamp starting_time):
-    source(source), sink(sink), source_domain(source->domain),
+    id(id), source(source), sink(sink), source_domain(source->domain),
     sink_domain(source->root_transfer.apply(source_domain)),
     starting_time(starting_time), final_time(Timestamp::max())
 {
@@ -149,7 +149,8 @@ DomainPathDescriptor PathScan::addDomainPath(NodeDescriptor source,
     assert(source->rule->type() == RuleType::SOURCE);
     assert(sink->rule->type() == RuleType::SINK);
     auto path = domain_path_list_.emplace(domain_path_list_.end(),
-                                          source, sink, starting_time);
+        last_path_id_++, source, sink, starting_time
+    );
 
     path->source_interceptor = new Rule(source->rule,
                                         std::move(path->source_domain));

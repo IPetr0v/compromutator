@@ -2,9 +2,15 @@
 
 #include <memory>
 
-void StatsBucket::addStats(StatsPtr stats)
+StatsDescriptor StatsBucket::addStats(StatsPtr stats)
 {
-    stats_list_.push_back(stats);
+    return stats_list_.emplace(stats_list_.end(), stats);
+}
+
+void StatsBucket::deleteStats(StatsDescriptor stats_desc)
+{
+    assert(StatsDescriptor(nullptr) != stats_desc);
+    stats_list_.erase(stats_desc);
 }
 
 RequestList StatsBucket::getRequests()
@@ -137,10 +143,10 @@ void StatsManager::requestRule(RulePtr rule)
     auto time = frontTime();
     auto bucket = get_bucket(Position::FRONT);
     auto stats = std::make_shared<RuleStats>(time, rule);
-    bucket.addStats(stats);
+    bucket->addStats(stats);
 }
 
-void StatsManager::requestPath(DomainPathDescriptor path,
+void StatsManager::requestPath(PathId id, DomainPathDescriptor path,
                                RulePtr source_interceptor,
                                RulePtr sink_interceptor)
 {
@@ -149,7 +155,21 @@ void StatsManager::requestPath(DomainPathDescriptor path,
     auto stats = std::make_shared<PathStats>(time, path,
                                              source_interceptor,
                                              sink_interceptor);
-    bucket.addStats(stats);
+    auto stats_desc = bucket->addStats(stats);
+    current_path_stats_.emplace(id, stats_desc);
+}
+
+void StatsManager::discardPathRequest(PathId id)
+{
+    auto it = current_path_stats_.find(id);
+    if (current_path_stats_.end() != it) {
+        auto stats_desc = it->second;
+        auto bucket = get_bucket(Position::FRONT);
+        bucket->deleteStats(stats_desc);
+    }
+    else {
+        // TODO: raise an error - no such path
+    }
 }
 
 void StatsManager::requestLink(PortPtr src_port, PortPtr dst_port)
@@ -157,14 +177,15 @@ void StatsManager::requestLink(PortPtr src_port, PortPtr dst_port)
     auto time = frontTime();
     auto bucket = get_bucket(Position::FRONT);
     auto stats = std::make_shared<LinkStats>(time, src_port, dst_port);
-    bucket.addStats(stats);
+    bucket->addStats(stats);
 }
 
 RequestList StatsManager::getNewRequests()
 {
     auto bucket = get_bucket(Position::FRONT);
-    if (bucket.queriesExist()) {
-        auto requests = bucket.getRequests();
+    if (bucket->queriesExist()) {
+        current_path_stats_.clear();
+        auto requests = bucket->getRequests();
         add_front_bucket();
         return std::move(requests);
     }
@@ -176,15 +197,15 @@ RequestList StatsManager::getNewRequests()
 void StatsManager::passRequest(RequestPtr request)
 {
     auto bucket = get_bucket(request->time);
-    bucket.passRequest(request);
+    bucket->passRequest(request);
 }
 
 std::list<StatsPtr> StatsManager::popStatsList()
 {
     // Get queries
     auto bucket = get_bucket(Position::BACK);
-    if (bucket.isFull()) {
-        auto queries = bucket.popStatsList();
+    if (bucket->isFull()) {
+        auto queries = bucket->popStatsList();
         delete_back_bucket();
         return std::move(queries);
     }
@@ -193,15 +214,15 @@ std::list<StatsPtr> StatsManager::popStatsList()
     }
 }
 
-StatsBucket& StatsManager::get_bucket(Timestamp time)
+StatsBucketPtr StatsManager::get_bucket(Timestamp time)
 {
     auto bucket_it = stats_timeline_.find(time.id);
     assert(bucket_it != stats_timeline_.end());
-    auto& bucket = bucket_it->second;
+    auto bucket = bucket_it->second;
     return bucket;
 }
 
-StatsBucket& StatsManager::get_bucket(Position pos)
+StatsBucketPtr StatsManager::get_bucket(Position pos)
 {
     auto time = (pos == Position::FRONT) ? frontTime() : backTime();
     return get_bucket(time);
@@ -211,7 +232,9 @@ void StatsManager::add_front_bucket()
 {
     auto time = timestamp_factory_.createTimestamp();
     timestamp_deque_.push_front(time);
-    stats_timeline_.emplace(time.id, StatsBucket(xid_generator_));
+    stats_timeline_.emplace(time.id,
+        std::make_shared<StatsBucket>(xid_generator_)
+    );
 }
 
 void StatsManager::delete_back_bucket()

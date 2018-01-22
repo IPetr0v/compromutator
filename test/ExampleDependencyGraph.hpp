@@ -25,21 +25,49 @@ class SimpleTwoSwitchGraph : public ExampleDependencyGraph
 protected:
     void initGraph() override {
         initNetwork();
-        auto link = network->addLink({1,2}, {2,1}).first;
-        dependency_graph->addLink(link);
-
-        table_miss1_diff = dependency_graph->addRule(table_miss1);
-        table_miss2_diff = dependency_graph->addRule(table_miss2);
-
-        rule1_diff = dependency_graph->addRule(rule1);
-        rule2_diff = dependency_graph->addRule(rule2);
+        dependency_graph = std::make_shared<DependencyGraph>(network);
     }
 
     void destroyGraph() override {
-
+        dependency_graph.reset();
         destroyNetwork();
     }
 
-    EdgeDiff rule1_diff, rule2_diff;
+    void installSpecialRules() {
+        drop_diff = dependency_graph->addRule(network->dropRule());
+        controller_diff = dependency_graph->addRule(network->controllerRule());
+
+        p11_source_diff = dependency_graph->addRule(port11->sourceRule());
+        p11_sink_diff = dependency_graph->addRule(port11->sinkRule());
+        p12_source_diff = dependency_graph->addRule(port12->sourceRule());
+        p12_sink_diff = dependency_graph->addRule(port12->sinkRule());
+
+        p21_source_diff = dependency_graph->addRule(port21->sourceRule());
+        p21_sink_diff = dependency_graph->addRule(port21->sinkRule());
+        p22_source_diff = dependency_graph->addRule(port22->sourceRule());
+        p22_sink_diff = dependency_graph->addRule(port22->sinkRule());
+    }
+    void installTableMissRules() {
+        table_miss1_diff = dependency_graph->addRule(table_miss1);
+        table_miss2_diff = dependency_graph->addRule(table_miss2);
+    }
+    void installLink() {
+        auto link = network->addLink({1,2}, {2,1}).first;
+        link_diff = dependency_graph->addLink(link);
+    }
+    void installFirstRule() {
+        rule1_diff = dependency_graph->addRule(rule1);
+    }
+    void installSecondRule() {
+        rule2_diff = dependency_graph->addRule(rule2);
+    }
+
+    EdgeDiff drop_diff, controller_diff;
+    EdgeDiff p11_source_diff, p11_sink_diff;
+    EdgeDiff p12_source_diff, p12_sink_diff;
+    EdgeDiff p21_source_diff, p21_sink_diff;
+    EdgeDiff p22_source_diff, p22_sink_diff;
     EdgeDiff table_miss1_diff, table_miss2_diff;
+    EdgeDiff link_diff;
+    EdgeDiff rule1_diff, rule2_diff;
 };

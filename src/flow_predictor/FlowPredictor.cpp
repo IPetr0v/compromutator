@@ -49,8 +49,8 @@ Instruction FlowPredictor::getInstruction()
 void FlowPredictor::passRequest(RequestPtr request)
 {
     stats_manager_->passRequest(request);
-    auto queries = stats_manager_->popStatsList();
-    process_queries(std::move(queries));
+    auto stats_list = stats_manager_->popStatsList();
+    process_stats_list(std::move(stats_list));
 }
 
 void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
@@ -89,24 +89,24 @@ void FlowPredictor::predict_subtree(NodeDescriptor root)
     });
 }
 
-void FlowPredictor::process_queries(std::list<StatsPtr>&& queries)
+void FlowPredictor::process_stats_list(std::list<StatsPtr>&& stats_list)
 {
     // TODO: use byte counters
 
     // Process statistics
     std::list<Prediction> new_predictions;
-    for (const auto& query : queries) {
-        if (auto rule_query = std::dynamic_pointer_cast<RuleStats>(query)) {
-            auto rule = rule_query->rule;
-            auto time = rule_query->time;
-            auto real_counter = rule_query->stats_fields.packet_count;
-            //process_rule_query(rule_query);
+    for (const auto& stats : stats_list) {
+        if (auto rule_stats = std::dynamic_pointer_cast<RuleStats>(stats)) {
+            auto rule = rule_stats->rule;
+            auto time = rule_stats->time;
+            auto real_counter = rule_stats->stats_fields.packet_count;
+            //process_rule_query(rule_stats);
             new_predictions.emplace_back(rule, time, real_counter, 0);
         }
-        else if (auto path_query = std::dynamic_pointer_cast<PathStats>(query))
-            process_path_query(path_query);
-        else if (auto link_query = std::dynamic_pointer_cast<LinkStats>(query))
-            process_link_query(link_query);
+        else if (auto path_stats = std::dynamic_pointer_cast<PathStats>(stats))
+            process_path_query(path_stats);
+        else if (auto link_stats = std::dynamic_pointer_cast<LinkStats>(stats))
+            process_link_query(link_stats);
         else
             assert(0);
     }
@@ -249,18 +249,20 @@ void FlowPredictor::query_domain_path(NodeDescriptor source,
                                       NodeDescriptor sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
+    auto path_id = path_scan_->domainPath(path).id;
     auto source_rule = path_scan_->node(source).rule;
     auto sink_rule = path_scan_->node(sink).rule;
-    stats_manager_->requestPath(path, source_rule, sink_rule);
+    stats_manager_->requestPath(path_id, path, source_rule, sink_rule);
 }
 
 void FlowPredictor::add_domain_path(NodeDescriptor source,
                                     NodeDescriptor sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
+    auto path_id = path_scan_->domainPath(path).id;
     auto source_rule = path_scan_->node(source).rule;
     auto sink_rule = path_scan_->node(sink).rule;
-    stats_manager_->requestPath(path, source_rule, sink_rule);
+    stats_manager_->requestPath(path_id, path, source_rule, sink_rule);
 
     // Add interceptors
     InterceptorDiff new_diff;
@@ -273,11 +275,13 @@ void FlowPredictor::delete_domain_path(NodeDescriptor source,
                                        NodeDescriptor sink)
 {
     auto path = path_scan_->outDomainPath(source);
+    auto path_id = path_scan_->domainPath(path).id;
     auto path_time = path_scan_->domainPath(path).starting_time;
-    if (path_time != current_time()) {path_scan_->setDomainPathFinalTime(path, current_time());
+    if (path_time != current_time()) {
+        path_scan_->setDomainPathFinalTime(path, current_time());
         auto source_rule = path_scan_->node(source).rule;
         auto sink_rule = path_scan_->node(sink).rule;
-        stats_manager_->requestPath(path, source_rule, sink_rule);
+        stats_manager_->requestPath(path_id, path, source_rule, sink_rule);
 
         // Delete interceptors
         InterceptorDiff new_diff;
@@ -286,6 +290,8 @@ void FlowPredictor::delete_domain_path(NodeDescriptor source,
         latest_interceptor_diff_ += new_diff;
     }
     else {
-        // TODO: delete domain path as it never existed !!!
+        // Delete domain path because it hasn't produced any interceptor
+        stats_manager_->discardPathRequest(path_id);
+        path_scan_->deleteDomainPath(path);
     }
 }

@@ -4,6 +4,7 @@
 #include <list>
 
 using NodeId = uint64_t;
+using PathId = uint64_t;
 
 struct Node;
 using NodePtr = Node*;

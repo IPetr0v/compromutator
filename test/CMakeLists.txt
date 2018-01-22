@@ -50,7 +50,9 @@ add_executable(unit_test
         HeaderSpaceTest.cpp
         ExampleNetwork.hpp
         NetworkTest.cpp
-        DependencyGraphTest.cpp ExampleDependencyGraph.hpp)
+        DependencyGraphTest.cpp
+        ExampleDependencyGraph.hpp
+        FlowPredictorTest.cpp)
 
 target_link_libraries(unit_test
         detector

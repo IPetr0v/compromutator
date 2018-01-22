@@ -43,9 +43,10 @@ struct Node
 
 struct DomainPath
 {
-    DomainPath(NodeDescriptor source, NodeDescriptor sink,
+    DomainPath(PathId id, NodeDescriptor source, NodeDescriptor sink,
                Timestamp starting_time);
 
+    PathId id;
     NodeDescriptor source;
     NodeDescriptor sink;
 
@@ -66,7 +67,7 @@ public:
     using NodeVisitor = std::function<void(NodeDescriptor node)>;
     using NodeDeletingVisitor = std::function<bool(NodeDescriptor node)>;
 
-    PathScan(): last_node_id_(0) {}
+    PathScan(): last_node_id_(0), last_path_id_(0) {}
 
     const Node& node(NodeDescriptor desc) const {return *desc;}
     const std::list<NodeDescriptor>& getNodes(RulePtr rule) const;
@@ -101,6 +102,7 @@ private:
     std::list<Node> node_list_;
     std::list<DomainPath> domain_path_list_;
     NodeId last_node_id_;
+    PathId last_path_id_;
 
     RuleMappingDescriptor add_rule_mapping(RulePtr rule);
     void delete_rule_mapping(RulePtr rule);

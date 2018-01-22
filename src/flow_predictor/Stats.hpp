@@ -136,13 +136,15 @@ struct RequestList
     std::vector<RequestPtr> data;
 };
 
+using StatsDescriptor = std::list<StatsPtr>::iterator;
 class StatsBucket
 {
 public:
     StatsBucket(std::shared_ptr<RequestIdGenerator> xid_generator):
         xid_generator_(xid_generator) {}
 
-    void addStats(StatsPtr stats);
+    StatsDescriptor addStats(StatsPtr stats);
+    void deleteStats(StatsDescriptor stats_desc);
 
     RequestList getRequests();
     void passRequest(RequestPtr request);
@@ -153,14 +155,15 @@ public:
 
 private:
     std::list<StatsPtr> stats_list_;
+    // These requests have been sent to the network
     std::map<RequestId, StatsPtr> expected_requests_;
     std::shared_ptr<RequestIdGenerator> xid_generator_;
 
     StatsPtr get_stats(RequestId id);
     void pass_rule_request(RuleRequestPtr request);
     void pass_port_request(PortRequestPtr request);
-
 };
+using StatsBucketPtr = std::shared_ptr<StatsBucket>;
 
 class StatsManager
 {
@@ -172,11 +175,11 @@ public:
     Timestamp backTime() const;
 
     void requestRule(RulePtr rule);
-    void requestPath(DomainPathDescriptor path,
+    void requestPath(PathId id, DomainPathDescriptor path,
                      RulePtr source_interceptor,
                      RulePtr sink_interceptor);
     void requestLink(PortPtr src_port, PortPtr dst_port);
-    // TODO: delete requests
+    void discardPathRequest(PathId id);
 
     RequestList getNewRequests();
     void passRequest(RequestPtr request);
@@ -184,13 +187,17 @@ public:
     std::list<StatsPtr> popStatsList();
 
 private:
-    std::unordered_map<TimestampId, StatsBucket> stats_timeline_;
+    std::unordered_map<TimestampId, StatsBucketPtr> stats_timeline_;
     std::deque<Timestamp> timestamp_deque_;
     TimestampFactory timestamp_factory_;
     std::shared_ptr<RequestIdGenerator> xid_generator_;
 
-    StatsBucket& get_bucket(Timestamp time);
-    StatsBucket& get_bucket(Position pos);
+    // This map is used to quickly delete path stats that have not been sent
+    // to the network.
+    std::map<PathId, StatsDescriptor> current_path_stats_;
+
+    StatsBucketPtr get_bucket(Timestamp time);
+    StatsBucketPtr get_bucket(Position pos);
     void add_front_bucket();
     void delete_back_bucket();
 
