@@ -1,5 +1,3 @@
-#add_subdirectory(third_party)
-
 find_package(Threads REQUIRED)
 
 # Enable ExternalProject CMake module

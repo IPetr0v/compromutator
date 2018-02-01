@@ -214,7 +214,7 @@ void DependencyGraph::add_in_edges(RulePtr dst_rule)
         auto src_rule = edge_pair.first;
         const auto& transfer = edge_pair.second.transfer;
         auto domain = edge_pair.second.domain;
-        add_edge(src_rule, dst_rule, transfer, domain);
+        add_edge(src_rule, dst_rule, transfer, domain, true);
     }
 }
 
@@ -325,7 +325,8 @@ void DependencyGraph::add_edges(RulePtr src_rule, RuleRange dst_rules,
 
 void DependencyGraph::add_edge(RulePtr src_rule, RulePtr dst_rule,
                                const Transfer& transfer,
-                               const NetworkSpace& domain)
+                               const NetworkSpace& domain,
+                               bool is_dependent)
 {
     auto src_vertex = src_rule->vertex_;
     auto dst_vertex = dst_rule->vertex_;
@@ -340,7 +341,12 @@ void DependencyGraph::add_edge(RulePtr src_rule, RulePtr dst_rule,
     else {
         auto edge = graph_->addEdge(src_vertex, dst_vertex,
                                     Edge{src_rule, dst_rule, transfer, domain});
-        latest_diff_.new_edges.emplace_back(edge);
+        if (not is_dependent) {
+            latest_diff_.new_edges.emplace_back(edge);
+        }
+        else {
+            latest_diff_.new_dependent_edges.emplace_back(edge);
+        }
     }
 }
 

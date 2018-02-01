@@ -70,10 +70,9 @@ class FlowPredictorTest : public ::testing::Test
 {
 protected:
     virtual void SetUp() {
-        initGraph();
-        xid_generator = std::make_shared<RequestIdGenerator>();
-        flow_predictor = std::make_shared<FlowPredictor>(dependency_graph,
-                                                         xid_generator);
+        initFlowPredictor();
+        updateSpecialRuleEdges();
+        updateTableMissEdges();
     }
 
     virtual void TearDown() {
@@ -82,29 +81,54 @@ protected:
         destroyGraph();
     }
 
+    void initFlowPredictor() {
+        initGraph();
+        xid_generator = std::make_shared<RequestIdGenerator>();
+        flow_predictor = std::make_shared<FlowPredictor>(dependency_graph,
+                                                         xid_generator);
+    }
+
+    void updateSpecialRuleEdges() {
+        installSpecialRules();
+        flow_predictor->updateEdges(drop_diff);
+        flow_predictor->updateEdges(controller_diff);
+
+        flow_predictor->updateEdges(p11_source_diff);
+        flow_predictor->updateEdges(p11_sink_diff);
+        flow_predictor->updateEdges(p12_source_diff);
+        flow_predictor->updateEdges(p12_sink_diff);
+
+        flow_predictor->updateEdges(p21_source_diff);
+        flow_predictor->updateEdges(p21_sink_diff);
+        flow_predictor->updateEdges(p22_source_diff);
+        flow_predictor->updateEdges(p22_sink_diff);
+    }
+
+    void updateTableMissEdges() {
+        installTableMissRules();
+        flow_predictor->updateEdges(table_miss1_diff);
+        //flow_predictor->updateEdges(table_miss2_diff);
+    }
+
     std::shared_ptr<RequestIdGenerator> xid_generator;
     std::shared_ptr<FlowPredictor> flow_predictor;
 };
 
 TEST_F(FlowPredictorTest, CreationTest)
 {
-    installSpecialRules();
-
-    flow_predictor->updateEdges(drop_diff);
-    flow_predictor->updateEdges(controller_diff);
-
-    flow_predictor->updateEdges(p11_source_diff);
-    flow_predictor->updateEdges(p11_sink_diff);
-    flow_predictor->updateEdges(p12_source_diff);
-    flow_predictor->updateEdges(p12_sink_diff);
-
-    flow_predictor->updateEdges(p21_source_diff);
-    flow_predictor->updateEdges(p21_sink_diff);
-    flow_predictor->updateEdges(p22_source_diff);
-    flow_predictor->updateEdges(p22_sink_diff);
+    TearDown();
+    initFlowPredictor();
+    updateSpecialRuleEdges();
 
     auto instruction = flow_predictor->getInstruction();
     EXPECT_TRUE(instruction.interceptor_diff.empty());
+    EXPECT_TRUE(instruction.requests.data.empty());
+}
 
-    // TODO: implement other tests
+TEST_F(FlowPredictorTest, TableMissTest)
+{
+    auto instruction = flow_predictor->getInstruction();
+    EXPECT_EQ(4u, instruction.interceptor_diff.rules_to_add.size());
+    EXPECT_TRUE(instruction.interceptor_diff.rules_to_delete.empty());
+    EXPECT_TRUE(instruction.requests.data.empty());
 }

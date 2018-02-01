@@ -6,9 +6,11 @@
 #include "../openflow/Action.hpp"
 #include "../NetworkSpace.hpp"
 
+#include <iostream>
 #include <list>
 #include <map>
 #include <memory>
+#include <string>
 #include <vector>
 
 struct PortAction : public PortActionBase
@@ -116,6 +118,9 @@ public:
     PortId inPort() const {return domain_.inPort();}
     const Actions& actions() const {return actions_;}
     uint64_t multiplier() const {return actions_.size();}
+
+    friend std::ostream& operator<<(std::ostream& os, const Rule& rule);
+    friend std::ostream& operator<<(std::ostream& os, const RulePtr rule);
 
     class PtrComparator
     {

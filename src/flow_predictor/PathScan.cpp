@@ -20,11 +20,6 @@ DomainPath::DomainPath(PathId id, NodeDescriptor source, NodeDescriptor sink,
 
 }
 
-const std::list<NodeDescriptor>& PathScan::getNodes(RulePtr rule) const
-{
-    return rule->rule_mapping_->node_list;
-}
-
 void PathScan::forEachSubtreeNode(NodeDescriptor root, NodeVisitor visitor)
 {
     std::queue<NodeDescriptor> node_queue;
@@ -35,7 +30,7 @@ void PathScan::forEachSubtreeNode(NodeDescriptor root, NodeVisitor visitor)
         auto rule = node->rule;
         if (rule->type() != RuleType::SOURCE) {
             // Save child nodes to the queue
-            auto children = node->children();
+            const auto& children = node->children_;
             for (auto child_node : children) {
                 node_queue.push(child_node);
             }
@@ -68,7 +63,6 @@ void PathScan::forEachPathNode(NodeDescriptor source, NodeDescriptor sink,
 
         node_queue.pop();
     }
-
 }
 
 NodeDescriptor PathScan::addRootNode(RulePtr rule)
@@ -79,6 +73,7 @@ NodeDescriptor PathScan::addRootNode(RulePtr rule)
     auto root_transfer = Transfer::identityTransfer();
     auto node = add_node(rule, std::move(domain),
                          root_transfer, multiplier);
+    node->root = node;
     node->parent = NodeDescriptor(nullptr);
     return node;
 }
@@ -89,10 +84,11 @@ NodeDescriptor PathScan::addChildNode(NodeDescriptor parent, RulePtr rule,
                                       uint64_t multiplier)
 {
     assert(RuleType::SINK != rule->type());
-    // TODO: CRITICAL - flows may merge into one flow, there is no intercepter!
+    // TODO: CRITICAL - flows may merge into one flow, there is no interceptor!
     auto root_transfer = transfer * parent->root_transfer;
     auto node = add_node(rule, std::move(domain),
                          root_transfer, multiplier);
+    node->root = parent->root;
     node->parent = parent;
     node->parent_backward_iterator_ = parent->children_.emplace(
         parent->children_.end(), node
@@ -100,11 +96,11 @@ NodeDescriptor PathScan::addChildNode(NodeDescriptor parent, RulePtr rule,
     return node;
 }
 
-void PathScan::setNodeFinalTime(NodeDescriptor node, Timestamp time)
+void PathScan::setNodeFinalTime(NodeDescriptor node, Timestamp final_time)
 {
     // Node version becomes old
-    assert(Timestamp::max() != time);
-    node->final_time_ = time;
+    assert(Timestamp::max() != final_time);
+    node->final_time_ = final_time;
 
     // Remove node from corresponding vertex
     auto mapping = node->rule->rule_mapping_;
@@ -160,9 +156,10 @@ DomainPathDescriptor PathScan::addDomainPath(NodeDescriptor source,
     return path;
 }
 
-void PathScan::setDomainPathFinalTime(DomainPathDescriptor path, Timestamp time)
+void PathScan::setDomainPathFinalTime(DomainPathDescriptor path,
+                                      Timestamp final_time)
 {
-    path->final_time = time;
+    path->final_time = final_time;
 }
 
 void PathScan::deleteDomainPath(DomainPathDescriptor path)

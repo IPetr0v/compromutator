@@ -186,7 +186,6 @@ TEST_F(HeaderSpaceTest, ChangerCreationTest)
     EXPECT_EQ(T("zz0011xx"), T("zz0011xx"));
 }
 
-#include <iostream>
 TEST_F(HeaderSpaceTest, ChangerOperationTest)
 {
     EXPECT_EQ(identity(), identity() *= identity());

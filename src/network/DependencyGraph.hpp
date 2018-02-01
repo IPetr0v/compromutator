@@ -9,16 +9,19 @@
 struct EdgeDiff
 {
     std::vector<EdgeDescriptor> new_edges;
+    std::vector<EdgeDescriptor> new_dependent_edges;
     std::vector<EdgeDescriptor> changed_edges;
     std::vector<std::pair<RulePtr, RulePtr>> removed_edges;
 
     bool empty() const {
         return new_edges.empty() &&
+               new_dependent_edges.empty() &&
                changed_edges.empty() &&
                removed_edges.empty();
     }
     void clear() {
         new_edges.clear();
+        new_dependent_edges.clear();
         changed_edges.clear();
         removed_edges.clear();
     }
@@ -63,7 +66,8 @@ private:
     std::pair<Edge&, bool> get_edge();
 
     inline void add_edge(RulePtr src_rule, RulePtr dst_rule,
-                         const Transfer& transfer, const NetworkSpace& domain);
+                         const Transfer& transfer, const NetworkSpace& domain,
+                         bool is_dependent = false);
     inline void delete_edge(RulePtr src_rule, RulePtr dst_rule);
     inline void set_edge_domain(EdgeDescriptor edge,
                                 const NetworkSpace& domain);

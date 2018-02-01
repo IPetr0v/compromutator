@@ -35,6 +35,7 @@ void Detector::addSwitch(SwitchId id, std::vector<PortId> ports,
 
 void Detector::deleteSwitch(SwitchId id)
 {
+    // TODO: critical - we lose statistics on switch deletion
     auto sw = network_->getSwitch(id);
     if (not sw) return;
 

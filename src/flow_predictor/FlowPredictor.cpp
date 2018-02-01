@@ -152,19 +152,22 @@ void FlowPredictor::process_link_query(const LinkStatsPtr& query)
 void FlowPredictor::add_subtrees(EdgeDescriptor edge)
 {
     auto dst_rule = dependency_graph_->edge(edge).dst_rule;
-    auto domain = dependency_graph_->edge(edge).domain;
 
-    if (RuleType::SINK == dst_rule->type()) {
-        path_scan_->addRootNode(dst_rule);
+    bool is_new_rule = not path_scan_->ruleExists(dst_rule);
+    if (RuleType::SINK == dst_rule->type() && is_new_rule) {
+        auto root = path_scan_->addRootNode(dst_rule);
+        std::cout << "addRootNode: " << root->rule << std::endl;
     }
 
-    auto dst_nodes = path_scan_->getNodes(dst_rule);
-    for (auto dst_node : dst_nodes) {
-        auto result = add_child_node(dst_node, edge);
-        auto success = result.second;
-        if (success) {
-            auto new_child = result.first;
-            add_subtree(new_child);
+    if (path_scan_->ruleExists(dst_rule)) {
+        auto dst_nodes = path_scan_->getNodes(dst_rule);
+        for (auto dst_node : dst_nodes) {
+            auto result = add_child_node(dst_node, edge);
+            auto success = result.second;
+            if (success) {
+                auto new_child = result.first;
+                add_subtree(new_child);
+            }
         }
     }
 }
@@ -176,6 +179,19 @@ void FlowPredictor::delete_subtrees(std::pair<RulePtr, RulePtr> edge)
     for (auto node_it = nodes.begin(); node_it != nodes.end();) {
         delete_subtree(*(node_it++));
     }
+}
+
+bool FlowPredictor::is_in_subtree(NodeDescriptor parent,
+                                  EdgeDescriptor edge) const
+{
+    auto src_rule = dependency_graph_->edge(edge).src_rule;
+    for (auto child : path_scan_->getChildNodes(parent)) {
+        auto child_rule = path_scan_->node(child).rule;
+        if (src_rule->id() == child_rule->id()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 std::pair<NodeDescriptor, bool>
@@ -191,7 +207,7 @@ FlowPredictor::add_child_node(NodeDescriptor parent, EdgeDescriptor edge)
     auto multiplier = rule->multiplier() * parent_multiplier;
 
     // Create node
-    if (not domain.empty()) {
+    if (not domain.empty() && not is_in_subtree(parent, edge)) {
         auto new_node = path_scan_->addChildNode(
             parent, rule, std::move(domain), transfer, multiplier
         );
@@ -202,10 +218,12 @@ FlowPredictor::add_child_node(NodeDescriptor parent, EdgeDescriptor edge)
     }
 }
 
-void FlowPredictor::add_subtree(NodeDescriptor root)
+#include <iostream>
+void FlowPredictor::add_subtree(NodeDescriptor subtree_root)
 {
+    std::cout<<"add_subtree: "<<subtree_root->rule<<std::endl;
     std::queue<NodeDescriptor> node_queue;
-    node_queue.push(root);
+    node_queue.push(subtree_root);
     while (not node_queue.empty()) {
         auto& node = node_queue.front();
         auto rule = path_scan_->node(node).rule;
@@ -219,30 +237,36 @@ void FlowPredictor::add_subtree(NodeDescriptor root)
                 auto success = result.second;
                 if (success) {
                     auto child_node = result.first;
+                    std::cout<<"    "<<child_node->rule<<std::endl;
                     node_queue.push(child_node);
                 }
             }
         }
         else {
+            auto root = path_scan_->node(subtree_root).root;
+            std::cout<<"    Add path"<<std::endl;
             add_domain_path(node, root);
         }
         node_queue.pop();
     }
 }
 
-void FlowPredictor::delete_subtree(NodeDescriptor root)
+void FlowPredictor::delete_subtree(NodeDescriptor subtree_root)
 {
-    path_scan_->forEachSubtreeNode(root, [this, root](NodeDescriptor node) {
-        // TODO: delete path from getPort
+    path_scan_->forEachSubtreeNode(subtree_root,
+        [this, subtree_root](NodeDescriptor node) {
+            // TODO: delete path from getPort
 
-        // Set node to be an old version
-        path_scan_->setNodeFinalTime(node, current_time());
+            // Set node to be an old version
+            path_scan_->setNodeFinalTime(node, current_time());
 
-        auto rule = path_scan_->node(node).rule;
-        if (rule->type() == RuleType::SOURCE) {
-            delete_domain_path(node, root);
+            auto rule = path_scan_->node(node).rule;
+            if (rule->type() == RuleType::SOURCE) {
+                auto root = path_scan_->node(subtree_root).root;
+                delete_domain_path(node, root);
+            }
         }
-    });
+    );
 }
 
 void FlowPredictor::query_domain_path(NodeDescriptor source,

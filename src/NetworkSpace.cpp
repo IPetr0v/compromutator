@@ -1,5 +1,7 @@
 #include "NetworkSpace.hpp"
 
+#include <string>
+
 NetworkSpace::NetworkSpace(std::string str):
     in_port_(SpecialPort::ANY), header_(std::move(str))
 {
@@ -86,7 +88,13 @@ NetworkSpace NetworkSpace::operator&(const NetworkSpace& right)
 
 std::ostream& operator<<(std::ostream& os, const NetworkSpace& domain)
 {
-    os << "(" << domain.in_port_ << " | " << domain.header_ << ")";
+    std::string port;
+    switch(domain.in_port_) {
+    case SpecialPort::NONE: port = "NONE"; break;
+    case SpecialPort::ANY:  port = "ANY";  break;
+    default: port = std::to_string(domain.in_port_); break;
+    }
+    os << "(" << port << "|" << domain.header_ << ")";
     return os;
 }
 
