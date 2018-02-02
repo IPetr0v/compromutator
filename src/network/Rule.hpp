@@ -105,7 +105,7 @@ class Rule
 public:
     Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
          NetworkSpace&& domain, Actions&& actions);
-    Rule(const RulePtr other, NetworkSpace&& domain);
+    Rule(const RulePtr other, const NetworkSpace& domain);
     ~Rule();
 
     RuleType type() const {return type_;}

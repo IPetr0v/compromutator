@@ -183,8 +183,8 @@ void FlowPredictor::delete_subtrees(std::pair<RulePtr, RulePtr> edge)
     }
 }
 
-bool FlowPredictor::is_in_subtree(NodeDescriptor parent,
-                                  EdgeDescriptor edge) const
+bool FlowPredictor::is_existing_child(NodeDescriptor parent,
+                                      EdgeDescriptor edge) const
 {
     auto src_rule = dependency_graph_->edge(edge).src_rule;
     for (auto child : path_scan_->getChildNodes(parent)) {
@@ -204,12 +204,13 @@ FlowPredictor::add_child_node(NodeDescriptor parent, EdgeDescriptor edge)
     auto edge_domain = dependency_graph_->edge(edge).domain;
 
     auto rule = dependency_graph_->edge(edge).src_rule;
-    auto transfer = dependency_graph_->edge(edge).transfer;
-    auto domain = transfer.inverse(edge_domain & parent_domain);
+    auto& transfer = dependency_graph_->edge(edge).transfer;
+    auto domain =
+        transfer.inverse(edge_domain & parent_domain) & rule->domain();
     auto multiplier = rule->multiplier() * parent_multiplier;
 
     // Create node
-    if (not domain.empty() && not is_in_subtree(parent, edge)) {
+    if (not domain.empty() && not is_existing_child(parent, edge)) {
         auto new_node = path_scan_->addChildNode(
             parent, rule, std::move(domain), transfer, multiplier
         );
@@ -222,7 +223,8 @@ FlowPredictor::add_child_node(NodeDescriptor parent, EdgeDescriptor edge)
 
 void FlowPredictor::add_subtree(NodeDescriptor subtree_root)
 {
-    std::cout<<"add_subtree: "<<subtree_root->rule<<std::endl;
+    std::cout<<"add_subtree: "<<subtree_root->rule<<" | "
+             <<subtree_root->domain<<std::endl;
     std::queue<NodeDescriptor> node_queue;
     node_queue.push(subtree_root);
     while (not node_queue.empty()) {
@@ -238,14 +240,14 @@ void FlowPredictor::add_subtree(NodeDescriptor subtree_root)
                 auto success = result.second;
                 if (success) {
                     auto child_node = result.first;
-                    std::cout<<"    "<<child_node->rule<<std::endl;
+                    std::cout<<"    "<<child_node->rule<<" | "
+                             <<child_node->domain<<std::endl;
                     node_queue.push(child_node);
                 }
             }
         }
         else {
             auto root = path_scan_->node(subtree_root).root;
-            std::cout<<"    Add path"<<std::endl;
             add_domain_path(node, root);
         }
         node_queue.pop();
@@ -254,12 +256,16 @@ void FlowPredictor::add_subtree(NodeDescriptor subtree_root)
 
 void FlowPredictor::delete_subtree(NodeDescriptor subtree_root)
 {
+    std::cout<<"delete_subtree: "<<subtree_root->rule<<" | "
+             <<subtree_root->domain<<std::endl;
     path_scan_->forEachSubtreeNode(subtree_root,
         [this, subtree_root](NodeDescriptor node) {
             // TODO: delete path from getPort
 
             // Set node to be an old version
             path_scan_->setNodeFinalTime(node, current_time());
+            std::cout<<"    "<<node->rule<<" | "
+                     <<node->domain<<std::endl;
 
             auto rule = path_scan_->node(node).rule;
             if (rule->type() == RuleType::SOURCE) {
@@ -283,9 +289,11 @@ void FlowPredictor::query_domain_path(NodeDescriptor source,
 void FlowPredictor::add_domain_path(NodeDescriptor source,
                                     NodeDescriptor sink)
 {
-    path_scan_->addDomainPath(source, sink, current_time());
-    auto source_rule = path_scan_->node(source).rule;
-    //auto sink_rule = path_scan_->node(sink).rule;
+    auto path = path_scan_->addDomainPath(source, sink, current_time());
+    auto source_rule = path_scan_->domainPath(path).source_interceptor;
+    //auto sink_rule = path_scan_->domainPath(path).sink_interceptor;
+    std::cout<<"    Add path | time="<<path->starting_time.id
+             <<", "<<source->domain<<std::endl;
 
     // Add interceptors
     InterceptorDiff new_diff;
@@ -300,10 +308,12 @@ void FlowPredictor::delete_domain_path(NodeDescriptor source,
     auto path = path_scan_->outDomainPath(source);
     auto path_id = path_scan_->domainPath(path).id;
     auto path_time = path_scan_->domainPath(path).starting_time;
+    std::cout<<"    Delete path | time="<<path_time.id
+             <<", "<<source->domain<<std::endl;
     if (path_time != current_time()) {
         path_scan_->setDomainPathFinalTime(path, current_time());
-        auto source_rule = path_scan_->node(source).rule;
-        auto sink_rule = path_scan_->node(sink).rule;
+        auto source_rule = path_scan_->domainPath(path).source_interceptor;
+        auto sink_rule = path_scan_->domainPath(path).sink_interceptor;
         stats_manager_->requestPath(path_id, path, source_rule, sink_rule);
 
         // Delete interceptors

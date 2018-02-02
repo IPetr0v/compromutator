@@ -190,6 +190,9 @@ RequestList StatsManager::getNewRequests()
         return std::move(requests);
     }
     else {
+        // Delete empty bucket and increase front time
+        delete_back_bucket();
+        add_front_bucket();
         return RequestList();
     }
 }

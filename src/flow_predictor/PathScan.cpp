@@ -148,10 +148,9 @@ DomainPathDescriptor PathScan::addDomainPath(NodeDescriptor source,
         last_path_id_++, source, sink, starting_time
     );
 
-    path->source_interceptor = new Rule(source->rule,
-                                        std::move(path->source_domain));
-    path->sink_interceptor = new Rule(sink->rule,
-                                      std::move(path->sink_domain));
+    // TODO: delete these rules or make them shared
+    path->source_interceptor = new Rule(source->rule, path->source_domain);
+    path->sink_interceptor = new Rule(sink->rule, path->sink_domain);
     source->out_path_ = path;
     return path;
 }
