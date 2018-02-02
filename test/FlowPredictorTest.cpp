@@ -123,18 +123,17 @@ protected:
         flow_predictor->updateEdges(rule2_diff);
     }
 
-    RulePtr getRule(SwitchId sw_id, PortId in_port_id,
-                    const std::vector<RulePtr>& rules) {
-        auto it = std::find_if(rules.begin(), rules.end(),
-            [sw_id, in_port_id](RulePtr rule) {
-                if (rule->sw()) {
-                    return rule->sw()->id() == sw_id &&
-                           rule->domain().inPort() == in_port_id;
-                }
-                return false;
-            }
-        );
-        return (it != rules.end()) ? *it : nullptr;
+    void updateAllRules() {
+        // Get table miss instruction
+        flow_predictor->getInstruction();
+
+        // Get rule1 instruction
+        updateFirstRuleEdges();
+        flow_predictor->getInstruction();
+
+        // Get rule2 instruction
+        updateSecondRuleEdges();
+        flow_predictor->getInstruction();
     }
 
     RulePtr getRule(SwitchId sw_id, NetworkSpace domain,
@@ -149,6 +148,26 @@ protected:
             }
         );
         return (it != rules.end()) ? *it : nullptr;
+    }
+
+    RulePtr getRequestedRule(SwitchId sw_id, NetworkSpace domain,
+                             const RequestList& request_list) {
+        auto it = std::find_if(
+            request_list.data.begin(), request_list.data.end(),
+            [sw_id, domain](RequestPtr request) {
+                auto rule_request = RuleRequest::pointerCast(request);
+                if (not rule_request) return false;
+
+                auto rule = rule_request->rule;
+                if (rule->sw()) {
+                    return rule->sw()->id() == sw_id &&
+                           rule->domain() == domain;
+                }
+                return false;
+            }
+        );
+        auto rule_request = RuleRequest::pointerCast(*it);
+        return rule_request->rule;
     }
 
     std::shared_ptr<RequestIdGenerator> xid_generator;
@@ -182,9 +201,6 @@ TEST_F(FlowPredictorTest, TableMissTest)
 TEST_F(FlowPredictorTest, AddRuleTest)
 {
     // Get table miss instruction
-    std::cout<<"----- START -----"<<std::endl;
-    std::cout<<std::endl;
-    std::cout<<std::endl;
     auto table_miss_instruction = flow_predictor->getInstruction();
     auto& table_miss_new_rules =
           table_miss_instruction.interceptor_diff.rules_to_add;
@@ -212,15 +228,69 @@ TEST_F(FlowPredictorTest, AddRuleTest)
     EXPECT_NE(nullptr, rule1_new_rule2);
 
     // Check rule1 deleted rules
-    auto& rule1_old_rules = rule1_instruction.interceptor_diff.rules_to_delete;
-    ASSERT_EQ(1u, rule1_old_rules.size());
-    auto rule1_old_rule1 = getRule(1u, N(1), rule1_old_rules);
+    auto& rule1_deleted_rules = rule1_instruction.interceptor_diff.rules_to_delete;
+    ASSERT_EQ(1u, rule1_deleted_rules.size());
+    auto rule1_old_rule1 = getRule(1u, N(1), rule1_deleted_rules);
     ASSERT_NE(nullptr, rule1_old_rule1);
     EXPECT_EQ(table_miss_source1->id(), rule1_old_rule1->id());
 
+    // Get rule2 instruction
     updateSecondRuleEdges();
     auto rule2_instruction = flow_predictor->getInstruction();
     EXPECT_EQ(1u, rule2_instruction.requests.data.size());
     EXPECT_EQ(2u, rule2_instruction.interceptor_diff.rules_to_add.size());
     EXPECT_EQ(1u, rule2_instruction.interceptor_diff.rules_to_delete.size());
+}
+
+TEST_F(FlowPredictorTest, DeleteRuleTest)
+{
+    /*updateAllRules();
+
+    // Delete rule
+    std::cout<<"----- START -----\n";
+    std::cout<<"\n";
+    auto diff = dependency_graph->deleteRule(rule1);
+    flow_predictor->updateEdges(diff);
+    auto instruction = flow_predictor->getInstruction();
+
+    // Check requests
+    EXPECT_EQ(2u, instruction.requests.data.size());
+    auto requested_rule1 = getRequestedRule(
+        1u, N(1, H("0000xxxx")), instruction.requests
+    );
+    auto requested_rule2 = getRequestedRule(
+        1u, N(1, H("xxxxxxxx") - H("0000xxxx")), instruction.requests
+    );
+    EXPECT_NE(nullptr, requested_rule1);
+    EXPECT_NE(nullptr, requested_rule2);
+
+    // Check rule1 new rules
+    auto& new_rules = instruction.interceptor_diff.rules_to_add;
+    EXPECT_EQ(1u, new_rules.size());
+    auto new_rule = getRule(1u, N(1), new_rules);
+    EXPECT_NE(nullptr, new_rule);
+
+    // Check rule1 deleted rules
+    auto& deleted_rules = instruction.interceptor_diff.rules_to_delete;
+    EXPECT_EQ(2u, deleted_rules.size());
+    auto deleted_rule1 = getRule(1u, N(1, H("0000xxxx")), deleted_rules);
+    auto deleted_rule2 = getRule(1u, N(1, H("xxxxxxxx") - H("0000xxxx")),
+                                 deleted_rules);
+    ASSERT_NE(nullptr, deleted_rule1);
+    ASSERT_NE(nullptr, deleted_rule2);*/
+}
+
+TEST_F(FlowPredictorTest, AddLinkTest)
+{
+    updateAllRules();
+}
+
+TEST_F(FlowPredictorTest, DeleteLinkTest)
+{
+    updateAllRules();
+}
+
+TEST_F(FlowPredictorTest, PredictionTest)
+{
+    updateAllRules();
 }

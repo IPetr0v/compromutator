@@ -247,14 +247,14 @@ void DependencyGraph::delete_in_edges(RulePtr dst_rule)
         for (auto low_dst_rule : table->lowerRules(dst_rule)) {
             auto domain_intersection = edge_domain & low_dst_rule->domain();
             if (not domain_intersection.empty()) {
-                add_edge(src_rule, dst_rule, edge_transfer,
+                add_edge(src_rule, low_dst_rule, edge_transfer,
                          domain_intersection);
 
                 // Decrease the edge domain as it goes through lower rules
                 edge_domain -= domain_intersection;
             }
         }
-        latest_diff_.removed_edges.emplace_back(src_rule, dst_rule);
+        latest_diff_.removed_dependent_edges.emplace_back(src_rule, dst_rule);
     }
     graph_->deleteInEdges(dst_rule->vertex_);
 }
