@@ -177,9 +177,11 @@ void FlowPredictor::add_subtrees(EdgeDescriptor edge)
 void FlowPredictor::delete_subtrees(std::pair<RulePtr, RulePtr> edge)
 {
     auto src_rule = edge.first;
-    auto nodes = path_scan_->getNodes(src_rule);
-    for (auto node_it = nodes.begin(); node_it != nodes.end();) {
-        delete_subtree(*(node_it++));
+    if (path_scan_->ruleExists(src_rule)) {
+        auto nodes = path_scan_->getNodes(src_rule);
+        for (auto node_it = nodes.begin(); node_it != nodes.end();) {
+            delete_subtree(*(node_it++));
+        }
     }
 }
 

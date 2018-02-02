@@ -198,7 +198,7 @@ protected:
     std::shared_ptr<DependencyGraph> dependency_graph;
 };
 
-TEST_F(DependencyGraphTest, EdgeTest)
+TEST_F(DependencyGraphTest, AddRuleTest)
 {
     auto rule_diff = dependency_graph->addRule(rule1);
     ASSERT_EQ(1u, rule_diff.new_edges.size());
@@ -213,9 +213,7 @@ TEST_F(DependencyGraphTest, EdgeTest)
     EXPECT_EQ(rule1, out_edge.dst_rule);
     EXPECT_EQ(N(1, H("0000xxxx")), out_edge.domain);
 
-    auto in_edge = findEdgeFrom(
-        rule_diff.new_edges, rule1
-    );
+    auto in_edge = findEdgeFrom(rule_diff.new_edges, rule1);
     EXPECT_EQ(rule1, in_edge.src_rule);
     EXPECT_EQ(port12->sinkRule(), in_edge.dst_rule);
     EXPECT_EQ(N(1, H("0000xxxx")), in_edge.domain);
@@ -231,12 +229,35 @@ TEST_F(DependencyGraphTest, EdgeTest)
                                      ActionsBase::portAction(2));
     auto top_diff = dependency_graph->addRule(top_rule);
     ASSERT_EQ(1u, top_diff.changed_edges.size());
-    auto last_edge = findEdgeTo(
-        top_diff.changed_edges, rule1
-    );
+    auto last_edge = findEdgeTo(top_diff.changed_edges, rule1);
     EXPECT_EQ(port11->sourceRule(), last_edge.src_rule);
     EXPECT_EQ(rule1, last_edge.dst_rule);
     EXPECT_EQ(N(1, H("0000xxxx")) - N(1, H("00000011")), last_edge.domain);
+}
+
+TEST_F(DependencyGraphTest, DeleteRuleTest)
+{
+    dependency_graph->addRule(rule1);
+    auto rule_diff = dependency_graph->deleteRule(rule1);
+    EXPECT_TRUE(rule_diff.new_edges.empty());
+    EXPECT_TRUE(rule_diff.new_dependent_edges.empty());
+    ASSERT_EQ(1u, rule_diff.changed_edges.size());
+    ASSERT_EQ(1u, rule_diff.removed_edges.size());
+    ASSERT_EQ(1u, rule_diff.removed_dependent_edges.size());
+
+    auto& changed_table_miss_edge = rule_diff.changed_edges[0]->data;
+    EXPECT_EQ(port11->sourceRule(), changed_table_miss_edge.src_rule);
+    EXPECT_EQ(table_miss1, changed_table_miss_edge.dst_rule);
+    EXPECT_EQ(N(1, H("xxxxxxxx")), changed_table_miss_edge.domain);
+
+    auto deleted_out_edge = *rule_diff.removed_edges.begin();
+    EXPECT_EQ(rule1, deleted_out_edge.first);
+    EXPECT_EQ(port12->sinkRule(), deleted_out_edge.second);
+
+    auto deleted_in_edge = *rule_diff.removed_dependent_edges.begin();
+    EXPECT_EQ(port11->sourceRule(), deleted_in_edge.first);
+    EXPECT_EQ(rule1, deleted_in_edge.second);
+
 }
 
 TEST_F(DependencyGraphTest, AddLinkTest)
