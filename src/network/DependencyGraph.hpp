@@ -63,13 +63,12 @@ private:
     void add_edges_to_group(RulePtr src_rule, const GroupAction& action);
 
     void add_edges(RulePtr src_rule, RuleRange dst_rules,
-                   const Transfer& transfer, NetworkSpace output_domain);
-    //void add_edges(RuleRange src_rules, RulePtr dst_rules);
+                   Transfer&& transfer, NetworkSpace output_domain);
 
     std::pair<Edge&, bool> get_edge();
 
     inline void add_edge(RulePtr src_rule, RulePtr dst_rule,
-                         const Transfer& transfer, const NetworkSpace& domain,
+                         Transfer&& transfer, const NetworkSpace& domain,
                          bool is_dependent = false);
     inline void delete_edge(RulePtr src_rule, RulePtr dst_rule);
     inline void set_edge_domain(EdgeDescriptor edge,

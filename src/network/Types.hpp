@@ -52,6 +52,7 @@ public:
     MapRange(Map& map, Iterator begin, Iterator end):
         map_(map), begin_(begin), end_(end) {}
 
+    bool empty() const {return not (begin_ != end_);}
     MapIterator<Map> begin() const {return MapIterator<Map>(begin_);}
     MapIterator<Map> end() const {return MapIterator<Map>(end_);}
 

@@ -206,17 +206,17 @@ TEST_F(DependencyGraphTest, AddRuleTest)
     ASSERT_EQ(1u, rule_diff.changed_edges.size());
     EXPECT_TRUE(rule_diff.removed_edges.empty());
 
-    auto out_edge = findEdgeFrom(
+    auto in_edge = findEdgeFrom(
         rule_diff.new_dependent_edges, port11->sourceRule()
     );
-    EXPECT_EQ(port11->sourceRule(), out_edge.src_rule);
-    EXPECT_EQ(rule1, out_edge.dst_rule);
-    EXPECT_EQ(N(1, H("0000xxxx")), out_edge.domain);
-
-    auto in_edge = findEdgeFrom(rule_diff.new_edges, rule1);
-    EXPECT_EQ(rule1, in_edge.src_rule);
-    EXPECT_EQ(port12->sinkRule(), in_edge.dst_rule);
+    EXPECT_EQ(port11->sourceRule(), in_edge.src_rule);
+    EXPECT_EQ(rule1, in_edge.dst_rule);
     EXPECT_EQ(N(1, H("0000xxxx")), in_edge.domain);
+
+    auto out_edge = findEdgeFrom(rule_diff.new_edges, rule1);
+    EXPECT_EQ(rule1, out_edge.src_rule);
+    EXPECT_EQ(port12->sinkRule(), out_edge.dst_rule);
+    EXPECT_EQ(N(2, H("0000xxxx")), out_edge.domain);
 
     auto changed_edge = rule_diff.changed_edges[0];
     EXPECT_EQ(port11->sourceRule(),
@@ -268,6 +268,8 @@ TEST_F(DependencyGraphTest, AddLinkTest)
     auto link = network->addLink({1,2}, {2,1}).first;
     auto diff = dependency_graph->addLink(link);
     ASSERT_EQ(2u, diff.new_edges.size());
+    EXPECT_EQ(0u, diff.changed_edges.size());
+    EXPECT_EQ(4u, diff.removed_edges.size());
 
     auto link_edge_to2 = findEdgeTo(diff.new_edges, rule2);
     EXPECT_EQ(rule1, link_edge_to2.src_rule);
@@ -279,9 +281,18 @@ TEST_F(DependencyGraphTest, AddLinkTest)
     EXPECT_EQ(table_miss2, link_edge_to_miss.dst_rule);
     EXPECT_EQ(N(1, H("0000xxxx")) - N(1, H("000000xx")),
               link_edge_to_miss.domain);
+
+    auto port12_source_range = dependency_graph->outEdges(port12->sourceRule());
+    auto port12_sink_range = dependency_graph->inEdges(port12->sinkRule());
+    auto port21_source_range = dependency_graph->outEdges(port21->sourceRule());
+    auto port21_sink_range = dependency_graph->inEdges(port21->sinkRule());
+    EXPECT_TRUE(port12_source_range.empty());
+    EXPECT_TRUE(port12_sink_range.empty());
+    EXPECT_TRUE(port21_source_range.empty());
+    EXPECT_TRUE(port21_sink_range.empty());
 }
 
-TEST_F(DependencyGraphTest, LinkTest)
+TEST_F(DependencyGraphTest, ExistingLinkTest)
 {
     dependency_graph->addRule(rule2);
     network->deleteRule(rule1->id());
@@ -302,6 +313,51 @@ TEST_F(DependencyGraphTest, LinkTest)
     EXPECT_EQ(table_miss2, link_edge_to_miss.dst_rule);
     EXPECT_EQ(N(1, H("0000xxxx")) - N(1, H("000000xx")),
               link_edge_to_miss.domain);
+}
+
+TEST_F(DependencyGraphTest, DeleteLinkTest)
+{
+    dependency_graph->addRule(rule1);
+    dependency_graph->addRule(rule2);
+    auto link = network->addLink({1,2}, {2,1}).first;
+    dependency_graph->addLink(link);
+
+    auto diff = dependency_graph->deleteLink(link);
+    EXPECT_EQ(4u, diff.new_edges.size());
+    EXPECT_EQ(0u, diff.changed_edges.size());
+    EXPECT_EQ(2u, diff.removed_edges.size());
+
+    auto edge_from_rule1 = findEdgeFrom(diff.new_edges, rule1);
+    EXPECT_EQ(rule1, edge_from_rule1.src_rule);
+    EXPECT_EQ(port12->sinkRule(), edge_from_rule1.dst_rule);
+    EXPECT_EQ(N(2, H("0000xxxx")), edge_from_rule1.domain);
+
+    auto edge_to_table_miss1 = findEdgeTo(diff.new_edges, table_miss1);
+    EXPECT_EQ(port12->sourceRule(), edge_to_table_miss1.src_rule);
+    EXPECT_EQ(table_miss1, edge_to_table_miss1.dst_rule);
+    EXPECT_EQ(N(2), edge_to_table_miss1.domain);
+
+    auto edge_to_rule2 = findEdgeTo(diff.new_edges, rule2);
+    EXPECT_EQ(port21->sourceRule(), edge_to_rule2.src_rule);
+    EXPECT_EQ(rule2, edge_to_rule2.dst_rule);
+    EXPECT_EQ(N(1, H("000000xx")), edge_to_rule2.domain);
+
+    auto edge_to_table_miss2 = findEdgeTo(diff.new_edges, table_miss2);
+    EXPECT_EQ(port21->sourceRule(), edge_to_table_miss2.src_rule);
+    EXPECT_EQ(table_miss2, edge_to_table_miss2.dst_rule);
+    EXPECT_EQ(N(1), edge_to_table_miss2.domain);
+
+    std::set<std::pair<RulePtr, RulePtr>> expected_removed_edges {
+        {rule1, rule2}, {rule1, table_miss2}
+    };
+    for (auto edge : diff.removed_edges) {
+        auto src_rule = edge.first;
+        auto dst_rule = edge.second;
+        auto it = expected_removed_edges.find({src_rule, dst_rule});
+        EXPECT_NE(expected_removed_edges.end(), it);
+        expected_removed_edges.erase(it);
+    }
+    EXPECT_TRUE(expected_removed_edges.empty());
 }
 
 TEST_F(DependencyGraphTest, EdgeCleanUpTest)

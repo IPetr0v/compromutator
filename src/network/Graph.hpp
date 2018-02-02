@@ -84,6 +84,8 @@ public:
         explicit AdjacencyRange(AdjacencyList& list) :
             begin_(list.begin()), end_(list.end()) {}
 
+        bool empty() const {return not (begin_ != end_);}
+
     protected:
         typename AdjacencyList::iterator begin_;
         typename AdjacencyList::iterator end_;
@@ -95,7 +97,7 @@ public:
             AdjacencyRange(list) {}
 
         VertexIterator begin() {return VertexIterator(this->begin_);}
-        VertexIterator end() { return VertexIterator(this->end_); }
+        VertexIterator end() {return VertexIterator(this->end_);}
     };
 
     struct EdgeRange : public AdjacencyRange
@@ -103,8 +105,8 @@ public:
         explicit EdgeRange(AdjacencyList& list) :
             AdjacencyRange(list) {}
 
-        EdgeIterator begin() { return EdgeIterator(this->begin_); }
-        EdgeIterator end() { return EdgeIterator(this->end_); }
+        EdgeIterator begin() {return EdgeIterator(this->begin_);}
+        EdgeIterator end() {return EdgeIterator(this->end_);}
     };
 
     VertexDescriptor addVertex(VertexDataType&& data)

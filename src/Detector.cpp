@@ -102,6 +102,7 @@ void Detector::deleteLink(TopoId src_topo_id, TopoId dst_topo_id)
     if (link_exists) {
         auto link = link_pair.first;
         delete_link_from_predictor(link);
+        network_->deleteLink(src_topo_id, dst_topo_id);
 
         execute_predictor_instruction();
     }

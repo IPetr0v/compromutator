@@ -48,7 +48,7 @@ EdgeDiff DependencyGraph::addLink(Link link)
 
         // Add edges that go through ports
         for (auto src_rule : src_port->srcRules()) {
-            // Find getPort action in the src rule
+            // Find port action in the src rule
             auto& actions = src_rule->actions().port_actions;
             auto it = std::find_if(actions.begin(), actions.end(),
                 [src_port](const PortAction& port_action) -> bool {
@@ -60,9 +60,12 @@ EdgeDiff DependencyGraph::addLink(Link link)
             );
             assert(actions.end() != it);
 
-            const auto& transfer = it->transfer;
+            // Transfer to the destination port
+            auto transfer = it->transfer;
+            transfer.dstPort(dst_port->id());
             auto output_domain = transfer.apply(src_rule->domain());
-            add_edges(src_rule, dst_port->dstRules(), transfer, output_domain);
+            add_edges(src_rule, dst_port->dstRules(),
+                      std::move(transfer), output_domain);
         }
     }
 
@@ -79,15 +82,12 @@ EdgeDiff DependencyGraph::deleteLink(Link link)
 
         // Move edges to source/sink rules
         for (auto src_rule : src_port->srcRules()) {
-            // Delete edges between ports and add edges from the source rule
+            // Delete edges between ports
             for (auto dst_rule : dst_port->dstRules()) {
                 delete_edge(src_rule, dst_rule);
-                auto identity_transfer = Transfer::identityTransfer();
-                add_edge(dst_port->sourceRule(), dst_rule,
-                         identity_transfer, dst_rule->domain());
             }
 
-            // Find getPort action in the src rule
+            // Find port action in the src rule
             auto& actions = src_rule->actions().port_actions;
             auto it = std::find_if(actions.begin(), actions.end(),
                 [src_port](const PortAction& port_action) -> bool {
@@ -100,9 +100,17 @@ EdgeDiff DependencyGraph::deleteLink(Link link)
             assert(actions.end() != it);
 
             // Add edges to the sink rule
-            const auto& transfer = it->transfer;
+            auto transfer = it->transfer;
             auto output_domain = transfer.apply(src_rule->domain());
-            add_edge(src_rule, src_port->sinkRule(), transfer, output_domain);
+            add_edge(src_rule, src_port->sinkRule(),
+                     std::move(transfer), output_domain);
+        }
+
+        // Add edges from the source rule
+        for (auto dst_rule : dst_port->dstRules()) {
+            add_edge(dst_port->sourceRule(), dst_rule,
+                     Transfer::identityTransfer(),
+                     dst_port->sourceRule()->domain() & dst_rule->domain());
         }
     }
 
@@ -160,7 +168,7 @@ void DependencyGraph::add_in_edges(RulePtr dst_rule)
         // Create edges from source rules
         for (auto port : sw->ports()) {
             auto source_rule = port->sourceRule();
-            auto edge_domain = dst_rule->domain() & NetworkSpace(port->id());
+            auto edge_domain = source_rule->domain() & dst_rule->domain();
             new_edges.emplace(std::make_pair(
                 source_rule,
                 EdgeData{Transfer::identityTransfer(), edge_domain}
@@ -212,9 +220,9 @@ void DependencyGraph::add_in_edges(RulePtr dst_rule)
     // Add new edges
     for (auto edge_pair : new_edges) {
         auto src_rule = edge_pair.first;
-        const auto& transfer = edge_pair.second.transfer;
+        auto transfer = edge_pair.second.transfer;
         auto domain = edge_pair.second.domain;
-        add_edge(src_rule, dst_rule, transfer, domain, true);
+        add_edge(src_rule, dst_rule, std::move(transfer), domain, true);
     }
 }
 
@@ -232,29 +240,31 @@ void DependencyGraph::delete_out_edges(RulePtr src_rule)
 void DependencyGraph::delete_in_edges(RulePtr dst_rule)
 {
     auto table = dst_rule->table();
-    if (not table) {
-        // Dst rule is not a getTable rule
-        return;
-    }
-
-    // Move edges from the dst rule to lower rules
     for (auto edge : graph_->inEdges(dst_rule->vertex_)) {
         auto src_vertex = graph_->srcVertex(edge);
         auto src_rule = graph_->vertexData(src_vertex).rule;
-        const auto& edge_transfer = graph_->edgeData(edge).transfer;
+        auto edge_transfer = graph_->edgeData(edge).transfer;
         auto edge_domain = graph_->edgeData(edge).domain;
 
-        for (auto low_dst_rule : table->lowerRules(dst_rule)) {
-            auto domain_intersection = edge_domain & low_dst_rule->domain();
-            if (not domain_intersection.empty()) {
-                add_edge(src_rule, low_dst_rule, edge_transfer,
-                         domain_intersection);
+        if (table) {
+            // Move edges from the dst rule to lower rules
+            for (auto low_dst_rule : table->lowerRules(dst_rule)) {
+                auto domain_intersection = edge_domain & low_dst_rule->domain();
+                if (not domain_intersection.empty()) {
+                    add_edge(src_rule, low_dst_rule, std::move(edge_transfer),
+                             domain_intersection);
 
-                // Decrease the edge domain as it goes through lower rules
-                edge_domain -= domain_intersection;
+                    // Decrease the edge domain as it goes through lower rules
+                    edge_domain -= domain_intersection;
+                }
             }
+            latest_diff_.removed_dependent_edges.emplace_back(
+                src_rule, dst_rule
+            );
         }
-        latest_diff_.removed_dependent_edges.emplace_back(src_rule, dst_rule);
+        else {
+            latest_diff_.removed_edges.emplace_back(src_rule, dst_rule);
+        }
     }
     graph_->deleteInEdges(dst_rule->vertex_);
 }
@@ -262,28 +272,33 @@ void DependencyGraph::delete_in_edges(RulePtr dst_rule)
 void DependencyGraph::add_edges_to_port(RulePtr src_rule,
                                         const PortAction& action)
 {
-    const auto& transfer = action.transfer;
-    auto output_domain = transfer.apply(src_rule->domain());
+    auto transfer = action.transfer;
     switch (action.port_type) {
     case PortType::NORMAL:
         {
             auto src_port = action.port;
             auto dst_port = network_->adjacentPort(src_port);
             if (dst_port) {
+                // Transfer to the destination port
+                transfer.dstPort(dst_port->id());
                 add_edges(src_rule, dst_port->dstRules(),
-                          transfer, output_domain);
+                          std::move(transfer),
+                          transfer.apply(src_rule->domain()));
             }
             else {
                 add_edge(src_rule, src_port->sinkRule(),
-                         transfer, output_domain);
+                         std::move(transfer),
+                         transfer.apply(src_rule->domain()));
             }
         }
         break;
     case PortType::DROP:
-        add_edge(src_rule, network_->dropRule(), transfer, output_domain);
+        add_edge(src_rule, network_->dropRule(),
+                 std::move(transfer), transfer.apply(src_rule->domain()));
         break;
     case PortType::CONTROLLER:
-        add_edge(src_rule, network_->controllerRule(), transfer, output_domain);
+        add_edge(src_rule, network_->controllerRule(),
+                 std::move(transfer), transfer.apply(src_rule->domain()));
         break;
     case PortType::IN_PORT:
     case PortType::ALL:
@@ -298,9 +313,9 @@ void DependencyGraph::add_edges_to_table(RulePtr src_rule,
                                          const TableAction& action)
 {
     auto dst_rules = action.table->rules();
-    const auto& transfer = action.transfer;
+    auto transfer = action.transfer;
     auto output_domain = transfer.apply(src_rule->domain());
-    add_edges(src_rule, dst_rules, transfer, output_domain);
+    add_edges(src_rule, dst_rules, std::move(transfer), output_domain);
 }
 
 void DependencyGraph::add_edges_to_group(RulePtr src_rule,
@@ -310,22 +325,20 @@ void DependencyGraph::add_edges_to_group(RulePtr src_rule,
 }
 
 void DependencyGraph::add_edges(RulePtr src_rule, RuleRange dst_rules,
-                                const Transfer& transfer,
-                                NetworkSpace output_domain)
+                                Transfer&& transfer, NetworkSpace output_domain)
 {
     // Create edges
     for (const auto& dst_rule : dst_rules) {
         NetworkSpace edge_domain = output_domain & dst_rule->domain();
         if (not edge_domain.empty()) {
             output_domain -= edge_domain;
-            add_edge(src_rule, dst_rule, transfer, edge_domain);
+            add_edge(src_rule, dst_rule, std::move(transfer), edge_domain);
         }
     }
 }
 
 void DependencyGraph::add_edge(RulePtr src_rule, RulePtr dst_rule,
-                               const Transfer& transfer,
-                               const NetworkSpace& domain,
+                               Transfer&& transfer, const NetworkSpace& domain,
                                bool is_dependent)
 {
     auto src_vertex = src_rule->vertex_;
@@ -339,8 +352,10 @@ void DependencyGraph::add_edge(RulePtr src_rule, RulePtr dst_rule,
         set_edge_domain(edge, edge_domain + domain);
     }
     else {
-        auto edge = graph_->addEdge(src_vertex, dst_vertex,
-                                    Edge{src_rule, dst_rule, transfer, domain});
+        auto edge = graph_->addEdge(
+            src_vertex, dst_vertex, Edge{src_rule, dst_rule,
+                                         std::move(transfer), domain}
+        );
         if (not is_dependent) {
             latest_diff_.new_edges.emplace_back(edge);
         }

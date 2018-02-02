@@ -61,9 +61,12 @@ public:
     Transfer(const Transfer& other) = default;
     Transfer(Transfer&& other) noexcept = default;
     static Transfer identityTransfer();
+    static Transfer portTransfer(PortId dst_port);
 
     Transfer& operator=(const Transfer& other) = default;
     Transfer& operator=(Transfer&& other) = default;
+
+    void dstPort(PortId dst_port) {dst_port_ = dst_port;}
 
     // Transfer superposition
     Transfer operator*(const Transfer& right) const;

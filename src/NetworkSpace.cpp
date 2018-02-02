@@ -119,6 +119,12 @@ Transfer Transfer::identityTransfer()
                     HeaderChanger::identityHeaderChanger(HEADER_LENGTH));
 }
 
+Transfer Transfer::portTransfer(PortId dst_port)
+{
+    return Transfer(SpecialPort::ANY, dst_port,
+                    HeaderChanger::identityHeaderChanger(HEADER_LENGTH));
+}
+
 Transfer Transfer::operator*(const Transfer& right) const
 {
     Transfer transfer(*this);

@@ -43,7 +43,7 @@ struct PortActionBase : public Action
         assert(port_type != PortType::NORMAL || port_id != SpecialPort::NONE);
     }
     PortActionBase(PortId port_id):
-        PortActionBase(Transfer::identityTransfer(),
+        PortActionBase(Transfer::portTransfer(port_id),
                        PortType::NORMAL, port_id) {}
 
     PortActionBase(const PortActionBase& other) = default;

@@ -136,6 +136,19 @@ protected:
         flow_predictor->getInstruction();
     }
 
+    void updateLinkInstallation() {
+        installLink();
+        flow_predictor->updateEdges(link_diff);
+    }
+
+    void updateLinkDeletion() {
+        // Get link instructions
+        updateLinkInstallation();
+        flow_predictor->getInstruction();
+
+
+    }
+
     RulePtr getRule(SwitchId sw_id, NetworkSpace domain,
                     const std::vector<RulePtr>& rules) {
         auto it = std::find_if(rules.begin(), rules.end(),
@@ -244,11 +257,9 @@ TEST_F(FlowPredictorTest, AddRuleTest)
 
 TEST_F(FlowPredictorTest, DeleteRuleTest)
 {
-    /*updateAllRules();
+    updateAllRules();
 
     // Delete rule
-    std::cout<<"----- START -----\n";
-    std::cout<<"\n";
     auto diff = dependency_graph->deleteRule(rule1);
     flow_predictor->updateEdges(diff);
     auto instruction = flow_predictor->getInstruction();
@@ -277,12 +288,18 @@ TEST_F(FlowPredictorTest, DeleteRuleTest)
     auto deleted_rule2 = getRule(1u, N(1, H("xxxxxxxx") - H("0000xxxx")),
                                  deleted_rules);
     ASSERT_NE(nullptr, deleted_rule1);
-    ASSERT_NE(nullptr, deleted_rule2);*/
+    ASSERT_NE(nullptr, deleted_rule2);
 }
 
 TEST_F(FlowPredictorTest, AddLinkTest)
 {
     updateAllRules();
+
+    // Add link
+    std::cout<<"----- START -----\n";
+    std::cout<<"\n";
+    updateLinkInstallation();
+    auto instruction = flow_predictor->getInstruction();
 }
 
 TEST_F(FlowPredictorTest, DeleteLinkTest)
