@@ -28,13 +28,13 @@ RequestList StatsBucket::getRequests()
         else if (auto path_stats = std::dynamic_pointer_cast<PathStats>(stats))
         {
             auto src_id = xid_generator_->getId();
-            auto dst_id = xid_generator_->getId();
+            //auto dst_id = xid_generator_->getId();
             requests.addRuleRequest(src_id, RequestType::SOURCE_RULE, time,
                                     path_stats->source_interceptor);
-            requests.addRuleRequest(dst_id, RequestType::SINK_RULE, time,
-                                    path_stats->sink_interceptor);
+            //requests.addRuleRequest(dst_id, RequestType::SINK_RULE, time,
+            //                        path_stats->sink_interceptor);
             expected_requests_.emplace(src_id, path_stats);
-            expected_requests_.emplace(dst_id, path_stats);
+            //expected_requests_.emplace(dst_id, path_stats);
         }
         else if (auto link_stats = std::dynamic_pointer_cast<LinkStats>(stats))
         {

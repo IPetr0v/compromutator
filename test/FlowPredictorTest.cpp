@@ -107,7 +107,7 @@ protected:
     void updateTableMissEdges() {
         installTableMissRules();
         flow_predictor->updateEdges(table_miss1_diff);
-        //flow_predictor->updateEdges(table_miss2_diff);
+        flow_predictor->updateEdges(table_miss2_diff);
     }
 
     std::shared_ptr<RequestIdGenerator> xid_generator;

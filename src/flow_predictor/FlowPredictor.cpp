@@ -65,6 +65,7 @@ void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
         delete_subtrees({src_rule, dst_rule});
         add_subtrees(changed_edge);
     }
+
     for (auto& new_edge : edge_diff.new_edges) {
         add_subtrees(new_edge);
     }
@@ -149,6 +150,7 @@ void FlowPredictor::process_link_query(const LinkStatsPtr& query)
 
 }
 
+#include <iostream>
 void FlowPredictor::add_subtrees(EdgeDescriptor edge)
 {
     auto dst_rule = dependency_graph_->edge(edge).dst_rule;
@@ -218,7 +220,6 @@ FlowPredictor::add_child_node(NodeDescriptor parent, EdgeDescriptor edge)
     }
 }
 
-#include <iostream>
 void FlowPredictor::add_subtree(NodeDescriptor subtree_root)
 {
     std::cout<<"add_subtree: "<<subtree_root->rule<<std::endl;
@@ -282,16 +283,14 @@ void FlowPredictor::query_domain_path(NodeDescriptor source,
 void FlowPredictor::add_domain_path(NodeDescriptor source,
                                     NodeDescriptor sink)
 {
-    auto path = path_scan_->addDomainPath(source, sink, current_time());
-    auto path_id = path_scan_->domainPath(path).id;
+    path_scan_->addDomainPath(source, sink, current_time());
     auto source_rule = path_scan_->node(source).rule;
-    auto sink_rule = path_scan_->node(sink).rule;
-    stats_manager_->requestPath(path_id, path, source_rule, sink_rule);
+    //auto sink_rule = path_scan_->node(sink).rule;
 
     // Add interceptors
     InterceptorDiff new_diff;
     new_diff.rules_to_add.push_back(source_rule);
-    new_diff.rules_to_add.push_back(sink_rule);
+    //new_diff.rules_to_add.push_back(sink_rule);
     latest_interceptor_diff_ += new_diff;
 }
 
@@ -310,7 +309,7 @@ void FlowPredictor::delete_domain_path(NodeDescriptor source,
         // Delete interceptors
         InterceptorDiff new_diff;
         new_diff.rules_to_delete.push_back(source_rule);
-        new_diff.rules_to_delete.push_back(sink_rule);
+        //new_diff.rules_to_delete.push_back(sink_rule);
         latest_interceptor_diff_ += new_diff;
     }
     else {
