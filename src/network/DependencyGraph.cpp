@@ -107,11 +107,9 @@ EdgeDiff DependencyGraph::deleteLink(Link link)
         }
 
         // Add edges from the source rule
-        for (auto dst_rule : dst_port->dstRules()) {
-            add_edge(dst_port->sourceRule(), dst_rule,
-                     Transfer::identityTransfer(),
-                     dst_port->sourceRule()->domain() & dst_rule->domain());
-        }
+        add_edges(dst_port->sourceRule(), dst_port->dstRules(),
+                  Transfer::identityTransfer(),
+                  dst_port->sourceRule()->domain());
     }
 
     return latest_diff_;

@@ -184,7 +184,7 @@ std::pair<Link, bool> Network::addLink(TopoId src_topo_id, TopoId dst_topo_id)
     auto dst_port = getPort(dst_topo_id);
     if (not src_port || not dst_port) return std::make_pair(Link(), false);
 
-    // Add ports to the topology
+    // Add link to the topology
     auto src_it = topology_.find(src_topo_id);
     auto dst_it = topology_.find(dst_topo_id);
     if (src_it == topology_.end() && dst_it == topology_.end()) {
@@ -199,20 +199,26 @@ std::pair<Link, bool> Network::addLink(TopoId src_topo_id, TopoId dst_topo_id)
     return std::make_pair(Link{src_port, dst_port}, true);
 }
 
-bool Network::deleteLink(TopoId src_topo_id, TopoId dst_topo_id)
+std::pair<Link, bool> Network::deleteLink(TopoId src_topo_id,
+                                          TopoId dst_topo_id)
 {
     // Check for loopbacks
-    if (src_topo_id == dst_topo_id) return false;
+    if (src_topo_id == dst_topo_id) std::make_pair(Link(), false);
 
-    // Check if the link exists
+    // Check getPort existence
+    auto src_port = getPort(src_topo_id);
+    auto dst_port = getPort(dst_topo_id);
+    if (not src_port || not dst_port) return std::make_pair(Link(), false);
+
+    // Delete link from the topology
     auto src_it = topology_.find(src_topo_id);
     auto dst_it = topology_.find(dst_topo_id);
     if (src_it != topology_.end() && dst_it != topology_.end()) {
         topology_.erase(src_it);
         topology_.erase(dst_it);
-        return true;
+        return std::make_pair(Link{src_port, dst_port}, true);
     }
-    return false;
+    return std::make_pair(Link(), false);
 }
 
 std::pair<bool, Actions> Network::get_actions(SwitchPtr sw,

@@ -319,10 +319,11 @@ TEST_F(DependencyGraphTest, DeleteLinkTest)
 {
     dependency_graph->addRule(rule1);
     dependency_graph->addRule(rule2);
-    auto link = network->addLink({1,2}, {2,1}).first;
-    dependency_graph->addLink(link);
+    auto new_link = network->addLink({1,2}, {2,1}).first;
+    dependency_graph->addLink(new_link);
 
-    auto diff = dependency_graph->deleteLink(link);
+    auto deleted_link = network->deleteLink({1,2}, {2,1}).first;
+    auto diff = dependency_graph->deleteLink(deleted_link);
     EXPECT_EQ(4u, diff.new_edges.size());
     EXPECT_EQ(0u, diff.changed_edges.size());
     EXPECT_EQ(2u, diff.removed_edges.size());
@@ -345,7 +346,7 @@ TEST_F(DependencyGraphTest, DeleteLinkTest)
     auto edge_to_table_miss2 = findEdgeTo(diff.new_edges, table_miss2);
     EXPECT_EQ(port21->sourceRule(), edge_to_table_miss2.src_rule);
     EXPECT_EQ(table_miss2, edge_to_table_miss2.dst_rule);
-    EXPECT_EQ(N(1), edge_to_table_miss2.domain);
+    EXPECT_EQ(N(1, H("xxxxxxxx") - H("000000xx")), edge_to_table_miss2.domain);
 
     std::set<std::pair<RulePtr, RulePtr>> expected_removed_edges {
         {rule1, rule2}, {rule1, table_miss2}

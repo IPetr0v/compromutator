@@ -55,6 +55,10 @@ protected:
         auto link = network->addLink({1,2}, {2,1}).first;
         link_diff = dependency_graph->addLink(link);
     }
+    void deleteLink() {
+        auto link = network->link({1,2}, {2,1}).first;
+        link_deletion_diff = dependency_graph->deleteLink(link);
+    }
     void installFirstRule() {
         rule1_diff = dependency_graph->addRule(rule1);
     }
@@ -68,6 +72,6 @@ protected:
     EdgeDiff p21_source_diff, p21_sink_diff;
     EdgeDiff p22_source_diff, p22_sink_diff;
     EdgeDiff table_miss1_diff, table_miss2_diff;
-    EdgeDiff link_diff;
+    EdgeDiff link_diff, link_deletion_diff;
     EdgeDiff rule1_diff, rule2_diff;
 };

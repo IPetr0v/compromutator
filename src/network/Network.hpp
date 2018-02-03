@@ -42,7 +42,7 @@ public:
     PortPtr adjacentPort(PortPtr port) const;
     std::pair<Link, bool> link(TopoId src_topo_id, TopoId dst_topo_id);
     std::pair<Link, bool> addLink(TopoId src_topo_id, TopoId dst_topo_id);
-    bool deleteLink(TopoId src_topo_id, TopoId dst_topo_id);
+    std::pair<Link, bool> deleteLink(TopoId src_topo_id, TopoId dst_topo_id);
 
     RulePtr dropRule() const {return drop_rule_;}
     RulePtr controllerRule() const {return controller_rule_;}
