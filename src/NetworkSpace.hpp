@@ -74,6 +74,9 @@ public:
     NetworkSpace apply(NetworkSpace domain) const;
     NetworkSpace inverse(NetworkSpace domain) const;
 
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const Transfer& transfer);
+
 private:
     PortId src_port_;
     PortId dst_port_;

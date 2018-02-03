@@ -150,6 +150,13 @@ HeaderSpace HeaderSpace::operator-(const HeaderSpace& right) const
 
 std::ostream& operator<<(std::ostream& os, const HeaderSpace& header)
 {
+    // Check header corruption
+    if (nullptr == header.hs_) {
+        os << "CORRUPTED";
+        return os;
+    }
+
+    // Create header string representation
     struct hs* output_hs = hs_copy_a(header.hs_);
     //hs_compact(output_hs);
 
@@ -307,6 +314,7 @@ HeaderChanger& HeaderChanger::operator=(const HeaderChanger& other)
     mask_            = array_copy(other.mask_, length_);
     rewrite_         = array_copy(other.rewrite_, length_);
     inverse_rewrite_ = array_copy(other.inverse_rewrite_, length_);
+
     return *this;
 }
 
@@ -342,31 +350,36 @@ bool HeaderChanger::operator!=(const HeaderChanger &other) const
 HeaderChanger HeaderChanger::operator*=(const HeaderChanger& right)
 {
     assert(length_ == right.length_);
-    identity_ &= right.identity_;
-    if (not right.identity_) {
-        // New mask is a logical and
-        for (int i = 0; i < length_*CHAR_BIT; i++) {
-            int byte = i/CHAR_BIT;
-            int bit = i%CHAR_BIT;
+    if (identity_) {
+        *this = right;
+    }
+    else {
+        identity_ &= right.identity_;
+        if (not right.identity_) {
+            // New mask is a logical and
+            for (int i = 0; i < length_ * CHAR_BIT; i++) {
+                int byte = i / CHAR_BIT;
+                int bit = i % CHAR_BIT;
 
-            enum bit_val mask_bit = array_get_bit(mask_, byte, bit);
-            enum bit_val right_mask_bit = array_get_bit(right.mask_, byte, bit);
-            assert(mask_bit != BIT_Z and right_mask_bit != BIT_Z);
-            enum bit_val result_mask_bit;
+                enum bit_val mask_bit = array_get_bit(mask_, byte, bit);
+                enum bit_val right_mask_bit = array_get_bit(
+                    right.mask_, byte, bit);
+                assert(mask_bit != BIT_Z and right_mask_bit != BIT_Z);
+                enum bit_val result_mask_bit;
 
-            if(mask_bit == BIT_0 || right_mask_bit == BIT_0) {
-                result_mask_bit = BIT_0;
+                if (mask_bit == BIT_0 || right_mask_bit == BIT_0) {
+                    result_mask_bit = BIT_0;
+                } else {
+                    result_mask_bit = BIT_1;
+                }
+
+                array_set_bit(mask_, result_mask_bit, byte, bit);
             }
-            else {
-                result_mask_bit = BIT_1;
-            }
 
-            array_set_bit(mask_, result_mask_bit, byte, bit);
+            array_rewrite(rewrite_, right.mask_, right.rewrite_, length_);
+            array_rewrite(inverse_rewrite_, right.mask_,
+                          right.inverse_rewrite_, length_);
         }
-
-        array_rewrite(rewrite_, right.mask_, right.rewrite_, length_);
-        array_rewrite(inverse_rewrite_, right.mask_,
-                      right.inverse_rewrite_, length_);
     }
     return *this;
 }
@@ -391,7 +404,15 @@ HeaderSpace HeaderChanger::inverse(const HeaderSpace& header) const
 
 std::ostream& operator<<(std::ostream& os, const HeaderChanger& transfer)
 {
-    // Create transfer string representation
+    // Check header changer corruption
+    if (nullptr == transfer.mask_ ||
+        nullptr == transfer.rewrite_ ||
+        nullptr == transfer.inverse_rewrite_) {
+        os << "CORRUPTED";
+        return os;
+    }
+
+    // Create header changer string representation
     int length = transfer.length_;
     array_t* transfer_array = array_create(length, BIT_Z);
     for (int i = 0; i < length*CHAR_BIT; i++) {

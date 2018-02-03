@@ -274,32 +274,35 @@ void DependencyGraph::add_edges_to_port(RulePtr src_rule,
 {
     auto transfer = action.transfer;
     switch (action.port_type) {
-    case PortType::NORMAL:
-        {
-            auto src_port = action.port;
-            auto dst_port = network_->adjacentPort(src_port);
-            if (dst_port) {
-                // Transfer to the destination port
-                transfer.dstPort(dst_port->id());
-                add_edges(src_rule, dst_port->dstRules(),
-                          std::move(transfer),
-                          transfer.apply(src_rule->domain()));
-            }
-            else {
-                add_edge(src_rule, src_port->sinkRule(),
-                         std::move(transfer),
-                         transfer.apply(src_rule->domain()));
-            }
+    case PortType::NORMAL: {
+        auto src_port = action.port;
+        auto dst_port = network_->adjacentPort(src_port);
+        if (dst_port) {
+            // Transfer to the destination port
+            transfer.dstPort(dst_port->id());
+            auto output_domain = transfer.apply(src_rule->domain());
+            add_edges(src_rule, dst_port->dstRules(),
+                      std::move(transfer), output_domain);
+        }
+        else {
+            auto output_domain = transfer.apply(src_rule->domain());
+            add_edge(src_rule, src_port->sinkRule(),
+                     std::move(transfer), output_domain);
         }
         break;
-    case PortType::DROP:
+    }
+    case PortType::DROP: {
+        auto output_domain = transfer.apply(src_rule->domain());
         add_edge(src_rule, network_->dropRule(),
-                 std::move(transfer), transfer.apply(src_rule->domain()));
+                 std::move(transfer), output_domain);
         break;
-    case PortType::CONTROLLER:
+    }
+    case PortType::CONTROLLER: {
+        auto output_domain = transfer.apply(src_rule->domain());
         add_edge(src_rule, network_->controllerRule(),
-                 std::move(transfer), transfer.apply(src_rule->domain()));
+                 std::move(transfer), output_domain);
         break;
+    }
     case PortType::IN_PORT:
     case PortType::ALL:
         // In this case every port may be an output getPort
@@ -332,7 +335,8 @@ void DependencyGraph::add_edges(RulePtr src_rule, RuleRange dst_rules,
         NetworkSpace edge_domain = output_domain & dst_rule->domain();
         if (not edge_domain.empty()) {
             output_domain -= edge_domain;
-            add_edge(src_rule, dst_rule, std::move(transfer), edge_domain);
+            auto transfer_copy = transfer;
+            add_edge(src_rule, dst_rule, std::move(transfer_copy), edge_domain);
         }
     }
 }

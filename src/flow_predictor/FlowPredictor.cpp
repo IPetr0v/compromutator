@@ -211,6 +211,12 @@ FlowPredictor::add_child_node(NodeDescriptor parent, EdgeDescriptor edge)
         transfer.inverse(edge_domain & parent_domain) & rule->domain();
     auto multiplier = rule->multiplier() * parent_multiplier;
 
+    std::cout << "add_child_node:"
+              << " rule=" << rule
+              << " transfer=" << transfer
+              << " domain=" << domain
+              << std::endl;
+
     // Create node
     if (not domain.empty() && not is_existing_child(parent, edge)) {
         auto new_node = path_scan_->addChildNode(

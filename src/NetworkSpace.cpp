@@ -2,6 +2,23 @@
 
 #include <string>
 
+std::string getPortString(PortId port_id)
+{
+    std::string port_string;
+    switch(port_id) {
+    case SpecialPort::NONE:
+        port_string = "NONE";
+        break;
+    case SpecialPort::ANY:
+        port_string = "ANY";
+        break;
+    default:
+        port_string = std::to_string(port_id);
+        break;
+    }
+    return port_string;
+}
+
 NetworkSpace::NetworkSpace(std::string str):
     in_port_(SpecialPort::ANY), header_(std::move(str))
 {
@@ -88,13 +105,7 @@ NetworkSpace NetworkSpace::operator&(const NetworkSpace& right)
 
 std::ostream& operator<<(std::ostream& os, const NetworkSpace& domain)
 {
-    std::string port;
-    switch(domain.in_port_) {
-    case SpecialPort::NONE: port = "NONE"; break;
-    case SpecialPort::ANY:  port = "ANY";  break;
-    default: port = std::to_string(domain.in_port_); break;
-    }
-    os << "(" << port << "|" << domain.header_ << ")";
+    os << "(" << getPortString(domain.in_port_) << "|" << domain.header_ << ")";
     return os;
 }
 
@@ -151,4 +162,12 @@ NetworkSpace Transfer::inverse(NetworkSpace domain) const
                          ? domain.header()
                          : header_changer_.inverse(domain.header());
     return NetworkSpace(port, header);
+}
+
+std::ostream& operator<<(std::ostream& os, const Transfer& transfer)
+{
+    os << "(" << getPortString(transfer.src_port_)
+       << "->" << getPortString(transfer.dst_port_)
+       << "|" << transfer.header_changer_ << ")";
+    return os;
 }
