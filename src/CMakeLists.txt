@@ -32,6 +32,8 @@ add_library(detector STATIC
         network/Types.hpp
         network/Vertex.hpp
         openflow/Action.hpp
+        openflow/Controller.hpp
+        openflow/Controller.cpp
         openflow/OpenFlowParser.cpp
         openflow/OpenFlowParser.hpp
         openflow/Types.hpp
@@ -39,9 +41,13 @@ add_library(detector STATIC
         test/Test.hpp
         Detector.cpp
         Detector.hpp
-        openflow/Controller.hpp
         NetworkSpace.cpp
         NetworkSpace.hpp
-        openflow/Controller.cpp)
+        proxy/Proxy.hpp
+        proxy/Proxy.cpp)
 
-target_link_libraries(detector header_space)
+target_link_libraries(detector
+    header_space
+    fluid_msg
+    fluid_base
+)
