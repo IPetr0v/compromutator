@@ -44,7 +44,9 @@ add_library(detector STATIC
         NetworkSpace.cpp
         NetworkSpace.hpp
         proxy/Proxy.hpp
-        proxy/Proxy.cpp)
+        proxy/ConnectionManager.hpp
+        proxy/ConnectionManager.cpp
+        proxy/Event.hpp)
 
 target_link_libraries(detector
     header_space
