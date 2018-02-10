@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ConcurrencyPrimitives.hpp"
 #include "openflow/Controller.hpp"
 #include "network/Network.hpp"
 #include "network/DependencyGraph.hpp"
@@ -7,7 +8,14 @@
 
 #include <memory>
 
-struct RuleBase
+struct SwitchInfo
+{
+    SwitchId id;
+    std::vector<PortId> ports;
+    uint8_t table_number;
+};
+
+struct RuleInfo
 {
     SwitchId switch_id;
     TableId table_id;
@@ -16,44 +24,43 @@ struct RuleBase
     ActionsBase actions;
 };
 
-enum class StatsStatus {APPLIED, DENIED};
+using InstructionQueue = ConcurrentAlarmingQueue<Instruction>;
 
 class Detector
 {
 public:
-    Detector();
+    explicit Detector(std::shared_ptr<Alarm> alarm);
+    ~Detector();
 
-    void addSwitch(SwitchId id, std::vector<PortId> ports,
-                   uint8_t table_number);
+    // TODO: make soft instruction request
+
+    bool instructionsExist() {
+        return not instruction_queue_.empty();
+    }
+
+    Instruction getInstruction() {
+        return instruction_queue_.pop();
+    }
+
+    void addSwitch(SwitchInfo info);
     void deleteSwitch(SwitchId id);
 
-    void addRule(SwitchId switch_id, TableId table_id,
-                 Priority priority, NetworkSpace domain,
-                 ActionsBase actions);
-    void deleteRule(RuleId id);
+    void addRule(RuleInfo info);
+    void deleteRule(RuleInfo info);
 
     void addLink(TopoId src_topo_id, TopoId dst_topo_id);
     void deleteLink(TopoId src_topo_id, TopoId dst_topo_id);
 
-    StatsStatus addRuleStats(RequestId xid, RuleStatsFields stats);
-    StatsStatus addPortStats(RequestId xid, PortStatsFields stats);
+    void addRuleStats(RequestId xid, RuleStatsFields stats);
+    void addPortStats(RequestId xid, PortStatsFields stats);
+
+    class Impl;
 
 private:
-    std::unique_ptr<Controller> controller_;
-    // TODO: take away xids that are used by the controller
-    std::shared_ptr<RequestIdGenerator> xid_generator_;
+    InstructionQueue instruction_queue_;
+    std::unique_ptr<Impl> impl_;
 
-    std::shared_ptr<Network> network_;
-    std::shared_ptr<DependencyGraph> dependency_graph_;
-    std::unique_ptr<FlowPredictor> flow_predictor_;
-
-    std::map<RequestId, RequestPtr> pending_requests_;
-
-    void execute_predictor_instruction();
-
-    void add_rule_to_predictor(RulePtr rule);
-    void delete_rule_from_predictor(RulePtr rule);
-    void add_link_to_predictor(Link link);
-    void delete_link_from_predictor(Link link);
+    // Detector runs in a separate thread
+    Executor executor_;
 
 };

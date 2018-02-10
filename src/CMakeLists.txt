@@ -45,7 +45,7 @@ add_library(detector STATIC
         Detector.hpp
         NetworkSpace.cpp
         NetworkSpace.hpp
-        ConcurrentQueue.hpp
+        ConcurrencyPrimitives.hpp
         Compromutator.cpp
         Compromutator.hpp)
 

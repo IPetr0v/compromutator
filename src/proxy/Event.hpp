@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../ConcurrentQueue.hpp"
+#include "../ConcurrencyPrimitives.hpp"
 
 #include <fluid/base/BaseOFConnection.hh>
 
@@ -87,4 +87,4 @@ struct MessageEvent : public Event
     }
 };
 
-using EventQueue = ConcurrentQueue<EventPtr>;
+using EventQueue = ConcurrentAlarmingQueue<EventPtr>;

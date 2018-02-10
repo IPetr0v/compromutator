@@ -20,13 +20,6 @@ class OpenFlowParser
     }
 };
 
-struct SwitchInfo
-{
-    SwitchId id;
-    std::vector<PortId> ports;
-    uint8_t table_number;
-};
-
 class TopologyTracker
 {
 public:
@@ -52,8 +45,6 @@ int main(int argc, char* argv[])
     proxy_settings.proxy_port = 6653;
 
     Compromutator compromutator(proxy_settings);
-
-    compromutator.run();
 
     return 0;
 }

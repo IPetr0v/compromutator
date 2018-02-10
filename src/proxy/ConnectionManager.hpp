@@ -96,8 +96,7 @@ private:
     std::unordered_map<ConnectionId, Connection> connections_;
     std::unordered_map<ConnectionId, WaitingConnection> waiting_connections_;
 
-    //EventQueue& event_queue_;
-    ConcurrentQueue<EventPtr>& event_queue_;
+    EventQueue& event_queue_;
 
     ConnectionId get_id(OFConnection* connection) {return connection->get_id();}
     void start_controller_connection(OFConnection* switch_connection);

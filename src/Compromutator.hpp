@@ -1,7 +1,7 @@
 #pragma once
 
 #include "openflow/Types.hpp"
-#include "ConcurrentQueue.hpp"
+#include "ConcurrencyPrimitives.hpp"
 #include "proxy/Event.hpp"
 #include "proxy/Proxy.hpp"
 #include "NetworkSpace.hpp"
@@ -18,20 +18,21 @@
 class Compromutator
 {
 public:
-    explicit Compromutator(ProxySettings settings):
-        alarm_(std::make_shared<Alarm>()), proxy_(settings, alarm_) {}
+    explicit Compromutator(ProxySettings settings);
+    ~Compromutator();
 
     void run();
 
 private:
+    std::atomic_bool is_running_;
     std::shared_ptr<Alarm> alarm_;
     Proxy proxy_;
-
-    std::atomic_bool is_running_;
+    Detector detector_;
 
     void on_timeout();
-    void on_proxy_event();
+    /// TODO: consider changing a name - should include "instruction"
     void on_detector_event();
+    void on_proxy_event();
     void on_controller_message(ConnectionId connection_id, Message message);
     void on_switch_message(ConnectionId connection_id, Message message);
 

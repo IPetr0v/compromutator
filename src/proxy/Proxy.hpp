@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../ConcurrentQueue.hpp"
+#include "../ConcurrencyPrimitives.hpp"
 #include "Event.hpp"
 #include "ConnectionManager.hpp"
 

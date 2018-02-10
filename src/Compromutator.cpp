@@ -2,6 +2,18 @@
 
 #include <chrono>
 
+Compromutator::Compromutator(ProxySettings settings):
+    is_running_(false), alarm_(std::make_shared<Alarm>()),
+    proxy_(settings, alarm_), detector_(alarm_)
+{
+
+}
+
+Compromutator::~Compromutator()
+{
+    is_running_ = false;
+}
+
 void Compromutator::run()
 {
     is_running_ = true;
@@ -11,6 +23,9 @@ void Compromutator::run()
             on_timeout();
         }
         else {
+            if (detector_.instructionsExist()) {
+                on_detector_event();
+            }
             if (proxy_.eventsExist()) {
                 on_proxy_event();
             }
@@ -23,40 +38,44 @@ void Compromutator::on_timeout()
 
 }
 
-void Compromutator::on_proxy_event()
+void Compromutator::on_detector_event()
 {
-    auto event = proxy_.getEvent();
-    switch (event->type) {
-    case EventType::CONNECTION: {
-        auto connection_event = ConnectionEvent::pointerCast(event);
-        if (connection_event->type == ConnectionEventType::NEW) {
+    while (detector_.instructionsExist()) {
 
-        }
-        else {
-
-        }
-        break;
-    }
-    case EventType::MESSAGE: {
-        auto message_event = MessageEvent::pointerCast(event);
-        if (message_event->origin == Origin::FROM_CONTROLLER) {
-            on_controller_message(
-                message_event->connection_id, message_event->message
-            );
-        }
-        else {
-            on_switch_message(
-                message_event->connection_id, message_event->message
-            );
-        }
-        break;
-    }
     }
 }
 
-void Compromutator::on_detector_event()
+void Compromutator::on_proxy_event()
 {
-    
+    while (proxy_.eventsExist()) {
+        auto event = proxy_.getEvent();
+        switch (event->type) {
+        case EventType::CONNECTION: {
+            auto connection_event = ConnectionEvent::pointerCast(event);
+            if (connection_event->type == ConnectionEventType::NEW) {
+
+            }
+            else {
+
+            }
+            break;
+        }
+        case EventType::MESSAGE: {
+            auto message_event = MessageEvent::pointerCast(event);
+            if (message_event->origin == Origin::FROM_CONTROLLER) {
+                on_controller_message(
+                    message_event->connection_id, message_event->message
+                );
+            }
+            else {
+                on_switch_message(
+                    message_event->connection_id, message_event->message
+                );
+            }
+            break;
+        }
+        }
+    }
 }
 
 void Compromutator::on_controller_message(ConnectionId connection_id,
