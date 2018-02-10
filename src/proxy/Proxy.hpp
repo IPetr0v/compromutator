@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../ConcurrentQueue.hpp"
 #include "Event.hpp"
 #include "ConnectionManager.hpp"
 
@@ -9,14 +10,20 @@
 class Proxy
 {
 public:
-    Proxy(ProxySettings settings) {
+    Proxy(ProxySettings settings, std::shared_ptr<Alarm> alarm):
+        event_queue_(alarm)
+    {
         connection_manager_ = std::make_unique<ConnectionManager>(
             settings, event_queue_
         );
     }
 
-    EventPtr getEvent(std::chrono::milliseconds timeout_duration) {
-        return event_queue_.pop(timeout_duration);
+    bool eventsExist() {
+        return not event_queue_.empty();
+    }
+
+    EventPtr getEvent() {
+        return event_queue_.pop();
     }
 
     void sendToController(ConnectionId id, Message message) {
@@ -29,6 +36,7 @@ public:
 
 private:
     EventQueue event_queue_;
+
     // TODO: consider changing ConnectionManager to ProxyImpl
     std::unique_ptr<ConnectionManager> connection_manager_;
 

@@ -1,21 +1,28 @@
 #pragma once
 
-#include <cassert>
-#include <condition_variable>
+#include "../ConcurrentQueue.hpp"
+
+#include <fluid/base/BaseOFConnection.hh>
+
 #include <memory>
-#include <mutex>
-#include <queue>
 
 using ConnectionId = uint32_t;
 
 struct Message
 {
-    Message(uint8_t type, void* data, size_t len):
-        type(type), data(data), len(len) {}
+    Message(uint8_t type, void* raw_data, size_t len):
+        type(type), data(reinterpret_cast<uint8_t*>(raw_data)), len(len) {
+    }
 
+    // TODO: change to uint8_t*
+    //auto deleter = [this](void* ptr){ free_data(ptr); };
+    //std::unique_ptr<void, decltype(deleter)> data {data_, deleter};
+    //using Deleter = decltype(fluid_base::BaseOFConnection::free_data);
     uint8_t type;
-    void* data;
+    uint8_t* data;
     size_t len;
+
+private:
 };
 
 enum class Origin
@@ -26,7 +33,6 @@ enum class Origin
 
 enum class EventType
 {
-    TIMEOUT,
     CONNECTION,
     MESSAGE
 };
@@ -47,11 +53,6 @@ protected:
     explicit Event(EventType type): type(type) {}
 };
 using EventPtr = std::shared_ptr<Event>;
-
-struct TimeoutEvent : public Event
-{
-    TimeoutEvent(): Event(EventType::TIMEOUT) {}
-};
 
 struct ConnectionEvent;
 using ConnectionEventPtr = std::shared_ptr<ConnectionEvent>;
@@ -86,38 +87,4 @@ struct MessageEvent : public Event
     }
 };
 
-class EventQueue
-{
-public:
-    void push(EventPtr&& event) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        events_.push(std::move(event));
-        is_available_.notify_one();
-    }
-
-    EventPtr pop(std::chrono::milliseconds timeout_duration) {
-        std::unique_lock<std::mutex> wait_lock(mutex_);
-        if (events_.empty()) {
-            auto status = is_available_.wait_for(wait_lock, timeout_duration);
-            if (std::cv_status::no_timeout == status) {
-                return this->pop();
-            } else {
-                return std::make_unique<TimeoutEvent>();
-            }
-        }
-        else {
-            return this->pop();
-        }
-    }
-
-private:
-    std::mutex mutex_;
-    std::condition_variable is_available_;
-    std::queue<EventPtr> events_;
-
-    EventPtr pop() {
-        auto event = std::move(events_.front());
-        events_.pop();
-        return std::move(event);
-    }
-};
+using EventQueue = ConcurrentQueue<EventPtr>;

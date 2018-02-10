@@ -34,19 +34,20 @@ add_library(detector STATIC
         openflow/Action.hpp
         openflow/Controller.hpp
         openflow/Controller.cpp
-        openflow/OpenFlowParser.cpp
-        openflow/OpenFlowParser.hpp
+        openflow/Parser.cpp
+        openflow/Parser.hpp
         openflow/Types.hpp
-        test/Test.cpp
-        test/Test.hpp
+        proxy/Proxy.hpp
+        proxy/ConnectionManager.hpp
+        proxy/ConnectionManager.cpp
+        proxy/Event.hpp
         Detector.cpp
         Detector.hpp
         NetworkSpace.cpp
         NetworkSpace.hpp
-        proxy/Proxy.hpp
-        proxy/ConnectionManager.hpp
-        proxy/ConnectionManager.cpp
-        proxy/Event.hpp)
+        ConcurrentQueue.hpp
+        Compromutator.cpp
+        Compromutator.hpp)
 
 target_link_libraries(detector
     header_space

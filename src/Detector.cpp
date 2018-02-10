@@ -109,6 +109,7 @@ void Detector::deleteLink(TopoId src_topo_id, TopoId dst_topo_id)
 
 StatsStatus Detector::addRuleStats(RequestId xid, RuleStatsFields stats)
 {
+    // TODO: check/find stats based on domain and port, not on xid
     auto it = pending_requests_.find(xid);
     if (it != pending_requests_.end()) {
         auto rule_request = RuleRequest::pointerCast(it->second);
