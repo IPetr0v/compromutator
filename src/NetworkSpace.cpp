@@ -26,7 +26,8 @@ NetworkSpace::NetworkSpace(std::string str):
 }
 
 NetworkSpace::NetworkSpace(PortId in_port):
-    in_port_(in_port), header_(HeaderSpace::wholeSpace(HEADER_LENGTH))
+    in_port_(in_port),
+    header_(HeaderSpace::wholeSpace(HeaderSpace::GLOBAL_LENGTH))
 {
 
 }
@@ -45,15 +46,19 @@ NetworkSpace::NetworkSpace(PortId in_port, const HeaderSpace& header):
 
 NetworkSpace NetworkSpace::emptySpace()
 {
-    return NetworkSpace(SpecialPort::NONE,
-                        HeaderSpace::emptySpace(HEADER_LENGTH));
+    return NetworkSpace(
+        SpecialPort::NONE,
+        HeaderSpace::emptySpace(HeaderSpace::GLOBAL_LENGTH)
+    );
 }
 
 NetworkSpace NetworkSpace::wholeSpace()
 {
     // We represent empty network space as any getPort with an empty header
-    return NetworkSpace(SpecialPort::ANY,
-                        HeaderSpace::wholeSpace(HEADER_LENGTH));
+    return NetworkSpace(
+        SpecialPort::ANY,
+        HeaderSpace::wholeSpace(HeaderSpace::GLOBAL_LENGTH)
+    );
 }
 
 NetworkSpace& NetworkSpace::operator+=(const NetworkSpace& right)
@@ -126,14 +131,18 @@ Transfer::Transfer(PortId src_port, PortId dst_port,
 
 Transfer Transfer::identityTransfer()
 {
-    return Transfer(SpecialPort::ANY, SpecialPort::NONE,
-                    HeaderChanger::identityHeaderChanger(HEADER_LENGTH));
+    return Transfer(
+        SpecialPort::ANY, SpecialPort::NONE,
+        HeaderChanger::identityHeaderChanger(HeaderSpace::GLOBAL_LENGTH)
+    );
 }
 
 Transfer Transfer::portTransfer(PortId dst_port)
 {
-    return Transfer(SpecialPort::ANY, dst_port,
-                    HeaderChanger::identityHeaderChanger(HEADER_LENGTH));
+    return Transfer(
+        SpecialPort::ANY, dst_port,
+        HeaderChanger::identityHeaderChanger(HeaderSpace::GLOBAL_LENGTH)
+    );
 }
 
 Transfer Transfer::operator*(const Transfer& right) const

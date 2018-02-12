@@ -1,5 +1,7 @@
 #include "HeaderSpace.hpp"
 
+int HeaderSpace::GLOBAL_LENGTH = 1;
+
 int get_len(const char* str) {
     auto commas = (bool)strchr(str, ',');
     int div = CHAR_BIT + commas;
@@ -9,12 +11,100 @@ int get_len(const char* str) {
     return len;
 }
 
+BitVector::BitVector(std::string str):
+    length_(get_len(str.c_str()))
+{
+    assert(length_ > 0);
+    array_ = array_from_str(str.c_str());
+}
+
+BitVector::BitVector(const BitVector& other):
+    length_ (other.length_), array_(array_copy(other.array_, length_))
+{
+
+}
+
+BitVector::BitVector(BitVector&& other) noexcept:
+    length_ (other.length_), array_(other.array_)
+{
+    other.array_ = nullptr;
+}
+
+BitVector BitVector::wholeSpace(int length)
+{
+    array_t* whole_space = array_create(length, BIT_X);
+    return {length, whole_space};
+}
+
+
+BitVector& BitVector::operator=(const BitVector& other)
+{
+    length_ = other.length_;
+    array_ = array_copy(other.array_, length_);
+    return *this;
+}
+
+BitVector& BitVector::operator=(BitVector&& other) noexcept
+{
+    length_ = other.length_;
+    array_ = other.array_;
+    other.array_ = nullptr;
+    return *this;
+}
+
+BitVector::BitVector(int length, array_t* array):
+    length_(length), array_(array)
+{
+
+}
+
+BitValue BitVector::getBit(uint32_t index) const
+{
+    uint32_t byte = index/CHAR_BIT;
+    uint32_t bit = index%CHAR_BIT;
+    return get_external_bit_value(array_get_bit(array_, byte, bit));
+}
+
+void BitVector::setBit(uint32_t index, BitValue bit_value)
+{
+    uint32_t byte = index/CHAR_BIT;
+    uint32_t bit = index%CHAR_BIT;
+    array_set_bit(array_, get_internal_bit_value(bit_value), byte, bit);
+}
+
+BitValue BitVector::get_external_bit_value(enum bit_val bit_value) const
+{
+    switch (bit_value) {
+    case BIT_0: return BitValue::ZERO;
+    case BIT_1: return BitValue::ONE;
+    case BIT_X: return BitValue::ANY;
+    default:    return BitValue::NONE;
+    }
+}
+
+enum bit_val BitVector::get_internal_bit_value(BitValue bit_value) const
+{
+    switch (bit_value) {
+    case BitValue::ZERO: return BIT_0;
+    case BitValue::ONE:  return BIT_1;
+    case BitValue::ANY:  return BIT_X;
+    default:             return BIT_Z;
+    }
+}
+
 HeaderSpace::HeaderSpace(std::string str):
     length_(get_len(str.c_str()))
 {
     assert(length_ > 0);
     hs_ = hs_create(length_);
     hs_add(hs_, array_from_str(str.c_str()));
+}
+
+HeaderSpace::HeaderSpace(BitVector bit_vector):
+    length_(bit_vector.length_)
+{
+    hs_ = hs_create(length_);
+    hs_add(hs_, bit_vector.array_);
 }
 
 HeaderSpace::HeaderSpace(const HeaderSpace& other):
@@ -36,7 +126,7 @@ HeaderSpace::HeaderSpace(int length):
     hs_ = hs_create(length_);
 }
 
-HeaderSpace::HeaderSpace(struct hs* hs, int length):
+HeaderSpace::HeaderSpace(int length, struct hs* hs):
     length_(length)
 {
     hs_ = hs_create(length_);
@@ -63,11 +153,15 @@ HeaderSpace::~HeaderSpace()
 
 void HeaderSpace::clear()
 {
-    if (hs_) hs_free(hs_);
+    if (hs_) {
+        hs_free(hs_);
+        hs_ = nullptr;
+    }
 }
 
 HeaderSpace& HeaderSpace::operator=(const HeaderSpace& other)
 {
+    clear();
     length_ = other.length_;
     hs_ = hs_create(other.length_);
     hs_copy(hs_, other.hs_);
@@ -76,6 +170,7 @@ HeaderSpace& HeaderSpace::operator=(const HeaderSpace& other)
 
 HeaderSpace& HeaderSpace::operator=(HeaderSpace&& other) noexcept
 {
+    clear();
     length_ = other.length_;
     hs_ = other.hs_;
     other.hs_ = nullptr;
@@ -131,21 +226,35 @@ HeaderSpace& HeaderSpace::operator-=(const HeaderSpace& right)
 
 HeaderSpace HeaderSpace::operator+(const HeaderSpace& right) const
 {
-    HeaderSpace header(hs_, length_);
+    HeaderSpace header(length_, hs_);
     header += right;
     return header;
 }
 
 HeaderSpace HeaderSpace::operator&(const HeaderSpace& right) const
 {
-    return HeaderSpace(hs_isect_a(hs_, right.hs_), length_);
+    return HeaderSpace(length_, hs_isect_a(hs_, right.hs_));
 }
 
 HeaderSpace HeaderSpace::operator-(const HeaderSpace& right) const
 {
-    HeaderSpace header(hs_, length_);
+    HeaderSpace header(length_, hs_);
     header -= right;
     return header;
+}
+
+std::vector<BitVector> HeaderSpace::getBitVectors() const
+{
+    // Perform lazy subtractions
+    hs_compact(hs_);
+
+    // Get bit vectors
+    std::vector<BitVector> bit_vectors;
+    for (int i = 0; i < hs_->list.used; i++) {
+        array_t* array = hs_->list.elems[i];
+        bit_vectors.push_back(BitVector(length_, array));
+    }
+    return std::move(bit_vectors);
 }
 
 std::ostream& operator<<(std::ostream& os, const HeaderSpace& header)
