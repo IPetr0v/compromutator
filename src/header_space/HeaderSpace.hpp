@@ -7,6 +7,7 @@ extern "C" {
 #include <climits>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -23,6 +24,7 @@ public:
     explicit BitVector(std::string str);
     BitVector(const BitVector& other);
     BitVector(BitVector&& other) noexcept;
+    static BitVector emptySpace(int length);
     static BitVector wholeSpace(int length);
 
     // BitVector does not own array_t pointer
@@ -36,6 +38,7 @@ public:
     //void operator[](uint32_t index);
 
     friend class HeaderSpace;
+    friend class HeaderChanger;
 
 private:
     BitVector(int length, array_t* array);
@@ -106,6 +109,7 @@ private:
 class HeaderChanger
 {
 public:
+    explicit HeaderChanger(const BitVector& bit_vector);
     HeaderChanger(const HeaderChanger& other);
     HeaderChanger(HeaderChanger&& other) noexcept;
     explicit HeaderChanger(const char* transfer_str);
@@ -133,6 +137,7 @@ public:
 
 private:
     explicit HeaderChanger(int length);
+    HeaderChanger(int length, array_t* transfer_array);
     void clear();
 
     int length_;

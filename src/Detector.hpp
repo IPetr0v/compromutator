@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ConcurrencyPrimitives.hpp"
-#include "openflow/Controller.hpp"
+#include "Controller.hpp"
 #include "network/Network.hpp"
 #include "network/DependencyGraph.hpp"
 #include "flow_predictor/FlowPredictor.hpp"
@@ -17,7 +17,6 @@ struct SwitchInfo
 
 struct RuleInfo
 {
-    SwitchId switch_id;
     TableId table_id;
     Priority priority;
     NetworkSpace domain;
@@ -45,8 +44,8 @@ public:
     void addSwitch(SwitchInfo info);
     void deleteSwitch(SwitchId id);
 
-    void addRule(RuleInfo info);
-    void deleteRule(RuleInfo info);
+    void addRule(SwitchId switch_id, RuleInfo info);
+    void deleteRule(SwitchId switch_id, RuleInfo info);
 
     void addLink(TopoId src_topo_id, TopoId dst_topo_id);
     void deleteLink(TopoId src_topo_id, TopoId dst_topo_id);

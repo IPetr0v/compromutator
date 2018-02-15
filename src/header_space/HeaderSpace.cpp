@@ -1,8 +1,10 @@
 #include "HeaderSpace.hpp"
 
+#include <bitset>
+
 int HeaderSpace::GLOBAL_LENGTH = 1;
 
-int get_len(const char* str) {
+static int get_len(const char* str) {
     auto commas = (bool)strchr(str, ',');
     int div = CHAR_BIT + commas;
     int len = (int)strlen(str) + commas;
@@ -28,6 +30,12 @@ BitVector::BitVector(BitVector&& other) noexcept:
     length_ (other.length_), array_(other.array_)
 {
     other.array_ = nullptr;
+}
+
+BitVector BitVector::emptySpace(int length)
+{
+    array_t* whole_space = array_create(length, BIT_Z);
+    return {length, whole_space};
 }
 
 BitVector BitVector::wholeSpace(int length)
@@ -60,8 +68,8 @@ BitVector::BitVector(int length, array_t* array):
 
 BitValue BitVector::getBit(uint32_t index) const
 {
-    uint32_t byte = index/CHAR_BIT;
-    uint32_t bit = index%CHAR_BIT;
+    int byte = index/CHAR_BIT;
+    int bit = index%CHAR_BIT;
     return get_external_bit_value(array_get_bit(array_, byte, bit));
 }
 
@@ -78,6 +86,7 @@ BitValue BitVector::get_external_bit_value(enum bit_val bit_value) const
     case BIT_0: return BitValue::ZERO;
     case BIT_1: return BitValue::ONE;
     case BIT_X: return BitValue::ANY;
+    case BIT_Z: return BitValue::NONE;
     default:    return BitValue::NONE;
     }
 }
@@ -88,6 +97,7 @@ enum bit_val BitVector::get_internal_bit_value(BitValue bit_value) const
     case BitValue::ZERO: return BIT_0;
     case BitValue::ONE:  return BIT_1;
     case BitValue::ANY:  return BIT_X;
+    case BitValue::NONE: return BIT_Z;
     default:             return BIT_Z;
     }
 }
@@ -286,6 +296,57 @@ HeaderChanger::HeaderChanger(int length):
     inverse_rewrite_ = array_create(length_, BIT_0);
 }
 
+HeaderChanger::HeaderChanger(int length, array_t* transfer_array):
+    length_(length)
+{
+    assert(length_ > 0);
+    mask_            = array_create(length_, BIT_1);
+    rewrite_         = array_create(length_, BIT_0);
+    inverse_rewrite_ = array_create(length_, BIT_0);
+
+    bool identity_check = true;
+    for (int i = 0; i < length_*CHAR_BIT; i++) {
+        int byte = i/CHAR_BIT;
+        int bit = i%CHAR_BIT;
+
+        enum bit_val transfer_bit = array_get_bit(transfer_array, byte, bit);
+        enum bit_val mask_bit;
+        enum bit_val rewrite_bit;
+        enum bit_val inverse_rewrite_bit;
+
+        switch(transfer_bit) {
+        case BIT_0:
+        case BIT_1:
+        case BIT_X:
+            mask_bit = BIT_0;
+            rewrite_bit = transfer_bit;
+            inverse_rewrite_bit = BIT_X;
+            identity_check = false;
+            break;
+
+        case BIT_Z:
+        default:
+            mask_bit = BIT_1;
+            rewrite_bit = BIT_0;
+            inverse_rewrite_bit = BIT_0;
+            break;
+        }
+        assert(mask_bit != BIT_Z and rewrite_bit != BIT_Z and
+               inverse_rewrite_bit != BIT_Z);
+
+        array_set_bit(mask_, mask_bit, byte, bit);
+        array_set_bit(rewrite_, rewrite_bit, byte, bit);
+        array_set_bit(inverse_rewrite_, inverse_rewrite_bit, byte, bit);
+    }
+    identity_ = identity_check;
+}
+
+HeaderChanger::HeaderChanger(const BitVector& bit_vector):
+    HeaderChanger(bit_vector.length_, bit_vector.array_)
+{
+
+}
+
 HeaderChanger::HeaderChanger(const HeaderChanger& other):
     length_(other.length_), identity_(other.identity_)
 {
@@ -307,51 +368,10 @@ HeaderChanger::HeaderChanger(HeaderChanger&& other) noexcept:
 }
 
 HeaderChanger::HeaderChanger(const char* transfer_str):
-    length_(get_len(transfer_str))
+    HeaderChanger(get_len(transfer_str),
+                  std::unique_ptr<array_t>(array_from_str(transfer_str)).get())
 {
-    assert(length_ > 0);
-    array_t* transfer_array = array_from_str(transfer_str);
 
-    mask_            = array_create(length_, BIT_1);
-    rewrite_         = array_create(length_, BIT_0);
-    inverse_rewrite_ = array_create(length_, BIT_0);
-
-    bool identity_check = true;
-    for (int i = 0; i < length_*CHAR_BIT; i++) {
-        int byte = i/CHAR_BIT;
-        int bit = i%CHAR_BIT;
-        
-        enum bit_val transfer_bit = array_get_bit(transfer_array, byte, bit);
-        enum bit_val mask_bit;
-        enum bit_val rewrite_bit;
-        enum bit_val inverse_rewrite_bit;
-        
-        switch(transfer_bit) {
-        case BIT_0:
-        case BIT_1:
-        case BIT_X:
-            mask_bit = BIT_0;
-            rewrite_bit = transfer_bit;
-            inverse_rewrite_bit = BIT_X;
-            identity_check = false;
-            break;
-        
-        case BIT_Z:
-        default:
-            mask_bit = BIT_1;
-            rewrite_bit = BIT_0;
-            inverse_rewrite_bit = BIT_0;
-            break;
-        }
-        assert(mask_bit != BIT_Z and rewrite_bit != BIT_Z and
-               inverse_rewrite_bit != BIT_Z);
-        
-        array_set_bit(mask_, mask_bit, byte, bit);
-        array_set_bit(rewrite_, rewrite_bit, byte, bit);
-        array_set_bit(inverse_rewrite_, inverse_rewrite_bit, byte, bit);
-    }
-    identity_ = identity_check;
-    array_free(transfer_array);
 }
 
 HeaderChanger::HeaderChanger(const char* mask_str, const char* rewrite_str)

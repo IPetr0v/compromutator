@@ -1,6 +1,7 @@
 #pragma once
 
 #include "openflow/Types.hpp"
+#include "openflow/Parser.hpp"
 #include "ConcurrencyPrimitives.hpp"
 #include "proxy/Event.hpp"
 #include "proxy/Proxy.hpp"
@@ -27,6 +28,7 @@ private:
     std::atomic_bool is_running_;
     std::shared_ptr<Alarm> alarm_;
     Proxy proxy_;
+    Parser parser_;
     Detector detector_;
 
     void on_timeout();
@@ -35,5 +37,7 @@ private:
     void on_proxy_event();
     void on_controller_message(ConnectionId connection_id, Message message);
     void on_switch_message(ConnectionId connection_id, Message message);
+
+    void on_flow_mod(ConnectionId connection_id, Message message);
 
 };

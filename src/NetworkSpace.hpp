@@ -16,6 +16,7 @@ public:
     explicit NetworkSpace(PortId in_port);
     explicit NetworkSpace(const HeaderSpace& header);
     NetworkSpace(PortId in_port, const HeaderSpace& header);
+    NetworkSpace(PortId in_port, HeaderSpace&& header);
     NetworkSpace(const NetworkSpace& other) = default;
     NetworkSpace(NetworkSpace&& other) noexcept = default;
     static NetworkSpace emptySpace();

@@ -70,19 +70,19 @@ struct Actions
     static Actions dropAction() {
         Actions actions;
         actions.port_actions.emplace_back(PortActionBase::dropAction());
-        return actions;
+        return std::move(actions);
     }
     static Actions controllerAction() {
         Actions actions;
         actions.port_actions.emplace_back(PortActionBase::controllerAction());
-        return actions;
+        return std::move(actions);
     }
     static Actions portAction(PortId port_id, PortPtr port) {
         Actions actions;
         actions.port_actions.emplace_back(
             PortAction(PortActionBase(port_id), port)
         );
-        return actions;
+        return std::move(actions);
     }
     static Actions noActions() {
         return Actions();

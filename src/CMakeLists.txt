@@ -32,15 +32,17 @@ add_library(detector STATIC
         network/Types.hpp
         network/Vertex.hpp
         openflow/Action.hpp
-        openflow/Controller.hpp
-        openflow/Controller.cpp
+        openflow/Types.hpp
         openflow/Parser.cpp
         openflow/Parser.hpp
-        openflow/Types.hpp
+        openflow/Mapping.hpp
+        openflow/Mapping.cpp
         proxy/Proxy.hpp
         proxy/ConnectionManager.hpp
         proxy/ConnectionManager.cpp
         proxy/Event.hpp
+        Controller.hpp
+        Controller.cpp
         Detector.cpp
         Detector.hpp
         NetworkSpace.cpp

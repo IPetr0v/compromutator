@@ -44,6 +44,12 @@ NetworkSpace::NetworkSpace(PortId in_port, const HeaderSpace& header):
     
 }
 
+NetworkSpace::NetworkSpace(PortId in_port, HeaderSpace&& header):
+    in_port_(in_port), header_(std::move(header))
+{
+
+}
+
 NetworkSpace NetworkSpace::emptySpace()
 {
     return NetworkSpace(

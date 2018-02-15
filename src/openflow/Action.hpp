@@ -26,6 +26,9 @@ struct Action
     Action(const Action& other) = default;
     Action(Action&& other) noexcept = default;
 
+    Action& operator=(const Action& other) = default;
+    Action& operator=(Action&& other) noexcept = default;
+
     ActionType type;
     Transfer transfer;
 
@@ -49,6 +52,9 @@ struct PortActionBase : public Action
     PortActionBase(const PortActionBase& other) = default;
     PortActionBase(PortActionBase&& other) noexcept = default;
 
+    PortActionBase& operator=(const PortActionBase& other) = default;
+    PortActionBase& operator=(PortActionBase&& other) noexcept = default;
+
     static PortActionBase dropAction() {
         return {Transfer::identityTransfer(), PortType::DROP};
     }
@@ -71,6 +77,9 @@ struct TableActionBase : public Action
     TableActionBase(const TableActionBase& other) = default;
     TableActionBase(TableActionBase&& other) noexcept = default;
 
+    TableActionBase& operator=(const TableActionBase& other) = default;
+    TableActionBase& operator=(TableActionBase&& other) noexcept = default;
+
     TableId table_id;
 };
 
@@ -79,8 +88,12 @@ struct GroupActionBase : public Action
     GroupActionBase(Transfer transfer, GroupId group_id):
         Action(ActionType::GROUP, std::move(transfer)),
         group_id(group_id) {}
+
     GroupActionBase(const GroupActionBase& other) = default;
     GroupActionBase(GroupActionBase&& other) noexcept = default;
+
+    GroupActionBase& operator=(const GroupActionBase& other) = default;
+    GroupActionBase& operator=(GroupActionBase&& other) noexcept = default;
 
     GroupId group_id;
 };
@@ -91,24 +104,42 @@ struct ActionsBase
     std::vector<TableActionBase> table_actions;
     std::vector<GroupActionBase> group_actions;
 
+    void operator+=(ActionsBase&& other) {
+        port_actions.insert(
+            port_actions.end(),
+            std::make_move_iterator(other.port_actions.begin()),
+            std::make_move_iterator(other.port_actions.end())
+        );
+        table_actions.insert(
+            table_actions.end(),
+            std::make_move_iterator(other.table_actions.begin()),
+            std::make_move_iterator(other.table_actions.end())
+        );
+        group_actions.insert(
+            group_actions.end(),
+            std::make_move_iterator(other.group_actions.begin()),
+            std::make_move_iterator(other.group_actions.end())
+        );
+    }
+
     static ActionsBase dropAction() {
         ActionsBase actions;
         actions.port_actions.emplace_back(PortActionBase::dropAction());
-        return actions;
+        return std::move(actions);
     }
     static ActionsBase controllerAction() {
         ActionsBase actions;
         actions.port_actions.emplace_back(PortActionBase::controllerAction());
-        return actions;
+        return std::move(actions);
     }
     static ActionsBase portAction(PortId port_id) {
         ActionsBase actions;
         actions.port_actions.emplace_back(port_id);
-        return actions;
+        return std::move(actions);
     }
     static ActionsBase tableAction(TableId table_id) {
         ActionsBase actions;
         actions.table_actions.emplace_back(table_id);
-        return actions;
+        return std::move(actions);
     }
 };

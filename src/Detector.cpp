@@ -10,8 +10,8 @@ public:
     void addSwitch(SwitchInfo info);
     void deleteSwitch(SwitchId id);
 
-    void addRule(RuleInfo info);
-    void deleteRule(RuleInfo info);
+    void addRule(SwitchId switch_id, RuleInfo info);
+    void deleteRule(SwitchId switch_id, RuleInfo info);
 
     void addLink(TopoId src_topo_id, TopoId dst_topo_id);
     void deleteLink(TopoId src_topo_id, TopoId dst_topo_id);
@@ -104,10 +104,10 @@ void Detector::Impl::deleteSwitch(SwitchId id)
     execute_predictor_instruction();
 }
 
-void Detector::Impl::addRule(RuleInfo info)
+void Detector::Impl::addRule(SwitchId switch_id, RuleInfo info)
 {
     auto rule = network_->addRule(
-        info.switch_id, info.table_id, info.priority,
+        switch_id, info.table_id, info.priority,
         std::move(info.domain), std::move(info.actions)
     );
     add_rule_to_predictor(rule);
@@ -115,7 +115,7 @@ void Detector::Impl::addRule(RuleInfo info)
     execute_predictor_instruction();
 }
 
-void Detector::Impl::deleteRule(RuleInfo info)
+void Detector::Impl::deleteRule(SwitchId switch_id, RuleInfo info)
 {
     // TODO: delete rules by their domain and priority
     RuleId id;
@@ -266,17 +266,17 @@ void Detector::deleteSwitch(SwitchId id)
     });
 }
 
-void Detector::addRule(RuleInfo info)
+void Detector::addRule(SwitchId switch_id, RuleInfo info)
 {
-    executor_.addTask([this, info = std::move(info)]() {
-        impl_->addRule(info);
+    executor_.addTask([this, switch_id, info = std::move(info)]() {
+        impl_->addRule(switch_id, info);
     });
 }
 
-void Detector::deleteRule(RuleInfo info)
+void Detector::deleteRule(SwitchId switch_id, RuleInfo info)
 {
-    executor_.addTask([this, info = std::move(info)]() {
-        impl_->deleteRule(info);
+    executor_.addTask([this, switch_id, info = std::move(info)]() {
+        impl_->deleteRule(switch_id, info);
     });
 }
 

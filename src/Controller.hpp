@@ -1,19 +1,15 @@
 #pragma once
 
-#include "Types.hpp"
-#include "../network/Rule.hpp"
-#include "../network/Network.hpp"
-#include "../proxy/Proxy.hpp"
+#include "openflow/Types.hpp"
+#include "network/Rule.hpp"
+#include "network/Network.hpp"
+#include "proxy/Proxy.hpp"
 
 #include <cstdint>
 
 class Controller
 {
 public:
-    void executeInstruction() {
-
-    }
-
     // TODO: CRITICAL - xid from the real controller may be equal to detectors!
 
     void getRuleStats(RequestId xid, const RulePtr rule);

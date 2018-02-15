@@ -92,6 +92,7 @@ void Compromutator::on_controller_message(ConnectionId connection_id,
         proxy_.sendToSwitch(connection_id, message);
         break;
     case of13::OFPT_FLOW_MOD:
+        on_flow_mod(connection_id, message);
         break;
         /*case of13::OFPT_PORT_MOD:
             break;
@@ -157,6 +158,37 @@ void Compromutator::on_switch_message(ConnectionId connection_id,
             break;*/
     default:
         proxy_.sendToController(connection_id, message);
+        break;
+    }
+}
+
+void Compromutator::on_flow_mod(ConnectionId connection_id, Message message)
+{
+    of13::FlowMod flow_mod;
+    flow_mod.unpack(message.data);
+    auto switch_id = 0u;//controller_.getSwitchId(connection_id);
+    auto rule_info = parser_.getRuleInfo(flow_mod);
+    switch (flow_mod.command()) {
+    case of13::OFPFC_ADD:
+        detector_.addRule(switch_id, rule_info);
+        break;
+    case of13::OFPFC_MODIFY:
+        detector_.deleteRule(switch_id, rule_info);
+        detector_.addRule(switch_id, rule_info);
+        break;
+    case of13::OFPFC_MODIFY_STRICT:
+        // TODO: implement modify strict
+        std::cerr << "OFPFC_MODIFY_STRICT is not implemented" << std::endl;
+        break;
+    case of13::OFPFC_DELETE:
+        detector_.deleteRule(switch_id, rule_info);
+        break;
+    case of13::OFPFC_DELETE_STRICT:
+        // TODO: implement delete strict
+        std::cerr << "OFPFC_DELETE_STRICT is not implemented" << std::endl;
+        break;
+    default:
+        std::cerr << "Unknown flow mod command" << std::endl;
         break;
     }
 }
