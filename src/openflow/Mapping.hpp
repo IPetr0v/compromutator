@@ -55,15 +55,35 @@ private:
             decltype(std::declval<Container>().value())
         >::type;
 
+        static MaskedBitSet toBitSet(const FieldType* object) {
+            return std::move(to_bitset<FieldType>(object));
+        }
+
+        // TODO: change fluid behaviour - return shared_ptr
+        static FieldType* fromBitSet(MaskedBitSet&& bitset) {
+            return from_bitset<FieldType>(std::move(bitset));
+        }
+
+    private:
         // Masked
         template<
             class Type,
             typename std::enable_if_t<IsMasked<Type>::value>* = nullptr
         >
-        static MaskedBitSet toBitSet(const Type& object) {
-            auto value = get_value(object->value());
-            auto mask = get_value(object->mask());
+        static MaskedBitSet to_bitset(const Type* object) {
+            auto value = get_integer_value(object->value());
+            auto mask = get_integer_value(object->mask());
             return MaskedBitSet(value, mask);
+        }
+
+        template<
+            class Type,
+            typename std::enable_if_t<IsMasked<Type>::value>* = nullptr
+        >
+        static Type* from_bitset(MaskedBitSet&& bitset) {
+            auto value = get_fluid_value(bitset.value.to_ullong());
+            auto mask = get_fluid_value(bitset.mask.to_ullong());
+            return new Type(value, mask);
         }
 
         // Unmasked
@@ -71,15 +91,23 @@ private:
             class Type,
             typename std::enable_if_t<not IsMasked<Type>::value>* = nullptr
         >
-        static MaskedBitSet toBitSet(const Type& object) {
-            auto value = get_value(object->value());
+        static MaskedBitSet to_bitset(const Type* object) {
+            auto value = get_integer_value(object->value());
             return MaskedBitSet(value);
         }
 
-        //static FieldType* fromBitSet(MaskedBitSet bitset);
+        template<
+            class Type,
+            typename std::enable_if_t<not IsMasked<Type>::value>* = nullptr
+        >
+        static Type* from_bitset(MaskedBitSet&& bitset) {
+            auto value = get_fluid_value(bitset.value.to_ullong());
+            return new Type(value);
+        }
 
-    private:
-        static uint64_t get_value(const ValueType&);
+        // Internal value converters
+        static ValueType get_fluid_value(uint64_t);
+        static uint64_t get_integer_value(const ValueType&);
 
     };
 
@@ -116,9 +144,15 @@ public:
     }
 
     template<class Map>
+    typename Map::FieldType getField() const {
+        auto bitset = get_bits<Map>();
+        return std::move(Map::fromBitSet<Map::FieldType>(bitset));
+    }
+
+    template<class Map>
     void setField(typename Map::FieldType* fluid_object) {
         auto bitset = Map::toBitSet(fluid_object);
-        set_bits<Map>(bitset);
+        set_bits<Map>(std::move(bitset));
     }
 
 private:
@@ -162,69 +196,5 @@ private:
             }
         }
     }
-
-
-    /*using ValueType = typename std::result_of<
-        decltype(std::declval<Container>().value())
-    >::type;*/
-    //    decltype(&Container::value)(Container)
-    //    typename std::decay<decltype(std::declval<Container>().value())>::type
-
-
-
-    /*template<class Map>
-    void set_bits(typename Map::BitSet value) {
-        for (uint32_t index = 0; index < Map::SIZE; index++) {
-            auto bit_value = (true == value[index]) ? BitValue::ONE
-                                                    : BitValue::ZERO;
-            bit_vector_.setBit(Map::OFFSET + index, bit_value);
-        }
-    }*/
-
-
-
-
-    /*of13::OXMTLV getField(uint8_t type) const;
-
-    of13::EthSrc* getEthSrc() const;
-    void setEthSrc(of13::EthSrc* eth_src);
-
-    of13::EthDst* getEthDst() const;
-    void setEthDst(of13::EthDst* eth_dst);
-
-    void setField(of13::EthType* eth_type);
-    void setField(of13::IPProto* ip_proto);
-    void setField(of13::IPv4Src* ipv4_src);
-    void setField(of13::IPv4Dst* ipv4_dst);
-    void setField(of13::TCPSrc* tcp_src);
-    void setField(of13::TCPDst* tcp_dst);
-    void setField(of13::UDPSrc* udp_src);
-    void setField(of13::UDPDst* udp_dst);*/
-
-
-
-
-    /*template<class BitSetType>
-    struct MaskedValue {BitSetType value; BitSetType mask;};
-
-    template<class BitSetType>
-    MaskedValue<BitSetType> get_masked_value(uint32_t offset, uint32_t size);
-    template<class BitSetType>
-    void set_masked_value(uint32_t offset, uint32_t size,
-                          MaskedValue<BitSetType>&& masked_value);
-
-    static_assert(6 == Size::ETH_SRC/8, "Proto mapping error");
-    static_assert(Size::ETH_SRC == Size::ETH_DST, "Proto mapping error");
-    using EthAddrBitSet = std::bitset<Size::ETH_SRC/8>;
-
-    static_assert(4 == Size::IPV4_SRC/8, "Proto mapping error");
-    static_assert(Size::IPV4_SRC == Size::IPV4_DST, "Proto mapping error");
-    using IPv4AddrBitSet = std::bitset<Size::IPV4_SRC/8>;
-
-    EthAddrBitSet to_bitset(const EthAddress& eth_address) const;
-    EthAddress get_eth_address(const EthAddrBitSet& bitset) const;
-
-    IPv4AddrBitSet to_bitset(const IPAddress& ipv4_address) const;
-    IPAddress get_ip_address(const IPv4AddrBitSet& bitset) const;*/
 
 };
