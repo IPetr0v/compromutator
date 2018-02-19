@@ -32,12 +32,6 @@ BitVector::BitVector(BitVector&& other) noexcept:
     other.array_ = nullptr;
 }
 
-BitVector BitVector::emptySpace(int length)
-{
-    array_t* whole_space = array_create(length, BIT_Z);
-    return {length, whole_space};
-}
-
 BitVector BitVector::wholeSpace(int length)
 {
     array_t* whole_space = array_create(length, BIT_X);
@@ -110,11 +104,12 @@ HeaderSpace::HeaderSpace(std::string str):
     hs_add(hs_, array_from_str(str.c_str()));
 }
 
-HeaderSpace::HeaderSpace(BitVector bit_vector):
+HeaderSpace::HeaderSpace(BitVector&& bit_vector):
     length_(bit_vector.length_)
 {
     hs_ = hs_create(length_);
     hs_add(hs_, bit_vector.array_);
+    bit_vector.array_ = nullptr;
 }
 
 HeaderSpace::HeaderSpace(const HeaderSpace& other):
@@ -317,13 +312,13 @@ HeaderChanger::HeaderChanger(int length, array_t* transfer_array):
         switch(transfer_bit) {
         case BIT_0:
         case BIT_1:
-        case BIT_X:
             mask_bit = BIT_0;
             rewrite_bit = transfer_bit;
             inverse_rewrite_bit = BIT_X;
             identity_check = false;
             break;
 
+        case BIT_X:
         case BIT_Z:
         default:
             mask_bit = BIT_1;
@@ -331,8 +326,8 @@ HeaderChanger::HeaderChanger(int length, array_t* transfer_array):
             inverse_rewrite_bit = BIT_0;
             break;
         }
-        assert(mask_bit != BIT_Z and rewrite_bit != BIT_Z and
-               inverse_rewrite_bit != BIT_Z);
+        assert(transfer_bit != BIT_Z and mask_bit != BIT_Z and
+               rewrite_bit != BIT_Z and inverse_rewrite_bit != BIT_Z);
 
         array_set_bit(mask_, mask_bit, byte, bit);
         array_set_bit(rewrite_, rewrite_bit, byte, bit);
@@ -393,21 +388,20 @@ HeaderChanger::HeaderChanger(const char* mask_str, const char* rewrite_str)
         enum bit_val transfer_bit;
         enum bit_val mask_bit = array_get_bit(mask_, byte, bit);
         enum bit_val rewrite_bit = array_get_bit(rewrite_, byte, bit);
-        assert(mask_bit == BIT_Z || rewrite_bit == BIT_Z);
         enum bit_val inverse_rewrite_bit;
 
         if(mask_bit == BIT_1) {
-            transfer_bit = BIT_Z;
+            transfer_bit = BIT_X;
             inverse_rewrite_bit = BIT_0;
         }
         else {
             transfer_bit = rewrite_bit;
             inverse_rewrite_bit = BIT_X;
         }
-        assert(mask_bit != BIT_Z and rewrite_bit != BIT_Z and
-               inverse_rewrite_bit != BIT_Z);
+        assert(transfer_bit != BIT_Z and mask_bit != BIT_Z and
+               rewrite_bit != BIT_Z and inverse_rewrite_bit != BIT_Z);
 
-        if (transfer_bit != BIT_Z) {
+        if (transfer_bit != BIT_X) {
             identity_check = false;
         }
 
@@ -498,7 +492,8 @@ HeaderChanger HeaderChanger::operator*=(const HeaderChanger& right)
 
                 if (mask_bit == BIT_0 || right_mask_bit == BIT_0) {
                     result_mask_bit = BIT_0;
-                } else {
+                }
+                else {
                     result_mask_bit = BIT_1;
                 }
 
@@ -543,7 +538,7 @@ std::ostream& operator<<(std::ostream& os, const HeaderChanger& transfer)
 
     // Create header changer string representation
     int length = transfer.length_;
-    array_t* transfer_array = array_create(length, BIT_Z);
+    array_t* transfer_array = array_create(length, BIT_X);
     for (int i = 0; i < length*CHAR_BIT; i++) {
         int byte = i/CHAR_BIT;
         int bit = i%CHAR_BIT;
@@ -553,7 +548,7 @@ std::ostream& operator<<(std::ostream& os, const HeaderChanger& transfer)
         enum bit_val rewrite_bit = array_get_bit(transfer.rewrite_, byte, bit);
 
         if(mask_bit == BIT_1) {
-            transfer_bit = BIT_Z;
+            transfer_bit = BIT_X;
         }
         else {
             transfer_bit = rewrite_bit;

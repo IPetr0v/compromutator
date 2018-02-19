@@ -106,9 +106,10 @@ void Detector::Impl::deleteSwitch(SwitchId id)
 
 void Detector::Impl::addRule(SwitchId switch_id, RuleInfo info)
 {
+    NetworkSpace domain(std::move(info.match));
     auto rule = network_->addRule(
         switch_id, info.table_id, info.priority,
-        std::move(info.domain), std::move(info.actions)
+        std::move(domain), std::move(info.actions)
     );
     add_rule_to_predictor(rule);
 

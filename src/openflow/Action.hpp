@@ -42,10 +42,12 @@ struct PortActionBase : public Action
     PortActionBase(Transfer transfer, PortType port_type,
                    PortId port_id = SpecialPort::NONE):
         Action(ActionType::PORT, std::move(transfer)),
-        port_type(port_type), port_id(port_id) {
+        port_type(port_type), port_id(port_id)
+    {
         assert(port_type != PortType::NORMAL || port_id != SpecialPort::NONE);
+        transfer.dstPort(port_id);
     }
-    PortActionBase(PortId port_id):
+    explicit PortActionBase(PortId port_id):
         PortActionBase(Transfer::portTransfer(port_id),
                        PortType::NORMAL, port_id) {}
 
@@ -71,7 +73,7 @@ struct TableActionBase : public Action
     TableActionBase(Transfer transfer, TableId table_id):
         Action(ActionType::TABLE, std::move(transfer)),
         table_id(table_id) {}
-    TableActionBase(TableId table_id):
+    explicit TableActionBase(TableId table_id):
         TableActionBase(Transfer::identityTransfer(), table_id) {}
 
     TableActionBase(const TableActionBase& other) = default;
@@ -101,8 +103,10 @@ struct GroupActionBase : public Action
 struct ActionsBase
 {
     std::vector<PortActionBase> port_actions;
-    std::vector<TableActionBase> table_actions;
     std::vector<GroupActionBase> group_actions;
+    std::vector<TableActionBase> table_actions;
+    // TODO: consider making one table action - since it can be only one
+    //TableActionBase table_action;
 
     void operator+=(ActionsBase&& other) {
         port_actions.insert(
@@ -120,6 +124,12 @@ struct ActionsBase
             std::make_move_iterator(other.group_actions.begin()),
             std::make_move_iterator(other.group_actions.end())
         );
+    }
+
+    bool empty() const {
+        return port_actions.empty() &&
+               group_actions.empty() &&
+               table_actions.empty();
     }
 
     static ActionsBase dropAction() {

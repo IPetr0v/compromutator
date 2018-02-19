@@ -9,12 +9,29 @@ enum SpecialPort: PortId
     ANY  = 0xFFFFFFFF
 };
 
+class Match
+{
+public:
+    Match(PortId in_port, BitVector&& header);
+
+    PortId inPort() const {return in_port_;}
+    BitVector header() const {return header_;}
+
+    friend class NetworkSpace;
+
+private:
+    PortId in_port_;
+    BitVector header_;
+
+};
+
 class NetworkSpace
 {
 public:
     explicit NetworkSpace(std::string str);
     explicit NetworkSpace(PortId in_port);
     explicit NetworkSpace(const HeaderSpace& header);
+    explicit NetworkSpace(Match&& match);
     NetworkSpace(PortId in_port, const HeaderSpace& header);
     NetworkSpace(PortId in_port, HeaderSpace&& header);
     NetworkSpace(const NetworkSpace& other) = default;
@@ -70,6 +87,7 @@ public:
     void dstPort(PortId dst_port) {dst_port_ = dst_port;}
 
     // Transfer superposition
+    Transfer operator*=(const Transfer& right);
     Transfer operator*(const Transfer& right) const;
     
     NetworkSpace apply(NetworkSpace domain) const;

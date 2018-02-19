@@ -24,7 +24,6 @@ public:
     explicit BitVector(std::string str);
     BitVector(const BitVector& other);
     BitVector(BitVector&& other) noexcept;
-    static BitVector emptySpace(int length);
     static BitVector wholeSpace(int length);
 
     // BitVector does not own array_t pointer
@@ -37,12 +36,15 @@ public:
     void setBit(uint32_t index, BitValue bit_value);
     //void operator[](uint32_t index);
 
+    int length() const {return length_;}
+
     friend class HeaderSpace;
     friend class HeaderChanger;
 
 private:
     BitVector(int length, array_t* array);
 
+    // TODO: change int to uint32_t
     int length_;
     array_t* array_;
 
@@ -62,7 +64,7 @@ public:
     // And think how to implement copy on write to hs_
     // that will be needed if I will use smart pointers
     explicit HeaderSpace(std::string str);
-    explicit HeaderSpace(BitVector bit_vector);
+    explicit HeaderSpace(BitVector&& bit_vector);
     HeaderSpace(const HeaderSpace& other);
     HeaderSpace(HeaderSpace&& other) noexcept;
     static HeaderSpace emptySpace(int length);

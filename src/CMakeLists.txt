@@ -12,6 +12,8 @@ add_library(detector STATIC
         network/Graph.hpp
         network/DependencyGraph.cpp
         network/DependencyGraph.hpp
+        flow_predictor/InterceptorManager.cpp
+        flow_predictor/InterceptorManager.hpp
         flow_predictor/FlowPredictor.cpp
         flow_predictor/FlowPredictor.hpp
         flow_predictor/Node.hpp

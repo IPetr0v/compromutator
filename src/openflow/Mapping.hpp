@@ -9,6 +9,7 @@
 #include <fluid/of13msg.hh>
 
 #include <bitset>
+#include <stdexcept>
 #include <utility>
 
 // This class is used to check whether Container has mask() function
@@ -128,11 +129,16 @@ public:
     using UDPSrc = Base<fluid_msg::of13::UDPSrc, 16u, IPv4Dst>;
     using UDPDst = Base<fluid_msg::of13::UDPDst, 16u, UDPSrc>;
 
+    using End = Base<fluid_msg::of13::UDPDst, 0u, UDPDst>;
+    static constexpr uint32_t HEADER_SIZE = End::OFFSET;
+
 };
 
 class BitVectorBridge
 {
 public:
+    explicit BitVectorBridge(const BitVector& bit_vector):
+        bit_vector_(bit_vector) {}
     explicit BitVectorBridge(BitVector&& bit_vector):
         bit_vector_(std::move(bit_vector)) {}
 
@@ -144,13 +150,13 @@ public:
     }
 
     template<class Map>
-    typename Map::FieldType getField() const {
+    typename Map::FieldType* getField() const {
         auto bitset = get_bits<Map>();
-        return std::move(Map::fromBitSet<Map::FieldType>(bitset));
+        return std::move(Map::fromBitSet(std::move(bitset)));
     }
 
     template<class Map>
-    void setField(typename Map::FieldType* fluid_object) {
+    void setField(const typename Map::FieldType* fluid_object) {
         auto bitset = Map::toBitSet(fluid_object);
         set_bits<Map>(std::move(bitset));
     }
@@ -179,7 +185,7 @@ private:
                 break;
             case BitValue::NONE:
             default:
-                return nullptr;
+                throw std::invalid_argument("Parsing error: Bad bit vector");
             }
         }
         return {std::move(value), std::move(mask)};

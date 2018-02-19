@@ -167,7 +167,8 @@ void Compromutator::on_flow_mod(ConnectionId connection_id, Message message)
     of13::FlowMod flow_mod;
     flow_mod.unpack(message.data);
     auto switch_id = 0u;//controller_.getSwitchId(connection_id);
-    auto rule_info = parser_.getRuleInfo(flow_mod);
+    // auto flow_mod = controller_.getFluidMessage<of13::FlowMod>(message);
+    auto rule_info = parser_.getRuleInfo(switch_id, flow_mod);
     switch (flow_mod.command()) {
     case of13::OFPFC_ADD:
         detector_.addRule(switch_id, rule_info);

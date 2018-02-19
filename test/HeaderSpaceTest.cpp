@@ -180,22 +180,21 @@ TEST_F(HeaderSpaceTest, ComplementTest)
 TEST_F(HeaderSpaceTest, ChangerCreationTest)
 {
     auto identity_header = identity();
-    EXPECT_EQ(T("zzzzzzzz"), identity_header);
+    EXPECT_EQ(T("xxxxxxxx"), identity_header);
     EXPECT_EQ(identity(), T(identity_header));
     EXPECT_EQ(identity(), T(std::move(identity_header)));
-    EXPECT_EQ(T("zz0011xx"), T("zz0011xx"));
+    EXPECT_EQ(T("xx0011xx"), T("xx0011xx"));
 }
 
 TEST_F(HeaderSpaceTest, ChangerOperationTest)
 {
     EXPECT_EQ(identity(), identity() *= identity());
-    EXPECT_EQ(T("zz0011xx"), T("zz0011xx") *= identity());
+    EXPECT_EQ(T("xx0011xx"), T("xx0011xx") *= identity());
 
-    EXPECT_EQ(zeros(), T("zzzz0000").apply(H("000011zz")));
-    EXPECT_EQ(ones(), T("zz1111zz").apply(H("1100xx11")));
-    EXPECT_EQ(whole(), T("xxxxzzzz").apply(H("0011xxxx")));
+    EXPECT_EQ(zeros(), T("xxxx0000").apply(H("000011xx")));
+    EXPECT_EQ(ones(), T("xx1111xx").apply(H("1100xx11")));
 
-    auto transfer = T("zz00zzzz") *= T("00zzzzzz") *= T("zzzz0000");
+    auto transfer = T("xx00xxxx") *= T("00xxxxxx") *= T("xxxx0000");
     EXPECT_EQ(zeros(), transfer.apply(H("11111111")));
 }
 
@@ -223,18 +222,20 @@ TEST_F(HeaderSpaceTest, BitVectorTest)
     bit_vector.setBit(1, BitValue::ZERO);
     bit_vector.setBit(2, BitValue::ONE);
     bit_vector.setBit(3, BitValue::ONE);
-    EXPECT_EQ(H("0011xxxx"), H(bit_vector));
+    EXPECT_EQ(H("0011xxxx"), H(std::move(bit_vector)));
 
     auto diff_header = whole() - H("00xxxxxx");
     auto bit_vectors = diff_header.getBitVectors();
     ASSERT_EQ(2u, bit_vectors.size());
-    auto bit_vector0 = H(bit_vectors[0]);
-    auto bit_vector1 = H(bit_vectors[1]);
-    if (H("1xxxxxxx") == bit_vector0) {
-        EXPECT_EQ(H("x1xxxxxx"), bit_vector1);
+    auto bit_vector0 = bit_vectors[0];
+    auto bit_vector1 = bit_vectors[1];
+    auto header0 = H(std::move(bit_vector0));
+    auto header1 = H(std::move(bit_vector1));
+    if (H("1xxxxxxx") == header0) {
+        EXPECT_EQ(H("x1xxxxxx"), header1);
     }
     else {
-        EXPECT_EQ(H("1xxxxxxx"), bit_vector1);
-        EXPECT_EQ(H("x1xxxxxx"), bit_vector0);
+        EXPECT_EQ(H("1xxxxxxx"), header1);
+        EXPECT_EQ(H("x1xxxxxx"), header0);
     }
 }

@@ -15,14 +15,6 @@ struct SwitchInfo
     uint8_t table_number;
 };
 
-struct RuleInfo
-{
-    TableId table_id;
-    Priority priority;
-    NetworkSpace domain;
-    ActionsBase actions;
-};
-
 using InstructionQueue = ConcurrentAlarmingQueue<Instruction>;
 
 class Detector

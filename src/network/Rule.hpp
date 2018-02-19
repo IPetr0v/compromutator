@@ -148,3 +148,12 @@ private:
     RuleMappingDescriptor rule_mapping_;
 
 };
+
+struct RuleInfo
+{
+    SwitchId switch_id;
+    TableId table_id;
+    Priority priority;
+    Match match;
+    ActionsBase actions;
+};

@@ -3,6 +3,7 @@
 #include "../network/Graph.hpp"
 #include "../network/DependencyGraph.hpp"
 #include "PathScan.hpp"
+#include "InterceptorManager.hpp"
 #include "Timestamp.hpp"
 #include "Stats.hpp"
 #include "../network/Network.hpp"
@@ -64,6 +65,7 @@ public:
 private:
     std::shared_ptr<DependencyGraph> dependency_graph_;
     std::unique_ptr<PathScan> path_scan_;
+    std::unique_ptr<InterceptorManager> interceptor_manager_;
     std::unique_ptr<StatsManager> stats_manager_;
 
     InterceptorDiff latest_interceptor_diff_;
@@ -91,50 +93,3 @@ private:
     void delete_domain_path(NodeDescriptor source, NodeDescriptor sink);
 
 };
-
-/*struct PathStats
-{
-    TimeId time;
-    uint64_t current_flow;
-    uint64_t next_flow;
-};
-
-enum class EventType
-{
-    START,
-    QUERY,
-    FINISH
-};
-
-struct LinkEvent
-{
-    EventType type;
-    TimeId time;
-    PathStats* associated_query;
-};
-
-struct LinkInterval
-{
-    TimeId start;
-    TimeId end;
-    std::map<TimeId, LinkEvent, std::less<>> event_map;
-};
-
-struct LinkTimeline
-{
-    LinkTimeline& getInterval(TimeId id) {
-        auto it = interval_map.lower_bound(id);
-        auto predesessor = --it;
-        return predesessor->second;
-    }
-
-    std::map<TimeId, LinkTimeline, std::less<>> interval_map;
-};
-
-// Directed link
-struct LinkNode
-{
-    PortPtr src_port;
-    PortPtr dst_port;
-    LinkTimeline timeline;
-};*/

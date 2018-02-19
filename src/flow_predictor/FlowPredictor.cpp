@@ -314,5 +314,7 @@ void FlowPredictor::delete_domain_path(NodeDescriptor source,
         // Delete domain path because it hasn't produced any interceptor
         stats_manager_->discardPathRequest(path_id);
         path_scan_->deleteDomainPath(path);
+
+        // TODO: delete domain path from latest_interceptor_diff_
     }
 }

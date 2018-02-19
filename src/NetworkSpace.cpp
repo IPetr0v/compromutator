@@ -19,6 +19,12 @@ std::string getPortString(PortId port_id)
     return port_string;
 }
 
+Match::Match(PortId in_port, BitVector&& header):
+    in_port_(in_port), header_(std::move(header))
+{
+
+}
+
 NetworkSpace::NetworkSpace(std::string str):
     in_port_(SpecialPort::ANY), header_(std::move(str))
 {
@@ -36,6 +42,12 @@ NetworkSpace::NetworkSpace(const HeaderSpace& header):
     in_port_(SpecialPort::ANY), header_(header)
 {
     
+}
+
+NetworkSpace::NetworkSpace(Match&& match):
+    in_port_(match.in_port_), header_(std::move(match.header_))
+{
+
 }
 
 NetworkSpace::NetworkSpace(PortId in_port, const HeaderSpace& header):
@@ -149,6 +161,13 @@ Transfer Transfer::portTransfer(PortId dst_port)
         SpecialPort::ANY, dst_port,
         HeaderChanger::identityHeaderChanger(HeaderSpace::GLOBAL_LENGTH)
     );
+}
+
+Transfer Transfer::operator*=(const Transfer& right)
+{
+    dst_port_ = right.dst_port_;
+    header_changer_ *= right.header_changer_;
+    return *this;
 }
 
 Transfer Transfer::operator*(const Transfer& right) const
