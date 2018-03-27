@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../openflow/Types.hpp"
+#include "../Types.hpp"
 
 #include <map>
 
@@ -14,6 +14,29 @@ using PortPtr = Port*;
 using TablePtr = Table*;
 using GroupPtr = Group*;
 using RulePtr = Rule*;
+
+struct PortInfo
+{
+    PortInfo(PortId id, uint32_t speed): id(id), speed(speed) {}
+
+    PortId id;
+    uint32_t speed;
+};
+
+struct SwitchInfo
+{
+    SwitchInfo() {}
+    SwitchInfo(SwitchId id, uint8_t table_number,
+               std::vector<PortInfo> ports):
+        id(id), table_number(table_number), ports(ports) {}
+    SwitchInfo(SwitchId id, uint8_t table_number,
+               std::vector<PortInfo>&& ports):
+        id(id), table_number(table_number), ports(std::move(ports)) {}
+
+    SwitchId id;
+    uint8_t table_number;
+    std::vector<PortInfo> ports;
+};
 
 template<typename Map>
 class MapIterator

@@ -48,7 +48,29 @@ private:
     Transfer latest_transfer_;
 };
 
-Match Parser::get_match(of13::Match match) const
+of13::FlowMod Parser::getFlowMod(RuleInfo rule)
+{
+    of13::FlowMod flow_mod;
+
+    flow_mod.table_id(rule.table_id);
+    flow_mod.priority(rule.priority);
+    flow_mod.match(get_of_match(rule.match));
+    flow_mod.instructions(get_instructions(rule.actions));
+
+    return std::move(flow_mod);
+}
+
+of13::MultipartRequestFlow Parser::getMultipartRequestFlow(RuleInfo rule)
+{
+    of13::MultipartRequestFlow request_flow;
+
+    request_flow.table_id(rule.table_id);
+    request_flow.match(get_of_match(rule.match));
+
+    return std::move(request_flow);
+}
+
+Match Parser::get_match(of13::Match match)
 {
     PortId in_port = SpecialPort::ANY;
     auto bit_vector = BitVectorBridge(
@@ -101,7 +123,7 @@ Match Parser::get_match(of13::Match match) const
     return Match(in_port, bit_vector.popBitVector());
 }
 
-of13::Match Parser::get_of_match(const Match& match) const
+of13::Match Parser::get_of_match(const Match& match)
 {
     of13::Match of_match;
     auto bit_vector = BitVectorBridge(match.header());
@@ -148,7 +170,7 @@ of13::Match Parser::get_of_match(const Match& match) const
     return std::move(of_match);
 }
 
-ActionsBase Parser::get_actions(of13::InstructionSet instructions) const
+ActionsBase Parser::get_actions(of13::InstructionSet instructions)
 {
     ActionsBaseBridge actions_bridge;
     for (auto instruction : instructions.instruction_set()) {
@@ -181,7 +203,7 @@ ActionsBase Parser::get_actions(of13::InstructionSet instructions) const
 }
 
 Parser::ActionsBaseBridge
-Parser::get_apply_actions(of13::ApplyActions* actions) const
+Parser::get_apply_actions(of13::ApplyActions* actions)
 {
     ActionsBaseBridge actions_bridge;
     auto transfer = Transfer::identityTransfer();
@@ -224,7 +246,7 @@ Parser::get_apply_actions(of13::ApplyActions* actions) const
     return std::move(actions_bridge);
 }
 
-Transfer Parser::get_transfer(const of13::SetFieldAction* action) const
+Transfer Parser::get_transfer(const of13::SetFieldAction* action)
 {
     PortId in_port = SpecialPort::ANY;
     PortId out_port = SpecialPort::NONE;
@@ -278,7 +300,7 @@ Transfer Parser::get_transfer(const of13::SetFieldAction* action) const
                     HeaderChanger(bit_vector.popBitVector()));
 }
 
-of13::InstructionSet Parser::get_instructions(ActionsBase actions) const
+of13::InstructionSet Parser::get_instructions(ActionsBase actions)
 {
     of13::InstructionSet instructions;
     return std::move(instructions);

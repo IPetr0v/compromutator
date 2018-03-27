@@ -7,22 +7,25 @@ class Detector::Impl
 public:
     explicit Impl(InstructionQueue& instruction_queue);
 
-    void addSwitch(SwitchInfo info);
+    void addSwitch(SwitchInfo&& info);
     void deleteSwitch(SwitchId id);
 
-    void addRule(SwitchId switch_id, RuleInfo info);
-    void deleteRule(SwitchId switch_id, RuleInfo info);
+    void addRule(SwitchId switch_id, RuleInfo&& info);
+    void deleteRule(SwitchId switch_id, RuleInfo&& info);
 
     void addLink(TopoId src_topo_id, TopoId dst_topo_id);
     void deleteLink(TopoId src_topo_id, TopoId dst_topo_id);
 
-    void addRuleStats(RequestId xid, RuleStatsFields stats);
-    void addPortStats(RequestId xid, PortStatsFields stats);
+    void addRuleStats(RequestId request_id, RuleInfo&& info,
+                      RuleStatsFields stats);
+    void addPortStats(RequestId request_id, PortInfo&& info,
+                      PortStatsFields stats);
+
+    void prepareInstructions();
 
 private:
     InstructionQueue& instruction_queue_;
 
-    std::unique_ptr<Controller> controller_;
     // TODO: take away xids that are used by the controller
     std::shared_ptr<RequestIdGenerator> xid_generator_;
 
@@ -31,8 +34,6 @@ private:
     std::unique_ptr<FlowPredictor> flow_predictor_;
 
     std::map<RequestId, RequestPtr> pending_requests_;
-
-    void execute_predictor_instruction();
 
     void add_rule_to_predictor(RulePtr rule);
     void delete_rule_from_predictor(RulePtr rule);
@@ -44,7 +45,6 @@ private:
 Detector::Impl::Impl(InstructionQueue& instruction_queue):
     instruction_queue_(instruction_queue)
 {
-    controller_ = std::make_unique<Controller>();
     xid_generator_ = std::make_shared<RequestIdGenerator>();
 
     network_ = std::make_shared<Network>();
@@ -56,11 +56,9 @@ Detector::Impl::Impl(InstructionQueue& instruction_queue):
     add_rule_to_predictor(network_->controllerRule());
 }
 
-void Detector::Impl::addSwitch(SwitchInfo info)
+void Detector::Impl::addSwitch(SwitchInfo&& info)
 {
-    auto sw = network_->addSwitch(
-        info.id, std::move(info.ports), info.table_number
-    );
+    auto sw = network_->addSwitch(info);
 
     // Add special rules to the predictor
     for (auto port : sw->ports()) {
@@ -70,8 +68,6 @@ void Detector::Impl::addSwitch(SwitchInfo info)
     for (auto table : sw->tables()) {
         add_rule_to_predictor(table->tableMissRule());
     }
-
-    execute_predictor_instruction();
 }
 
 void Detector::Impl::deleteSwitch(SwitchId id)
@@ -100,11 +96,9 @@ void Detector::Impl::deleteSwitch(SwitchId id)
     }
 
     network_->deleteSwitch(id);
-
-    execute_predictor_instruction();
 }
 
-void Detector::Impl::addRule(SwitchId switch_id, RuleInfo info)
+void Detector::Impl::addRule(SwitchId switch_id, RuleInfo&& info)
 {
     NetworkSpace domain(std::move(info.match));
     auto rule = network_->addRule(
@@ -112,19 +106,15 @@ void Detector::Impl::addRule(SwitchId switch_id, RuleInfo info)
         std::move(domain), std::move(info.actions)
     );
     add_rule_to_predictor(rule);
-
-    execute_predictor_instruction();
 }
 
-void Detector::Impl::deleteRule(SwitchId switch_id, RuleInfo info)
+void Detector::Impl::deleteRule(SwitchId switch_id, RuleInfo&& info)
 {
     // TODO: delete rules by their domain and priority
     RuleId id;
     auto rule = network_->rule(id);
     delete_rule_from_predictor(rule);
     network_->deleteRule(id);
-
-    execute_predictor_instruction();
 }
 
 void Detector::Impl::addLink(TopoId src_topo_id, TopoId dst_topo_id)
@@ -134,8 +124,6 @@ void Detector::Impl::addLink(TopoId src_topo_id, TopoId dst_topo_id)
     if (link_added) {
         auto link = link_pair.first;
         add_link_to_predictor(link);
-
-        execute_predictor_instruction();
     }
 }
 
@@ -146,15 +134,14 @@ void Detector::Impl::deleteLink(TopoId src_topo_id, TopoId dst_topo_id)
     if (link_exists) {
         auto link = link_pair.first;
         delete_link_from_predictor(link);
-
-        execute_predictor_instruction();
     }
 }
 
-void Detector::Impl::addRuleStats(RequestId xid, RuleStatsFields stats)
+void Detector::Impl::addRuleStats(RequestId request_id, RuleInfo&& info,
+                                  RuleStatsFields stats)
 {
     // TODO: check/find stats based on domain and port, not on xid
-    auto it = pending_requests_.find(xid);
+    auto it = pending_requests_.find(request_id);
     if (it != pending_requests_.end()) {
         auto rule_request = RuleRequest::pointerCast(it->second);
         assert(rule_request != nullptr);
@@ -170,9 +157,10 @@ void Detector::Impl::addRuleStats(RequestId xid, RuleStatsFields stats)
     }
 }
 
-void Detector::Impl::addPortStats(RequestId xid, PortStatsFields stats)
+void Detector::Impl::addPortStats(RequestId request_id, PortInfo&& info,
+                                  PortStatsFields stats)
 {
-    auto it = pending_requests_.find(xid);
+    auto it = pending_requests_.find(request_id);
     if (it != pending_requests_.end()) {
         auto port_request = PortRequest::pointerCast(it->second);
         assert(port_request != nullptr);
@@ -188,34 +176,10 @@ void Detector::Impl::addPortStats(RequestId xid, PortStatsFields stats)
     }
 }
 
-void Detector::Impl::execute_predictor_instruction()
+void Detector::Impl::prepareInstructions()
 {
     auto instruction = flow_predictor_->getInstruction();
-
-    for (const auto& request : instruction.requests.data) {
-        auto request_id = request->id;
-        if (auto rule_request = RuleRequest::pointerCast(request)) {
-            auto rule = rule_request->rule;
-            pending_requests_.emplace(request_id, rule_request);
-            controller_->getRuleStats(request_id, rule);
-        }
-        else if (auto port_request = PortRequest::pointerCast(request)) {
-            auto port = port_request->port;
-            pending_requests_.emplace(request_id, port_request);
-            controller_->getPortStats(request_id, port);
-        }
-        else {
-            assert(0);
-        }
-    }
-
-    for (auto rule_to_delete : instruction.interceptor_diff.rules_to_delete) {
-        controller_->deleteRule(rule_to_delete);
-    }
-
-    for (auto rule_to_add : instruction.interceptor_diff.rules_to_add) {
-        controller_->installRule(rule_to_add);
-    }
+    instruction_queue_.push(std::move(instruction));
 }
 
 void Detector::Impl::add_rule_to_predictor(RulePtr rule)
@@ -255,8 +219,8 @@ Detector::~Detector()
 
 void Detector::addSwitch(SwitchInfo info)
 {
-    executor_.addTask([this, info = std::move(info)]() {
-        impl_->addSwitch(info);
+    executor_.addTask([this, info = std::move(info)]() mutable {
+        impl_->addSwitch(std::move(info));
     });
 }
 
@@ -269,15 +233,15 @@ void Detector::deleteSwitch(SwitchId id)
 
 void Detector::addRule(SwitchId switch_id, RuleInfo info)
 {
-    executor_.addTask([this, switch_id, info = std::move(info)]() {
-        impl_->addRule(switch_id, info);
+    executor_.addTask([this, switch_id, info = std::move(info)]() mutable {
+        impl_->addRule(switch_id, std::move(info));
     });
 }
 
 void Detector::deleteRule(SwitchId switch_id, RuleInfo info)
 {
-    executor_.addTask([this, switch_id, info = std::move(info)]() {
-        impl_->deleteRule(switch_id, info);
+    executor_.addTask([this, switch_id, info = std::move(info)]() mutable {
+        impl_->deleteRule(switch_id, std::move(info));
     });
 }
 
@@ -295,16 +259,29 @@ void Detector::deleteLink(TopoId src_topo_id, TopoId dst_topo_id)
     });
 }
 
-void Detector::addRuleStats(RequestId xid, RuleStatsFields stats)
+void Detector::addRuleStats(RequestId request_id, RuleInfo info,
+                            RuleStatsFields stats)
 {
-    executor_.addTask([this, xid, stats]() {
-        impl_->addRuleStats(xid, stats);
-    });
+    executor_.addTask(
+        [this, request_id, info = std::move(info), stats]() mutable {
+            impl_->addRuleStats(request_id, std::move(info), stats);
+        }
+    );
 }
 
-void Detector::addPortStats(RequestId xid, PortStatsFields stats)
+void Detector::addPortStats(RequestId request_id, PortInfo info,
+                            PortStatsFields stats)
 {
-    executor_.addTask([this, xid, stats]() {
-        impl_->addPortStats(xid, stats);
+    executor_.addTask(
+        [this, request_id, info = std::move(info), stats]() mutable {
+            impl_->addPortStats(request_id, std::move(info), stats);
+        }
+    );
+}
+
+void Detector::prepareInstructions()
+{
+    executor_.addTask([this]() {
+        impl_->prepareInstructions();
     });
 }

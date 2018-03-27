@@ -1,7 +1,7 @@
 #pragma once
 
 #include "header_space/HeaderSpace.hpp"
-#include "openflow/Types.hpp"
+#include "Types.hpp"
 
 enum SpecialPort: PortId
 {

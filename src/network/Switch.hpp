@@ -37,7 +37,7 @@ private:
 class Port
 {
 public:
-    Port(SwitchPtr sw, PortId id);
+    Port(SwitchPtr sw, PortInfo info);
     ~Port();
 
     PortId id() const {return id_;}
@@ -58,6 +58,8 @@ public:
 
 private:
     PortId id_;
+    uint32_t speed_;
+
     SwitchPtr sw_;
     SwitchId switch_id_;
 
@@ -79,8 +81,7 @@ class Switch
     using TableRange = MapRange<std::map<TableId, TablePtr>>;
 
 public:
-    Switch(SwitchId id, const std::vector<PortId>& ports,
-           uint8_t table_number);
+    explicit Switch(const SwitchInfo& info);
     ~Switch();
 
     SwitchId id() const {return id_;}
@@ -98,7 +99,7 @@ private:
     std::map<TableId, TablePtr> table_map_;
     TablePtr front_table_;
 
-    PortPtr add_port(PortId id);
+    PortPtr add_port(PortInfo info);
     TablePtr add_table(TableId id);
 
 };

@@ -29,12 +29,11 @@ SwitchPtr Network::getSwitch(SwitchId id) const
     return it != switch_map_.end() ? it->second : nullptr;
 }
 
-SwitchPtr Network::addSwitch(SwitchId id, std::vector<PortId> ports,
-                             uint8_t table_number)
+SwitchPtr Network::addSwitch(const SwitchInfo& info)
 {
-    auto existing_sw = getSwitch(id);
+    auto existing_sw = getSwitch(info.id);
     if (not existing_sw) {
-        auto sw = switch_map_[id] = new Switch(id, ports, table_number);
+        auto sw = switch_map_[info.id] = new Switch(info);
         for (auto table : sw->tables()) {
             add_rule_to_topology(table->tableMissRule());
         }

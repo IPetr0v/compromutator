@@ -63,7 +63,7 @@ private:
         explicit WaitingConnection(OFConnection* connection):
             connection(connection) {}
         OFConnection* connection;
-        std::queue<Message> message_queue;
+        std::queue<RawMessage> message_queue;
     };
 
     struct Connection
@@ -75,8 +75,8 @@ private:
 public:
     ConnectionManager(ProxySettings settings, EventQueue& event_queue);
 
-    void sendToController(ConnectionId id, Message message);
-    void sendToSwitch(ConnectionId id, Message message);
+    void sendToController(ConnectionId id, RawMessage message);
+    void sendToSwitch(ConnectionId id, RawMessage message);
 
     void onControllerConnection(OFConnection* connection,
                                 OFConnection::Event type);
@@ -84,9 +84,9 @@ public:
                             OFConnection::Event type);
 
     void onControllerMessage(OFConnection* connection,
-                             Message message);
+                             RawMessage message);
     void onSwitchMessage(OFConnection* connection,
-                         Message message);
+                         RawMessage message);
 
 private:
     ProxySettings settings_;
@@ -107,6 +107,6 @@ private:
                               OFConnection* switch_connection);
     void delete_proxy_connection(OFConnection* connection);
 
-    void send(OFConnection* connection, Message message);
+    void send(OFConnection* connection, RawMessage message);
 
 };

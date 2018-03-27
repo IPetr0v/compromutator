@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../openflow/Types.hpp"
+#include "../Types.hpp"
 #include "../NetworkSpace.hpp"
 #include "../Detector.hpp"
 

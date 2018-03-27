@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Types.hpp"
+#include "../Types.hpp"
 #include "Mapping.hpp"
 #include "../NetworkSpace.hpp"
 #include "../Detector.hpp"
@@ -13,41 +13,38 @@
 
 #include <bitset>
 
+// TODO: add openflow namespace
 using namespace fluid_msg;
 
 class Parser
 {
+    class ActionsBaseBridge;
 public:
-    RuleInfo getRuleInfo(SwitchId switch_id, of13::FlowMod& flow_mod) const {
-        auto table_id = flow_mod.table_id();
-        auto priority = flow_mod.priority();
-        auto match = get_match(flow_mod.match());
-        auto actions = get_actions(flow_mod.instructions());
+    template<class Message>
+    static RuleInfo getRuleInfo(SwitchId switch_id, Message& message) {
+        auto table_id = message.table_id();
+        auto priority = message.priority();
+        auto match = get_match(message.match());
+        auto actions = get_actions(message.instructions());
 
         return {switch_id, table_id, priority,
                 std::move(match), std::move(actions)};
     }
 
-    of13::FlowMod getFlowMod(RuleInfo rule) const {
-        of13::FlowMod flow_mod;
-
-        flow_mod.table_id(rule.table_id);
-        flow_mod.priority(rule.priority);
-        flow_mod.match(get_of_match(rule.match));
-        flow_mod.instructions(get_instructions(rule.actions));
-
-        return std::move(flow_mod);
-    }
+    static of13::FlowMod getFlowMod(RuleInfo rule);
+    static of13::MultipartRequestFlow getMultipartRequestFlow(RuleInfo rule);
 
 private:
-    class ActionsBaseBridge;
-
     // TODO: rewrite fluid_msg so we do not need to copy match (add const)
-    Match get_match(of13::Match match) const;
-    of13::Match get_of_match(const Match& match) const;
+    static Match get_match(of13::Match match);
+    static of13::Match get_of_match(const Match& match);
 
-    ActionsBase get_actions(of13::InstructionSet instructions) const;
-    ActionsBaseBridge get_apply_actions(of13::ApplyActions* actions) const;
-    Transfer get_transfer(const of13::SetFieldAction* action) const;
-    of13::InstructionSet get_instructions(ActionsBase actions) const;
+    static ActionsBase get_actions(of13::InstructionSet instructions);
+    static ActionsBaseBridge get_apply_actions(of13::ApplyActions* actions);
+    static Transfer get_transfer(const of13::SetFieldAction* action);
+    static of13::InstructionSet get_instructions(ActionsBase actions);
 };
+
+// Messages that contain rule information
+template RuleInfo Parser::getRuleInfo(SwitchId, of13::FlowMod&);
+template RuleInfo Parser::getRuleInfo(SwitchId, of13::FlowStats&);

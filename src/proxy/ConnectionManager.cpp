@@ -29,7 +29,7 @@ void Client::connection_callback(OFConnection* connection,
 void Client::message_callback(OFConnection* connection, uint8_t type,
                               void* data, size_t len)
 {
-    Message message(type, data, len);
+    RawMessage message(type, data, len);
     connection_manager_->onControllerMessage(connection, message);
 }
 
@@ -58,7 +58,7 @@ void Server::connection_callback(OFConnection* connection,
 void Server::message_callback(OFConnection* connection, uint8_t type,
                               void* data, size_t len)
 {
-    Message message(type, data, len);
+    RawMessage message(type, data, len);
     connection_manager_->onSwitchMessage(connection, message);
 }
 
@@ -89,7 +89,7 @@ ConnectionManager::ConnectionManager(ProxySettings settings,
 }
 
 
-void ConnectionManager::sendToController(ConnectionId id, Message message)
+void ConnectionManager::sendToController(ConnectionId id, RawMessage message)
 {
     auto it = connections_.find(id);
     if (connections_.end() != it) {
@@ -103,7 +103,7 @@ void ConnectionManager::sendToController(ConnectionId id, Message message)
     }
 }
 
-void ConnectionManager::sendToSwitch(ConnectionId id, Message message)
+void ConnectionManager::sendToSwitch(ConnectionId id, RawMessage message)
 {
     auto it = connections_.find(id);
     if (connections_.end() != it) {
@@ -188,7 +188,7 @@ void ConnectionManager::onSwitchConnection(OFConnection* connection,
 }
 
 void ConnectionManager::onControllerMessage(OFConnection* connection,
-                                            Message message)
+                                            RawMessage message)
 {
     auto connection_id = get_id(connection);
     auto it = connections_.find(connection_id);
@@ -207,7 +207,7 @@ void ConnectionManager::onControllerMessage(OFConnection* connection,
 }
 
 void ConnectionManager::onSwitchMessage(OFConnection* connection,
-                                        Message message)
+                                        RawMessage message)
 {
     auto connection_id = get_id(connection);
     auto waiting_it = waiting_connections_.find(connection_id);
@@ -332,8 +332,8 @@ void ConnectionManager::delete_proxy_connection(OFConnection* connection)
     }
 }
 
-void ConnectionManager::send(OFConnection* connection, Message message)
+void ConnectionManager::send(OFConnection* connection, RawMessage message)
 {
-    connection->send(message.data, message.len);
+    connection->send(message.data(), message.len);
     // TODO: delete message
 }

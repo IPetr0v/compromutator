@@ -22,9 +22,9 @@
 
 #define ARR_LEN(A) ( sizeof (A) / sizeof *(A) )
 #define DIV_ROUND_UP(X, A) ( ((X) + (A) - 1) / (A) )
-#define ROUND_UP(X, A) ( ((X) + (A) - 1) & ~((A) - 1) )
+#define ROUND_UP_(X, A) ( ((X) + (A) - 1) & ~((A) - 1) )
 
-#define PACKED __attribute__ ((__packed__))
+//#define PACKED __attribute__ ((__packed__))
 #define QUOTE(S) QUOTE_ (S)
 #define QUOTE_(S) #S
 

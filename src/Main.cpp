@@ -10,32 +10,6 @@
 
 using namespace std;
 
-class OpenFlowParser
-{
-    fluid_msg::of13::FlowMod parseFlowMod(Message message) const {
-        assert(message.type == fluid_msg::of13::OFPT_FLOW_MOD);
-        fluid_msg::of13::FlowMod flow_mod;
-        flow_mod.unpack(message.data);
-        return std::move(flow_mod);
-    }
-};
-
-class TopologyTracker
-{
-public:
-    void addConnection(ConnectionId id) {
-
-    }
-    /*SwitchInfo getNewSwitch(ConnectionId id,
-                            fluid_msg::of13::FeaturesReply features_reply) {
-
-    }*/
-
-private:
-    std::set<ConnectionId> empty_connections_;
-    std::unordered_map<ConnectionId, SwitchId> switch_map_;
-};
-
 int main(int argc, char* argv[])
 {
     ProxySettings proxy_settings;

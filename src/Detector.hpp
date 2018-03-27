@@ -8,13 +8,6 @@
 
 #include <memory>
 
-struct SwitchInfo
-{
-    SwitchId id;
-    std::vector<PortId> ports;
-    uint8_t table_number;
-};
-
 using InstructionQueue = ConcurrentAlarmingQueue<Instruction>;
 
 class Detector
@@ -42,8 +35,13 @@ public:
     void addLink(TopoId src_topo_id, TopoId dst_topo_id);
     void deleteLink(TopoId src_topo_id, TopoId dst_topo_id);
 
-    void addRuleStats(RequestId xid, RuleStatsFields stats);
-    void addPortStats(RequestId xid, PortStatsFields stats);
+    // TODO: do we need to check match, or we can only check xid ?
+    void addRuleStats(RequestId request_id, RuleInfo info,
+                      RuleStatsFields stats);
+    void addPortStats(RequestId request_id, PortInfo info,
+                      PortStatsFields stats);
+
+    void prepareInstructions();
 
     class Impl;
 

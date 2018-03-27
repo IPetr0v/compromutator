@@ -10,7 +10,8 @@
 
 TEST(InitSwitchTest, CreationTest)
 {
-    auto sw = new Switch(1, {1,2}, 3);
+    std::vector<PortInfo> ports{{1,0}, {2,0}};
+    auto sw = new Switch(SwitchInfo(1, 3, ports));
     ASSERT_NE(nullptr, sw);
     ASSERT_NE(sw->tables().begin(), sw->tables().end());
     auto table = *sw->tables().begin();
@@ -26,7 +27,8 @@ protected:
     using N = NetworkSpace;
 
     virtual void SetUp() {
-        sw = new Switch(1, ports, 3);
+        std::vector<PortInfo> ports{{1,0}, {2,0}};
+        sw = new Switch(SwitchInfo(1, 3, ports));
     }
 
     virtual void TearDown() {
@@ -80,7 +82,8 @@ TEST(BasicNetworkTest, CreationTest)
 {
     auto network = new Network();
     ASSERT_NE(nullptr, network);
-    auto sw = network->addSwitch(1, {1,2}, 2);
+    std::vector<PortInfo> ports{{1,0}, {2,0}};
+    auto sw = network->addSwitch(SwitchInfo(1, 2, ports));
     ASSERT_NE(nullptr, network->getSwitch(1));
     EXPECT_EQ(sw->id(), network->getSwitch(1)->id());
     delete network;

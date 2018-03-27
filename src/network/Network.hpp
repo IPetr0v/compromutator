@@ -3,7 +3,7 @@
 #include "Rule.hpp"
 #include "Switch.hpp"
 #include "../openflow/Action.hpp"
-#include "../openflow/Types.hpp"
+#include "../Types.hpp"
 
 #include <map>
 #include <memory>
@@ -25,8 +25,7 @@ public:
 
     // Switch management
     SwitchPtr getSwitch(SwitchId id) const;
-    SwitchPtr addSwitch(SwitchId id, std::vector<PortId> ports,
-                        uint8_t table_number);
+    SwitchPtr addSwitch(const SwitchInfo& info);
     void deleteSwitch(SwitchId id);
 
     TablePtr getTable(SwitchId switch_id, TableId table_id) const;

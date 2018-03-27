@@ -1,7 +1,7 @@
 #pragma once
 
 extern "C" {
-  #include "hs.h"
+#include "hs.h"
 }
 
 #include <climits>

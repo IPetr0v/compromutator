@@ -24,7 +24,7 @@ add_library(detector STATIC
         flow_predictor/Timestamp.hpp
         header_space/HeaderSpace.cpp
         header_space/HeaderSpace.hpp
-        openflow/Types.hpp
+    Types.hpp
         network/Switch.hpp
         network/Switch.cpp
         network/Network.cpp
@@ -34,7 +34,7 @@ add_library(detector STATIC
         network/Types.hpp
         network/Vertex.hpp
         openflow/Action.hpp
-        openflow/Types.hpp
+    Types.hpp
         openflow/Parser.cpp
         openflow/Parser.hpp
         openflow/Mapping.hpp
@@ -51,7 +51,7 @@ add_library(detector STATIC
         NetworkSpace.hpp
         ConcurrencyPrimitives.hpp
         Compromutator.cpp
-        Compromutator.hpp)
+        Compromutator.hpp openflow/MessageDispatcher.hpp MessagePipeline.cpp MessagePipeline.hpp)
 
 target_link_libraries(detector
     header_space

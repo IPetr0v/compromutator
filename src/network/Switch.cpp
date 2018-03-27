@@ -68,13 +68,13 @@ RuleRange Table::lowerRules(RulePtr rule)
     return {rule_map_, lower_bound, rule_map_.end()};
 }
 
-Port::Port(SwitchPtr sw, PortId id):
-    id_(id), sw_(sw), switch_id_(sw->id())
+Port::Port(SwitchPtr sw, PortInfo info):
+    id_(info.id), speed_(info.speed), sw_(sw), switch_id_(sw->id())
 {
     source_rule_ = new Rule(RuleType::SOURCE, sw_, nullptr, LOW_PRIORITY,
-                            NetworkSpace(id), Actions::noActions());
+                            NetworkSpace(id_), Actions::noActions());
     sink_rule_ = new Rule(RuleType::SINK, sw_, nullptr, LOW_PRIORITY,
-                          NetworkSpace(id), Actions::noActions());
+                          NetworkSpace(id_), Actions::noActions());
 }
 
 Port::~Port()
@@ -93,18 +93,17 @@ void Port::delete_rule(RulePtr rule, RuleMap& rule_map)
     rule_map.erase(rule->id());
 }
 
-Switch::Switch(SwitchId id, const std::vector<PortId>& ports,
-               uint8_t table_number):
-    id_(id)
+Switch::Switch(const SwitchInfo& info):
+    id_(info.id)
 {
     // Create ports
-    for (auto port_id : ports) {
-        add_port(port_id);
+    for (const auto& port : info.ports) {
+        add_port(port);
     }
 
     // Create tables
     front_table_ = add_table(0);
-    for (TableId table_id = 1; table_id < table_number; table_id++) {
+    for (TableId table_id = 1; table_id < info.table_number; table_id++) {
         add_table(table_id);
     }
 }
@@ -135,11 +134,11 @@ PortPtr Switch::port(PortId id) const
     return it != port_map_.end() ? it->second : nullptr;
 }
 
-PortPtr Switch::add_port(PortId id)
+PortPtr Switch::add_port(PortInfo info)
 {
     // Check existing getPort
-    auto old_port = port(id);
-    return old_port ? old_port : port_map_[id] = new Port(this, id);
+    auto old_port = port(info.id);
+    return old_port ? old_port : port_map_[info.id] = new Port(this, info);
 }
 
 TablePtr Switch::table(TableId id) const

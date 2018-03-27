@@ -22,9 +22,9 @@ class SimpleTwoSwitchNetwork : public ExampleNetwork
 protected:
     void initNetwork() override {
         network = std::make_shared<Network>();
-        std::vector<PortId> ports{1,2};
-        sw1 = network->addSwitch(1, ports, 2);
-        sw2 = network->addSwitch(2, ports, 1);
+        std::vector<PortInfo> ports{{1,0}, {2,0}};
+        sw1 = network->addSwitch(SwitchInfo(1, 2, ports));
+        sw2 = network->addSwitch(SwitchInfo(2, 1, ports));
 
         port11 = sw1->port(1);
         port12 = sw1->port(2);
@@ -55,9 +55,9 @@ class TwoSwitchNetwork : public ExampleNetwork
 protected:
     void initNetwork() override {
         network = std::make_shared<Network>();
-        std::vector<PortId> ports{1,2};
-        sw1 = network->addSwitch(1, ports, 2);
-        sw2 = network->addSwitch(2, ports, 1);
+        std::vector<PortInfo> ports{{1,0}, {2,0}};
+        sw1 = network->addSwitch(SwitchInfo(1, 2, ports));
+        sw2 = network->addSwitch(SwitchInfo(2, 1, ports));
 
         port11 = sw1->port(1);
         port12 = sw1->port(2);
