@@ -24,6 +24,10 @@ void Controller::addSwitch(ConnectionId connection_id, SwitchInfo&& info)
 {
     auto connection_iter = connection_map_.find(info.id);
     if (connection_map_.end() == connection_iter) {
+        // Add switch to the detector
+        detector_.addSwitch(info);
+
+        // Save switch
         connection_map_.emplace(info.id, connection_id);
         switch_map_.emplace(connection_id, std::move(info));
     }
@@ -38,6 +42,11 @@ void Controller::deleteSwitch(ConnectionId connection_id)
     auto switch_iter = switch_map_.find(connection_id);
     if (switch_map_.end() != switch_iter) {
         auto switch_id = switch_iter->second.id;
+
+        // Delete switch from the detector
+        detector_.deleteSwitch(switch_id);
+
+        // Delete switch
         connection_map_.erase(switch_id);
         switch_map_.erase(switch_iter);
     }

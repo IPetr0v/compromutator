@@ -22,12 +22,9 @@ public:
     Status wait(std::chrono::milliseconds timeout_duration) {
         std::unique_lock<std::mutex> wait_lock(mutex_);
         auto status = alarm_.wait_for(wait_lock, timeout_duration);
-        if (std::cv_status::no_timeout == status) {
-            return Status::NO_TIMEOUT;
-        }
-        else {
-            return Status::TIMEOUT;
-        }
+        return std::cv_status::no_timeout == status
+               ? Status::NO_TIMEOUT
+               : Status::TIMEOUT;
     }
 
 private:

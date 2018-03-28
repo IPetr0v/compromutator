@@ -113,8 +113,10 @@ void Detector::Impl::deleteRule(SwitchId switch_id, RuleInfo&& info)
     // TODO: delete rules by their domain and priority
     RuleId id;
     auto rule = network_->rule(id);
-    delete_rule_from_predictor(rule);
-    network_->deleteRule(id);
+    if (rule) {
+        delete_rule_from_predictor(rule);
+        network_->deleteRule(id);
+    }
 }
 
 void Detector::Impl::addLink(TopoId src_topo_id, TopoId dst_topo_id)

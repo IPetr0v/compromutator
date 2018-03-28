@@ -93,8 +93,9 @@ void ConnectionManager::sendToController(ConnectionId id, RawMessage message)
 {
     auto it = connections_.find(id);
     if (connections_.end() != it) {
-        std::cout << "Send to controller: connection id="
-                  << id << std::endl;
+        std::cout << "Send to controller: connection id=" << id
+                  << ", message="<<(int)message.type
+                  << std::endl;
         send(it->second.controller_connection, message);
     }
     else {
@@ -107,8 +108,9 @@ void ConnectionManager::sendToSwitch(ConnectionId id, RawMessage message)
 {
     auto it = connections_.find(id);
     if (connections_.end() != it) {
-        std::cout << "Send to switch: connection id="
-                  << id << std::endl;
+        std::cout << "Send to switch: connection id=" << id
+                  << ", message="<<(int)message.type
+                  << std::endl;
         send(it->second.switch_connection, message);
     }
     else {
@@ -194,7 +196,9 @@ void ConnectionManager::onControllerMessage(OFConnection* connection,
     auto it = connections_.find(connection_id);
     if (connections_.end() != it) {
         std::cout << "Received from controller: connection id="
-                  << connection_id << std::endl;
+                  << connection_id
+                  << ", message="<<(int)message.type
+                  << std::endl;
 
         event_queue_.push(std::make_shared<MessageEvent>(
             connection_id, Origin::FROM_CONTROLLER, std::move(message)
@@ -213,7 +217,9 @@ void ConnectionManager::onSwitchMessage(OFConnection* connection,
     auto waiting_it = waiting_connections_.find(connection_id);
     if (waiting_connections_.end() != waiting_it) {
         std::cout << "Enqueued from switch: connection id="
-                  << connection_id << std::endl;
+                  << connection_id
+                  << ", message="<<(int)message.type
+                  << std::endl;
 
         // Queue messages
         auto& message_queue = waiting_it->second.message_queue;
@@ -223,7 +229,9 @@ void ConnectionManager::onSwitchMessage(OFConnection* connection,
         auto it = connections_.find(connection_id);
         if (connections_.end() != it) {
             std::cout << "Received from switch: connection id="
-                      << connection_id << std::endl;
+                      << connection_id
+                      << ", message="<<(int)message.type
+                      << std::endl;
 
             event_queue_.push(std::make_shared<MessageEvent>(
                 connection_id, Origin::FROM_SWITCH, std::move(message)
@@ -259,10 +267,12 @@ void ConnectionManager::accept_controller_connection(OFConnection* controller_co
         // Send delayed messages
         auto& message_queue = it->second.message_queue;
         while (not message_queue.empty()) {
+            auto& message = message_queue.front();
+
             std::cout << "Send to switch (QUEUED): connection id="
+                      << ", message="<<(int)message.type
                       << connection_id << std::endl;
 
-            auto& message = message_queue.front();
             event_queue_.push(std::make_shared<MessageEvent>(
                 connection_id, Origin::FROM_SWITCH, std::move(message)
             ));
@@ -294,11 +304,11 @@ ConnectionManager::add_proxy_connection(OFConnection* controller_connection,
         ));
 
         std::cout << "Proxy connection id=" << get_id(switch_connection)
-                  << " started" << std::endl;
+                  << " established" << std::endl;
     }
     else {
         std::cerr << "Connection id=" << connection_id
-                  << " is already presented" << std::endl;
+                  << " already exists" << std::endl;
     }
 }
 
@@ -308,10 +318,11 @@ void ConnectionManager::delete_proxy_connection(OFConnection* connection)
     auto waiting_it = waiting_connections_.find(id);
     auto connection_it = connections_.find(id);
     // There cannot be same waiting connections and proxy connections
-    assert((waiting_connections_.end() != waiting_it and
-            connections_.end() == connection_it) or
-           (waiting_connections_.end() == waiting_it and
-            connections_.end() != connection_it));
+    bool is_waiting = waiting_connections_.end() != waiting_it and
+                      connections_.end() == connection_it;
+    bool is_connected = waiting_connections_.end() == waiting_it and
+                        connections_.end() != connection_it;
+    assert(is_waiting or is_connected);
 
     if (waiting_connections_.end() != waiting_it) {
         // TODO: delete old connections and their messages
@@ -335,5 +346,4 @@ void ConnectionManager::delete_proxy_connection(OFConnection* connection)
 void ConnectionManager::send(OFConnection* connection, RawMessage message)
 {
     connection->send(message.data(), message.len);
-    // TODO: delete message
 }

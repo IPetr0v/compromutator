@@ -10,7 +10,7 @@
 
 #include <type_traits>
 
-template<class ReturnType>
+template<class ReturnType, class BaseMessage>
 class MessageDispatcher
 {
 public:
@@ -21,6 +21,9 @@ public:
         template<class Message>
         ReturnType visitMessage(Message& message) {
             if (auto self = dynamic_cast<Visitor<Message>*>(this)) {
+                return self->visit(message);
+            }
+            else if (auto self = dynamic_cast<Visitor<BaseMessage>*>(this)) {
                 return self->visit(message);
             }
             else {
@@ -40,12 +43,11 @@ public:
     struct DispatchableInterface {
         virtual ReturnType accept(VisitorInterface& visitor) = 0;
     };
-    using DispatchablePtr = std::unique_ptr<DispatchableInterface>;
 
     template<class Message>
     struct DispatchableMessage : virtual Message, DispatchableInterface {
         ReturnType accept(VisitorInterface& visitor) override {
-            return visitor.visitMessage(*this);
+            return visitor.visitMessage((Message&)*this);
         }
     };
 
@@ -58,7 +60,12 @@ private:
     ReturnType dispatch(RawMessage raw_message,
                         VisitorInterface& visitor) const {
         auto message = std::make_unique<DispatchableMessage<Message>>();
-        message->unpack(raw_message.data());
+        auto error = message->unpack(raw_message.data());
+        if (error) {
+            throw std::logic_error(
+                "Message unpack error: Error code " + std::to_string(error)
+            );
+        }
         return message->accept(visitor);
     }
 
@@ -67,25 +74,37 @@ private:
         using namespace fluid_msg;
 
         switch (raw_message.type) {
-        // Universal messages
+        // Symmetric messages
         case of13::OFPT_HELLO:
             return dispatch<of13::Hello>(raw_message, visitor);
+        case of13::OFPT_ERROR:
+            return dispatch<of13::Error>(raw_message, visitor);
+        case of13::OFPT_ECHO_REQUEST:
+            return dispatch<of13::EchoRequest>(raw_message, visitor);
+        case of13::OFPT_ECHO_REPLY:
+            return dispatch<of13::EchoReply>(raw_message, visitor);
+        case of13::OFPT_EXPERIMENTER:
+            return dispatch<of13::Experimenter>(raw_message, visitor);
 
         // Controller messages
         case of13::OFPT_FEATURES_REQUEST:
             return dispatch<of13::FeaturesRequest>(raw_message, visitor);
         case of13::OFPT_GET_CONFIG_REQUEST:
             return dispatch<of13::GetConfigRequest>(raw_message, visitor);
-        case of13::OFPT_FLOW_MOD:
-            return dispatch<of13::FlowMod>(raw_message, visitor);
-        case of13::OFPT_PORT_MOD:
-            return dispatch<of13::PortMod>(raw_message, visitor);
-        case of13::OFPT_METER_MOD:
-            return dispatch<of13::MeterMod>(raw_message, visitor);
-        case of13::OFPT_GROUP_MOD:
-            return dispatch<of13::GroupMod>(raw_message, visitor);
+        case of13::OFPT_SET_CONFIG:
+            return dispatch<of13::SetConfig>(raw_message, visitor);
         case of13::OFPT_PACKET_OUT:
             return dispatch<of13::PacketOut>(raw_message, visitor);
+        case of13::OFPT_FLOW_MOD:
+            return dispatch<of13::FlowMod>(raw_message, visitor);
+        case of13::OFPT_GROUP_MOD:
+            return dispatch<of13::GroupMod>(raw_message, visitor);
+        case of13::OFPT_PORT_MOD:
+            return dispatch<of13::PortMod>(raw_message, visitor);
+        case of13::OFPT_TABLE_MOD:
+            return dispatch<of13::TableMod>(raw_message, visitor);
+        case of13::OFPT_METER_MOD:
+            return dispatch<of13::MeterMod>(raw_message, visitor);
         case of13::OFPT_BARRIER_REQUEST:
             return dispatch<of13::BarrierRequest>(raw_message, visitor);
         case of13::OFPT_QUEUE_GET_CONFIG_REQUEST:
@@ -94,18 +113,16 @@ private:
             return dispatch<of13::RoleRequest>(raw_message, visitor);
         case of13::OFPT_GET_ASYNC_REQUEST:
             return dispatch<of13::GetAsyncRequest>(raw_message, visitor);
+        case of13::OFPT_SET_ASYNC:
+            return dispatch<of13::SetAsync>(raw_message, visitor);
         case of13::OFPT_MULTIPART_REQUEST:
             return dispatch_multipart<of13::MultipartRequest>(raw_message, visitor);
 
         // Switch messages
-        case of13::OFPT_ERROR:
-            return dispatch<of13::Error>(raw_message, visitor);
         case of13::OFPT_FEATURES_REPLY:
             return dispatch<of13::FeaturesReply>(raw_message, visitor);
         case of13::OFPT_GET_CONFIG_REPLY:
             return dispatch<of13::GetConfigReply>(raw_message, visitor);
-        case of13::OFPT_EXPERIMENTER:
-            return dispatch<of13::Experimenter>(raw_message, visitor);
         case of13::OFPT_PACKET_IN:
             return dispatch<of13::PacketIn>(raw_message, visitor);
         case of13::OFPT_FLOW_REMOVED:
@@ -122,6 +139,8 @@ private:
             return dispatch<of13::GetAsyncReply>(raw_message, visitor);
         case of13::OFPT_MULTIPART_REPLY:
             return dispatch_multipart<of13::MultipartReply>(raw_message, visitor);
+
+        // Unknown message
         default:
             throw std::invalid_argument(
                 "Dispatcher error: Unknown message type - " +
@@ -160,18 +179,10 @@ private:
             return IsReply::value
                    ? dispatch<of13::MultipartReplyTable>(raw_message, visitor)
                    : dispatch<of13::MultipartRequestTable>(raw_message, visitor);
-        case of13::OFPMP_TABLE_FEATURES:
-            return IsReply::value
-                   ? dispatch<of13::MultipartReplyTableFeatures>(raw_message, visitor)
-                   : dispatch<of13::MultipartRequestTableFeatures>(raw_message, visitor);
         case of13::OFPMP_PORT_STATS:
             return IsReply::value
                    ? dispatch<of13::MultipartReplyPortStats>(raw_message, visitor)
                    : dispatch<of13::MultipartRequestPortStats>(raw_message, visitor);
-        case of13::OFPMP_PORT_DESC:
-            return IsReply::value
-                   ? dispatch<of13::MultipartReplyPortDescription>(raw_message, visitor)
-                   : dispatch<of13::MultipartRequestPortDescription>(raw_message, visitor);
         case of13::OFPMP_QUEUE:
             return IsReply::value
                    ? dispatch<of13::MultipartReplyQueue>(raw_message, visitor)
@@ -200,6 +211,18 @@ private:
             return IsReply::value
                    ? dispatch<of13::MultipartReplyMeterFeatures>(raw_message, visitor)
                    : dispatch<of13::MultipartRequestMeterFeatures>(raw_message, visitor);
+        case of13::OFPMP_TABLE_FEATURES:
+            return IsReply::value
+                   ? dispatch<of13::MultipartReplyTableFeatures>(raw_message, visitor)
+                   : dispatch<of13::MultipartRequestTableFeatures>(raw_message, visitor);
+        case of13::OFPMP_PORT_DESC:
+            return IsReply::value
+                   ? dispatch<of13::MultipartReplyPortDescription>(raw_message, visitor)
+                   : dispatch<of13::MultipartRequestPortDescription>(raw_message, visitor);
+        case of13::OFPMP_EXPERIMENTER:
+            return IsReply::value
+                   ? dispatch<of13::MultipartReplyExperimenter>(raw_message, visitor)
+                   : dispatch<of13::MultipartRequestExperimenter>(raw_message, visitor);
         default:
             throw std::invalid_argument(
                 "Dispatcher error: Unknown multipart type - " +

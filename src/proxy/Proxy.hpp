@@ -46,7 +46,6 @@ public:
         );
     }
 
-    // TODO: is this const?
     bool eventsExist() {
         return not event_queue_.empty();
     }
@@ -58,23 +57,6 @@ public:
     Sender getSender() const {
         return Sender(connection_manager_);
     }
-
-    /*void sendToController(ConnectionId id, RawMessage message) {
-        connection_manager_->sendToController(id, message);
-    }
-
-    void sendToSwitch(ConnectionId id, RawMessage message) {
-        connection_manager_->sendToSwitch(id, message);
-    }
-
-    void send(ConnectionId id, Destination destination, RawMessage message) {
-        if (destination == Destination::TO_CONTROLLER) {
-            connection_manager_->sendToController(id, message);
-        }
-        else {
-            connection_manager_->sendToSwitch(id, message);
-        }
-    }*/
 
 private:
     EventQueue event_queue_;

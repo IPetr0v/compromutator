@@ -206,21 +206,23 @@ Parser::ActionsBaseBridge
 Parser::get_apply_actions(of13::ApplyActions* actions)
 {
     ActionsBaseBridge actions_bridge;
-    auto transfer = Transfer::identityTransfer();
     for (auto action : actions->actions().action_list()) {
         switch (action->type()) {
         case of13::OFPAT_OUTPUT: {
             auto output_action = dynamic_cast<of13::OutputAction*>(action);
+            assert(output_action);
             actions_bridge.addPortAction(output_action->port());
             break;
         }
         case of13::OFPAT_GROUP: {
             auto group_action = dynamic_cast<of13::GroupAction*>(action);
+            assert(group_action);
             actions_bridge.addGroupAction(group_action->group_id());
             break;
         }
         case of13::OFPAT_SET_FIELD: {
             auto set_field_action = dynamic_cast<of13::SetFieldAction*>(action);
+            assert(set_field_action);
             actions_bridge.addTransfer(get_transfer(set_field_action));
             break;
         }

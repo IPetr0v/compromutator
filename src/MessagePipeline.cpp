@@ -9,7 +9,27 @@ namespace pipeline {
 
 using namespace fluid_msg;
 
-Action HandshakeHandler::visit(fluid_msg::of13::Hello& hello)
+Action HandshakeHandler::visit(of13::Hello&)
+{
+    return Action::FORWARD;
+}
+
+Action HandshakeHandler::visit(of13::Error&)
+{
+    return Action::FORWARD;
+}
+
+Action HandshakeHandler::visit(of13::EchoRequest&)
+{
+    return Action::FORWARD;
+}
+
+Action HandshakeHandler::visit(of13::EchoReply&)
+{
+    return Action::FORWARD;
+}
+
+Action HandshakeHandler::visit(of13::FeaturesRequest&)
 {
     return Action::FORWARD;
 }
@@ -19,7 +39,13 @@ Action HandshakeHandler::visit(of13::FeaturesReply& features_reply)
     info_.id = features_reply.datapath_id();
     info_.table_number = features_reply.n_tables();
     info_status_.features = true;
-    return try_establish();
+    try_establish();
+    return Action::FORWARD;
+}
+
+Action HandshakeHandler::visit(of13::MultipartRequestPortDescription&)
+{
+    return Action::FORWARD;
 }
 
 Action HandshakeHandler::visit(of13::MultipartReplyPortDescription& port_desc)
@@ -28,24 +54,20 @@ Action HandshakeHandler::visit(of13::MultipartReplyPortDescription& port_desc)
         info_.ports.emplace_back(port.port_no(), port.curr_speed());
     }
     info_status_.ports = true;
-    return try_establish();
+    try_establish();
+    return Action::FORWARD;
 }
 
-Action HandshakeHandler::visit(OFMsg& message)
+Action HandshakeHandler::visit(OFMsg&)
 {
-    return try_establish();
+    return Action::ENQUEUE;
 }
 
-Action HandshakeHandler::try_establish()
+void HandshakeHandler::try_establish()
 {
     if (not is_established_ && info_status_.isFull()) {
         controller_.addSwitch(connection_id_, std::move(info_));
         is_established_ = true;
-        return Action::FORWARD;
-    } else if (is_established_) {
-        return Action::FORWARD;
-    } else {
-        return Action::ENQUEUE;
     }
 }
 
@@ -98,7 +120,7 @@ Action MessageHandler::visit(of13::MultipartReplyFlow& reply_flow)
     return Action::FORWARD;
 }
 
-Action MessageHandler::visit(OFMsg& message)
+Action MessageHandler::visit(OFMsg&)
 {
     return Action::FORWARD;
 }
@@ -132,13 +154,24 @@ RawMessage MessageChanger::visit(of13::MultipartReplyFlow& reply_flow)
     return {reply_flow};
 }
 
+RawMessage MessageChanger::visit(OFMsg& message)
+{
+    return {message};
+}
+
 void MessagePipeline::addConnection(ConnectionId id)
 {
     auto handshake_it = handshake_pipelines_.find(id);
     auto handler_it = message_handlers_.find(id);
     if (handshake_pipelines_.end() == handshake_it &&
         message_handlers_.end() == handler_it) {
-        handshake_pipelines_.emplace(id, HandshakePipeline(id, controller_));
+        // Create message handler
+        handshake_pipelines_.emplace(
+            id, HandshakePipeline(id, controller_)
+        );
+        message_handlers_.emplace(
+            id, MessageHandler(id, controller_, detector_)
+        );
     }
     else {
         std::cerr << "Pipeline error: Already existing connection" << std::endl;
@@ -155,32 +188,44 @@ void MessagePipeline::processMessage(Message message)
     // Check if the connection hasn't been established yet
     auto handshake_it = handshake_pipelines_.find(message.id);
     if (handshake_pipelines_.end() != handshake_it) {
-        // Dispatch message
-        auto& pipeline = handshake_it->second;
-        auto pre_action = Dispatcher()(message.raw_message, pipeline.handler);
+        try {
+            // Dispatch message
+            auto &pipeline = handshake_it->second;
+            auto pre_action = Dispatcher()(message.raw_message,
+                                           pipeline.handler);
 
-        // Process message
-        switch (pre_action) {
-        case Action::FORWARD:
-            handle_message(message);
-            break;
-        case Action::ENQUEUE:
-            pipeline.queue.push(message);
-            break;
-        case Action::DROP:
-            break;
-        }
-        
-        // Check connection status
-        if (pipeline.handler.established()) {
-            while (not pipeline.queue.empty()) {
-                auto queued_message = pipeline.queue.front();
-                pipeline.queue.pop();
-                handle_message(queued_message);
+            // Process message
+            switch (pre_action) {
+            case Action::FORWARD:
+                handle_message(message);
+                break;
+            case Action::ENQUEUE:
+                pipeline.queue.push(message);
+                break;
+            case Action::DROP:
+                break;
             }
-            
-            // Delete handshake pipeline for the established connection
-            handshake_pipelines_.erase(handshake_it);
+
+            // Check connection status
+            if (pipeline.handler.established()) {
+                // Handle queued messages
+                while (not pipeline.queue.empty()) {
+                    auto queued_message = pipeline.queue.front();
+                    pipeline.queue.pop();
+                    handle_message(queued_message);
+                }
+
+                // Delete handshake pipeline for the established connection
+                handshake_pipelines_.erase(handshake_it);
+            }
+        }
+        catch (const std::invalid_argument& error) {
+            std::cerr << "Pipeline process error: " << error.what() << std::endl;
+            handle_message(message);
+        }
+        catch (const std::logic_error& error) {
+            std::cerr << "Pipeline process error: " << error.what() << std::endl;
+            handle_message(message);
         }
     }
     else {
@@ -193,7 +238,7 @@ void MessagePipeline::addBarrier()
     queue_.addBarrier();
 }
 
-void MessagePipeline::flushPipeline(ConnectionId id)
+void MessagePipeline::flushPipeline()
 {
     // TODO: check pipeline for emptiness
     for (auto message : queue_.pop()) {
@@ -231,8 +276,10 @@ void MessagePipeline::handle_message(Message message)
     }
     catch (const std::invalid_argument& error) {
         std::cerr << "Pipeline process error: " << error.what() << std::endl;
-
-        // Fast-forward the message
+        forward_message(message);
+    }
+    catch (const std::logic_error& error) {
+        std::cerr << "Pipeline process error: " << error.what() << std::endl;
         forward_message(message);
     }
 }
