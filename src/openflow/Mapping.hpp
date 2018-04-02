@@ -12,18 +12,21 @@
 #include <stdexcept>
 #include <utility>
 
-// This class is used to check whether Container has mask() function
+// This class is used to check if the Container has a mask() function
 template<typename Container>
 struct IsMasked
 {
+    // Using declval because fluid messages have 2 mask functions (setter and getter)
     template <typename C>
-    static auto is_masked(decltype(&C::mask)*) -> std::true_type;
+    static auto is_masked(
+        std::decay<decltype(std::declval<C>().mask())>*
+    ) -> std::true_type;
 
     template<typename C>
     static auto is_masked(...) -> std::false_type;
 
     using type = decltype(is_masked<Container>(nullptr));
-    static const int value = type::value;
+    static const bool value = type::value;
 };
 
 class Mapping
@@ -168,7 +171,7 @@ private:
     typename Map::MaskedBitSet get_bits() const {
         auto value = typename Map::BitSet();
         auto mask = typename Map::BitSet();
-        for (uint32_t index = 0; index < Map::SIZE; index++) {
+        for (size_t index = 0; index < Map::SIZE; index++) {
             auto bit_value = bit_vector_.getBit(Map::OFFSET + index);
             switch (bit_value) {
             case BitValue::ZERO:
@@ -193,7 +196,7 @@ private:
 
     template<class Map>
     void set_bits(typename Map::MaskedBitSet bitset) {
-        for (uint32_t index = 0; index < Map::SIZE; index++) {
+        for (size_t index = 0; index < Map::SIZE; index++) {
             if (true == bitset.mask[index]) {
                 auto bit_value = (true == bitset.value[index])
                                  ? BitValue::ONE

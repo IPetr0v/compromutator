@@ -5,13 +5,13 @@ static uint64_t get_eth_value(const fluid_msg::EthAddress& eth_address)
 {
     auto data = eth_address.get_data();
     auto raw_value = *reinterpret_cast<const uint64_t*>(data);
-    auto value = ntoh64(raw_value) & 0x0000FFFFFFFFFFFF;
+    auto value = (ntoh64(raw_value) & 0xFFFFFFFFFFFF0000) >> 16;
     return value;
 }
 
 static fluid_msg::EthAddress get_eth_fluid_value(uint64_t value)
 {
-    auto raw_value = hton64(value);
+    auto raw_value = hton64(value) >> 16;
     auto data = reinterpret_cast<uint8_t*>(&raw_value);
     return std::move(fluid_msg::EthAddress(data));
 }
@@ -59,16 +59,14 @@ Mapping::EthType::ValueType
 Mapping::EthType::get_fluid_value(uint64_t eth_type)
 {
     // TODO: use all bits if ether type
-    // 0x0800 - IPv4
-    return (1u == eth_type) ? 0x0800 : 0x0;
+    return (1u == eth_type) ? ETH_TYPE_IPv4 : 0x0;
 }
 
 template<>
 uint64_t Mapping::EthType::get_integer_value(const ValueType& eth_type)
 {
     // TODO: check if eth_type is in network order - then ntoh8() it
-    // 0x0800 - IPv4
-    return (0x0800 == eth_type) ? 1u : 0u;
+    return (ETH_TYPE_IPv4 == eth_type) ? 1u : 0u;
 }
 
 // L3
@@ -77,15 +75,13 @@ Mapping::IPProto::ValueType
 Mapping::IPProto::get_fluid_value(uint64_t ip_proto)
 {
     // TODO: use all bits if ip proto
-    // 0x06 - TCP, 0x11 - UDP
-    return (1u == ip_proto) ? 0x06 : 0x11;
+    return (1u == ip_proto) ? IP_PROTO_TCP : IP_PROTO_UDP;
 }
 
 template<>
 uint64_t Mapping::IPProto::get_integer_value(const ValueType& ip_proto)
 {
-    // 0x06 - TCP, 0x11 - UDP
-    return (0x06 == ip_proto) ? 1u : 0u;
+    return (IP_PROTO_TCP == ip_proto) ? 1u : 0u;
 }
 
 template<>

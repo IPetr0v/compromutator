@@ -34,7 +34,7 @@ public:
     static of13::FlowMod getFlowMod(RuleInfo rule);
     static of13::MultipartRequestFlow getMultipartRequestFlow(RuleInfo rule);
 
-private:
+protected:
     // TODO: rewrite fluid_msg so we do not need to copy match (add const)
     static Match get_match(of13::Match match);
     static of13::Match get_of_match(const Match& match);

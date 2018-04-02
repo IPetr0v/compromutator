@@ -60,8 +60,6 @@ public:
 
     std::list<Prediction> getPredictions() {return std::move(predictions_);}
 
-    friend class Test;
-
 private:
     std::shared_ptr<DependencyGraph> dependency_graph_;
     std::unique_ptr<PathScan> path_scan_;

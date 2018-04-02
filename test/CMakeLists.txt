@@ -52,6 +52,7 @@ add_executable(unit_test
     DependencyGraphTest.cpp
     ExampleDependencyGraph.hpp
     FlowPredictorTest.cpp
+    ParserTest.cpp
 )
 
 target_link_libraries(unit_test

@@ -143,29 +143,34 @@ of13::Match Parser::get_of_match(const Match& match)
     auto eth_type = bit_vector.getField<Mapping::EthType>();
     if (eth_type) of_match.add_oxm_field(eth_type);
 
-    // IPv4
-    auto ip_proto = bit_vector.getField<Mapping::IPProto>();
-    if (ip_proto) of_match.add_oxm_field(ip_proto);
+    if (ETH_TYPE_IPv4 == eth_type->value()) {
+        // IPv4
+        auto ip_proto = bit_vector.getField<Mapping::IPProto>();
+        if (ip_proto) of_match.add_oxm_field(ip_proto);
 
-    auto ipv4_src = bit_vector.getField<Mapping::IPv4Src>();
-    if (ipv4_src) of_match.add_oxm_field(ipv4_src);
+        auto ipv4_src = bit_vector.getField<Mapping::IPv4Src>();
+        if (ipv4_src) of_match.add_oxm_field(ipv4_src);
 
-    auto ipv4_dst = bit_vector.getField<Mapping::IPv4Dst>();
-    if (ipv4_dst) of_match.add_oxm_field(ipv4_dst);
+        auto ipv4_dst = bit_vector.getField<Mapping::IPv4Dst>();
+        if (ipv4_dst) of_match.add_oxm_field(ipv4_dst);
 
-    // TCP
-    auto tcp_src = bit_vector.getField<Mapping::TCPSrc>();
-    if (tcp_src) of_match.add_oxm_field(tcp_src);
+        if (IP_PROTO_TCP == ip_proto->value()) {
+            // TCP
+            auto tcp_src = bit_vector.getField<Mapping::TCPSrc>();
+            if (tcp_src) of_match.add_oxm_field(tcp_src);
 
-    auto tcp_dst = bit_vector.getField<Mapping::TCPDst>();
-    if (tcp_dst) of_match.add_oxm_field(tcp_dst);
+            auto tcp_dst = bit_vector.getField<Mapping::TCPDst>();
+            if (tcp_dst) of_match.add_oxm_field(tcp_dst);
+        }
+        else if (IP_PROTO_UDP == ip_proto->value()) {
+            // UDP
+            auto udp_src = bit_vector.getField<Mapping::UDPSrc>();
+            if (udp_src) of_match.add_oxm_field(udp_src);
 
-    // UDP
-    auto udp_src = bit_vector.getField<Mapping::UDPSrc>();
-    if (udp_src) of_match.add_oxm_field(udp_src);
-
-    auto udp_dst = bit_vector.getField<Mapping::UDPDst>();
-    if (udp_dst) of_match.add_oxm_field(udp_dst);
+            auto udp_dst = bit_vector.getField<Mapping::UDPDst>();
+            if (udp_dst) of_match.add_oxm_field(udp_dst);
+        }
+    }
 
     return std::move(of_match);
 }
