@@ -4,6 +4,8 @@
 #include "Event.hpp"
 #include "ConnectionManager.hpp"
 
+#include <fluid/ofcommon/msg.hh>
+
 #include <memory>
 #include <string>
 
@@ -12,6 +14,13 @@ class Sender
 public:
     explicit Sender(std::weak_ptr<ConnectionManager> connection_manager):
         connection_manager_(connection_manager) {}
+
+    // TODO: add const to add pack functions in fluid_msg
+    void send(ConnectionId id, Destination destination,
+              fluid_msg::OFMsg& message) {
+        RawMessage raw_message(message);
+        send(id, destination, std::move(raw_message));
+    }
 
     void send(ConnectionId id, Destination destination, RawMessage message) {
         if (auto manager = connection_manager_.lock()) {

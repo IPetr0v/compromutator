@@ -160,7 +160,7 @@ array_is_sub (const array_t *a, const array_t *b, int len)
 }
 
 int
-array_one_bit_subtract (array_t *a, array_t *b, int len ) {
+array_one_bit_subtract (array_t *a, array_t *b, int len) {
   int total_diff = 0;
   array_t diffs[len];
   for (int i = 0; i < SIZE (len); i++) {
@@ -234,12 +234,11 @@ array_combine(array_t **_a, array_t **_b, array_t **extra,
     else if (b1) { free(a); *_a = NULL; *extra = array_copy(tmp,len);}
     // e.g. 1xx0 U 1001 --> 1xx0 U 100x
     else if (b2) { free(b); *_b = NULL; *extra = array_copy(tmp,len);}
-    // e.g. 10x1 U 1x00 --> 10x1 U 1x00 U 100X
+    // e.g. 10x1 U 1x00 --> 10x1 U 1x00 U 100x
     else {*extra = array_copy(tmp,len);}
   }
 }
 
-
 enum bit_val
 array_get_bit (const array_t *a, int byte, int bit)
 {
@@ -274,7 +273,6 @@ array_set_byte (array_t *a, uint16_t val, int byte)
   a[2 * byte + 1] = val & 0xff;
 }
 
-
 void
 array_and (const array_t *a, const array_t *b, int len, array_t *res)
 {
@@ -362,7 +360,6 @@ array_x_count (const array_t *a, const array_t *mask, int len)
   return n;
 }
 
-
 array_t *
 array_and_a (const array_t *a, const array_t *b, int len)
 {

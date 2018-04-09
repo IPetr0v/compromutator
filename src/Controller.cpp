@@ -5,13 +5,7 @@
 
 using namespace fluid_msg;
 
-Controller::Controller(Sender sender, Detector& detector):
-    sender_(sender), detector_(detector)
-{
-
-}
-
-const SwitchInfo* Controller::getSwitch(ConnectionId connection_id) const
+const SwitchInfo* SwitchManager::getSwitch(ConnectionId connection_id) const
 {
     auto switch_iter = switch_map_.find(connection_id);
     if (switch_map_.end() != switch_iter) {
@@ -20,7 +14,7 @@ const SwitchInfo* Controller::getSwitch(ConnectionId connection_id) const
     return nullptr;
 }
 
-void Controller::addSwitch(ConnectionId connection_id, SwitchInfo&& info)
+void SwitchManager::addSwitch(ConnectionId connection_id, SwitchInfo&& info)
 {
     auto connection_iter = connection_map_.find(info.id);
     if (connection_map_.end() == connection_iter) {
@@ -37,7 +31,7 @@ void Controller::addSwitch(ConnectionId connection_id, SwitchInfo&& info)
     }
 }
 
-void Controller::deleteSwitch(ConnectionId connection_id)
+void SwitchManager::deleteSwitch(ConnectionId connection_id)
 {
     auto switch_iter = switch_map_.find(connection_id);
     if (switch_map_.end() != switch_iter) {
@@ -52,25 +46,37 @@ void Controller::deleteSwitch(ConnectionId connection_id)
     }
 }
 
-/*void Controller::getPortDesc(ConnectionId id)
+std::pair<ConnectionId, bool>
+SwitchManager::getConnectionId(SwitchId switch_id)
 {
-    auto xid = xid_factory_.getXid();
-    of13::MultipartRequestPortDescription port_desc(xid, 0u);
-    send_to_switch(id, port_desc);
-}*/
+    auto it = connection_map_.find(switch_id);
+    return connection_map_.end() != it
+           ? std::make_pair(it->second, true)
+           : std::make_pair((ConnectionId)-1, false);
+}
 
-void Controller::getRuleStats(RequestId request_id, const RuleInfo& info)
+void RuleManager::installRule(const RuleInfo& info)
 {
-    auto result = get_connection_id(info.switch_id);
+
+}
+
+void RuleManager::deleteRule(const RuleInfo& info)
+{
+
+}
+
+void StatsQuerier::getRuleStats(RequestId request_id, const RuleInfo& info)
+{
+    auto result = switch_manager_.getConnectionId(info.switch_id);
     if (result.second) {
         // Save request id
-        auto xid = xid_factory_.getXid();
+        auto xid = xid_manager_.getXid();
         request_id_map_.emplace(xid, request_id);
 
         // Send rule stats request
         auto connection_id = result.first;
         auto request_flow = Parser::getMultipartRequestFlow(info);
-        send_to_switch(connection_id, request_flow);
+        sender_.send(connection_id, Destination::TO_SWITCH, request_flow);
     }
     else {
         std::cerr << "Controller error: "
@@ -79,19 +85,19 @@ void Controller::getRuleStats(RequestId request_id, const RuleInfo& info)
     }
 }
 
-void Controller::getPortStats(RequestId request_id,
+void StatsQuerier::getPortStats(RequestId request_id,
                               SwitchId switch_id, PortId port_id)
 {
-    auto result = get_connection_id(switch_id);
+    auto result = switch_manager_.getConnectionId(switch_id);
     if (result.second) {
         // Save request id
-        auto xid = xid_factory_.getXid();
+        auto xid = xid_manager_.getXid();
         request_id_map_.emplace(xid, request_id);
 
         // Send port stats request
         auto connection_id = result.first;
         of13::MultipartRequestPortStats request_port_stats(xid, 0u, port_id);
-        send_to_switch(connection_id, request_port_stats);
+        sender_.send(connection_id, Destination::TO_SWITCH, request_port_stats);
     }
     else {
         std::cerr << "Controller error: "
@@ -100,17 +106,7 @@ void Controller::getPortStats(RequestId request_id,
     }
 }
 
-void Controller::installRule(const RuleInfo& info)
-{
-
-}
-
-void Controller::deleteRule(const RuleInfo& info)
-{
-
-}
-
-std::pair<RequestId, bool> Controller::popRequestId(uint32_t xid)
+std::pair<RequestId, bool> StatsQuerier::popRequestId(uint32_t xid)
 {
     auto it = request_id_map_.find(xid);
     if (request_id_map_.end() != it) {
@@ -121,22 +117,13 @@ std::pair<RequestId, bool> Controller::popRequestId(uint32_t xid)
     return std::make_pair((uint32_t)-1, false);
 }
 
-std::pair<ConnectionId, bool> Controller::get_connection_id(SwitchId switch_id)
+Controller::Controller(std::shared_ptr<Alarm> alarm, Sender sender):
+    detector(alarm),
+    xid_manager(),
+    switch_manager(detector),
+    link_discovery(detector),
+    rule_manager(xid_manager, switch_manager, sender),
+    stats_manager(xid_manager, switch_manager, sender)
 {
-    auto it = connection_map_.find(switch_id);
-    return connection_map_.end() != it
-           ? std::make_pair(it->second, true)
-           : std::make_pair((ConnectionId)-1, false);
-}
 
-void Controller::send_to_controller(ConnectionId id, OFMsg& message)
-{
-    RawMessage raw_message(message);
-    sender_.send(id, Destination::TO_CONTROLLER, std::move(raw_message));
-}
-
-void Controller::send_to_switch(ConnectionId id, OFMsg& message)
-{
-    RawMessage raw_message(message);
-    sender_.send(id, Destination::TO_SWITCH, std::move(raw_message));
 }

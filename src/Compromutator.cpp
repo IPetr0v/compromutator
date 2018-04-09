@@ -6,9 +6,8 @@ Compromutator::Compromutator(ProxySettings settings):
     is_running_(false),
     alarm_(std::make_shared<Alarm>()),
     proxy_(settings, alarm_),
-    detector_(alarm_),
-    controller_(proxy_.getSender(), detector_),
-    message_pipeline_(proxy_.getSender(), controller_, detector_)
+    controller_(alarm_, proxy_.getSender()),
+    pipeline_(proxy_.getSender(), controller_)
 {
 
 }
@@ -24,11 +23,11 @@ void Compromutator::run()
     while (is_running_) {
         auto status = alarm_->wait(std::chrono::milliseconds(100));
         if (status == Alarm::Status::TIMEOUT) {
-            detector_.prepareInstructions();
+            controller_.detector.prepareInstructions();
             // TODO: add barrier or flush pipeline
         }
         else {
-            if (detector_.instructionsExist()) {
+            if (controller_.detector.instructionsExist()) {
                 handle_detector_instruction();
             }
             if (proxy_.eventsExist()) {
@@ -78,16 +77,16 @@ void Compromutator::handle_proxy_event()
         case EventType::CONNECTION: {
             auto connection_event = ConnectionEvent::pointerCast(event);
             if (connection_event->type == ConnectionEventType::NEW) {
-                message_pipeline_.addConnection(connection_event->id);
+                pipeline_.addConnection(connection_event->id);
             }
             else {
-                message_pipeline_.deleteConnection(connection_event->id);
+                pipeline_.deleteConnection(connection_event->id);
             }
             break;
         }
         case EventType::MESSAGE: {
             auto message_event = MessageEvent::pointerCast(event);
-            message_pipeline_.processMessage(message_event->message);
+            pipeline_.processMessage(message_event->message);
             break;
         }
         }

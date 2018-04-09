@@ -133,7 +133,7 @@ public:
     using UDPDst = Base<fluid_msg::of13::UDPDst, 16u, UDPSrc>;
 
     using End = Base<fluid_msg::of13::UDPDst, 0u, UDPDst>;
-    static constexpr uint32_t HEADER_SIZE = End::OFFSET;
+    static constexpr uint32_t HEADER_SIZE = End::OFFSET/8 + 1;
 
 };
 

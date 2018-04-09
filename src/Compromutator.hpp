@@ -4,9 +4,10 @@
 #include "ConcurrencyPrimitives.hpp"
 #include "proxy/Event.hpp"
 #include "proxy/Proxy.hpp"
-#include "MessagePipeline.hpp"
+#include "pipeline/Pipeline.hpp"
 #include "NetworkSpace.hpp"
 #include "Detector.hpp"
+#include "Controller.hpp"
 
 #include <fluid/ofcommon/msg.hh>
 #include <fluid/of10msg.hh>
@@ -30,9 +31,8 @@ private:
     std::shared_ptr<Alarm> alarm_;
 
     Proxy proxy_;
-    Detector detector_;
     Controller controller_;
-    pipeline::MessagePipeline message_pipeline_;
+    pipeline::Pipeline pipeline_;
 
     void handle_detector_instruction();
     void handle_proxy_event();

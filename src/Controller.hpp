@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Types.hpp"
+#include "Detector.hpp"
 #include "network/Rule.hpp"
 #include "network/Network.hpp"
 #include "proxy/Proxy.hpp"
@@ -14,11 +15,10 @@
 
 #include <cstdint>
 
-class Detector;
-
-class XidFactory
+class XidManager
 {
 public:
+    // TODO: CRITICAL - xid from the real controller may be equal to detectors!
     uint32_t getXid() {
         // TODO: implement
         return 1u;
@@ -26,46 +26,88 @@ public:
     void deleteXid(uint32_t xid) {
 
     }
-
 private:
 
 };
 
-// TODO: rename to ProxyController or not...
-class Controller
+class SwitchManager
 {
 public:
-    // TODO: CRITICAL - xid from the real controller may be equal to detectors!
-
-    Controller(Sender sender, Detector& detector);
+    explicit SwitchManager(Detector& detector): detector_(detector) {}
 
     const SwitchInfo* getSwitch(ConnectionId connection_id) const;
     void addSwitch(ConnectionId connection_id, SwitchInfo&& info);
     void deleteSwitch(ConnectionId connection_id);
 
-    //void getPortDesc(ConnectionId id);
-    void getRuleStats(RequestId request_id, const RuleInfo& info);
-    void getPortStats(RequestId request_id, SwitchId switch_id, PortId port_id);
+    std::pair<ConnectionId, bool> getConnectionId(SwitchId switch_id);
+
+private:
+    Detector& detector_;
+
+    std::unordered_map<SwitchId, ConnectionId> connection_map_;
+    std::unordered_map<ConnectionId, SwitchInfo> switch_map_;
+};
+
+class LinkDiscovery
+{
+public:
+    explicit LinkDiscovery(Detector& detector): detector_(detector) {}
+
+private:
+    Detector& detector_;
+
+};
+
+class RuleManager
+{
+public:
+    RuleManager(XidManager& xid_manager, SwitchManager& switch_manager,
+                Sender sender):
+        xid_manager_(xid_manager), switch_manager_(switch_manager),
+        sender_(sender) {}
 
     void installRule(const RuleInfo& info);
     void deleteRule(const RuleInfo& info);
+
+private:
+    XidManager& xid_manager_;
+    SwitchManager& switch_manager_;
+    Sender sender_;
+
+};
+
+class StatsQuerier
+{
+public:
+    StatsQuerier(XidManager& xid_manager, SwitchManager& switch_manager,
+                 Sender sender):
+        xid_manager_(xid_manager), switch_manager_(switch_manager),
+        sender_(sender) {}
+
+    //void getPortDesc(ConnectionId id);
+    void getRuleStats(RequestId request_id, const RuleInfo& info);
+    void getPortStats(RequestId request_id, SwitchId switch_id, PortId port_id);
 
     // TODO: consider using std::optional
     std::pair<RequestId, bool> popRequestId(uint32_t xid);
 
 private:
-    XidFactory xid_factory_;
+    XidManager& xid_manager_;
+    SwitchManager& switch_manager_;
     Sender sender_;
-    Detector& detector_;
-
-    std::unordered_map<SwitchId, ConnectionId> connection_map_;
-    std::unordered_map<ConnectionId, SwitchInfo> switch_map_;
 
     std::map<uint32_t, RequestId> request_id_map_;
 
-    std::pair<ConnectionId, bool> get_connection_id(SwitchId switch_id);
-    // TODO: add const to add pack functions in fluid_msg
-    void send_to_controller(ConnectionId id, fluid_msg::OFMsg& message);
-    void send_to_switch(ConnectionId id, fluid_msg::OFMsg& message);
+};
 
+struct Controller
+{
+    Controller(std::shared_ptr<Alarm> alarm, Sender sender);
+
+    Detector detector;
+    XidManager xid_manager;
+    SwitchManager switch_manager;
+    LinkDiscovery link_discovery;
+    RuleManager rule_manager;
+    StatsQuerier stats_manager;
 };

@@ -10,13 +10,13 @@ Client::Client(ConnectionManager* connection_manager, uint32_t thread_num,
                OFServerSettings settings):
     OFClient(thread_num, settings), connection_manager_(connection_manager)
 {
-    std::cout<<"Starting Client"<<std::endl;
+    //std::cout<<"Starting Client"<<std::endl;
     OFClient::start();
 }
 
 Client::~Client()
 {
-    std::cout<<"Finishing Client"<<std::endl;
+    //std::cout<<"Finishing Client"<<std::endl;
     OFClient::stop();
 }
 
@@ -39,13 +39,13 @@ Server::Server(ConnectionManager* connection_manager,
     OFServer(address.c_str(), port, thread_num, false, settings),
     connection_manager_(connection_manager)
 {
-    std::cout<<"Starting Server"<<std::endl;
+    //std::cout<<"Starting Server"<<std::endl;
     OFServer::start();
 }
 
 Server::~Server()
 {
-    std::cout<<"Finishing Server"<<std::endl;
+    //std::cout<<"Finishing Server"<<std::endl;
     OFServer::stop();
 }
 
@@ -93,9 +93,9 @@ void ConnectionManager::sendToController(ConnectionId id, RawMessage message)
 {
     auto it = connections_.find(id);
     if (connections_.end() != it) {
-        std::cout << "Send to controller: connection id=" << id
-                  << ", message="<<(int)message.type
-                  << std::endl;
+        //std::cout << "Send to controller: connection id=" << id
+        //          << ", message="<<(int)message.type
+        //          << std::endl;
         send(it->second.controller_connection, message);
     }
     else {
@@ -108,9 +108,9 @@ void ConnectionManager::sendToSwitch(ConnectionId id, RawMessage message)
 {
     auto it = connections_.find(id);
     if (connections_.end() != it) {
-        std::cout << "Send to switch: connection id=" << id
-                  << ", message="<<(int)message.type
-                  << std::endl;
+        //std::cout << "Send to switch: connection id=" << id
+        //          << ", message="<<(int)message.type
+        //          << std::endl;
         send(it->second.switch_connection, message);
     }
     else {
@@ -124,15 +124,15 @@ void ConnectionManager::onControllerConnection(OFConnection* connection,
 {
     switch (type) {
     case OFConnection::EVENT_STARTED:
-        std::cout << "Controller connection id=" << get_id(connection) << " from "
-                  << connection->get_peer_address()
-                  << " started" << std::endl;
+        //std::cout << "Controller connection id=" << get_id(connection) << " from "
+        //          << connection->get_peer_address()
+        //          << " started" << std::endl;
         accept_controller_connection(connection);
         break;
     case OFConnection::EVENT_ESTABLISHED:
-        std::cout << "Controller connection id=" << get_id(connection) << " from "
-                  << connection->get_peer_address()
-                  << " established" << std::endl;
+        //std::cout << "Controller connection id=" << get_id(connection) << " from "
+        //          << connection->get_peer_address()
+        //          << " established" << std::endl;
         break;
     case OFConnection::EVENT_FAILED_NEGOTIATION:
         std::cout << "Controller connection id=" << get_id(connection) << " from "
@@ -141,9 +141,9 @@ void ConnectionManager::onControllerConnection(OFConnection* connection,
         break;
     case OFConnection::EVENT_CLOSED:
         delete_proxy_connection(connection);
-        std::cout << "Controller connection id=" << get_id(connection) << " from "
-                  << connection->get_peer_address()
-                  << " closed by the user" << std::endl;
+        //std::cout << "Controller connection id=" << get_id(connection) << " from "
+        //          << connection->get_peer_address()
+        //          << " closed by the user" << std::endl;
         break;
     case OFConnection::EVENT_DEAD:
         delete_proxy_connection(connection);
@@ -159,15 +159,15 @@ void ConnectionManager::onSwitchConnection(OFConnection* connection,
 {
     switch (type) {
     case OFConnection::EVENT_STARTED:
-        std::cout << "Switch connection id=" << get_id(connection) << " from "
-                  << connection->get_peer_address()
-                  << " started" << std::endl;
+        //std::cout << "Switch connection id=" << get_id(connection) << " from "
+        //          << connection->get_peer_address()
+        //          << " started" << std::endl;
         start_controller_connection(connection);
         break;
     case OFConnection::EVENT_ESTABLISHED:
-        std::cout << "Switch connection id=" << get_id(connection) << " from "
-                  << connection->get_peer_address()
-                  << " established" << std::endl;
+        //std::cout << "Switch connection id=" << get_id(connection) << " from "
+        //          << connection->get_peer_address()
+        //          << " established" << std::endl;
         break;
     case OFConnection::EVENT_FAILED_NEGOTIATION:
         std::cout << "Switch connection id=" << get_id(connection) << " from "
@@ -175,9 +175,9 @@ void ConnectionManager::onSwitchConnection(OFConnection* connection,
                   << ": failed version negotiation" << std::endl;
         break;
     case OFConnection::EVENT_CLOSED:
-        std::cout << "Switch connection id=" << get_id(connection) << " from "
-                  << connection->get_peer_address()
-                  << " closed by the user" << std::endl;
+        //std::cout << "Switch connection id=" << get_id(connection) << " from "
+        //          << connection->get_peer_address()
+        //          << " closed by the user" << std::endl;
         delete_proxy_connection(connection);
         break;
     case OFConnection::EVENT_DEAD:
@@ -195,10 +195,10 @@ void ConnectionManager::onControllerMessage(OFConnection* connection,
     auto connection_id = get_id(connection);
     auto it = connections_.find(connection_id);
     if (connections_.end() != it) {
-        std::cout << "Received from controller: connection id="
-                  << connection_id
-                  << ", message="<<(int)message.type
-                  << std::endl;
+        //std::cout << "Received from controller: connection id="
+        //          << connection_id
+        //          << ", message="<<(int)message.type
+        //          << std::endl;
 
         event_queue_.push(std::make_shared<MessageEvent>(
             connection_id, Origin::FROM_CONTROLLER, std::move(message)
@@ -228,10 +228,10 @@ void ConnectionManager::onSwitchMessage(OFConnection* connection,
     else {
         auto it = connections_.find(connection_id);
         if (connections_.end() != it) {
-            std::cout << "Received from switch: connection id="
-                      << connection_id
-                      << ", message="<<(int)message.type
-                      << std::endl;
+            //std::cout << "Received from switch: connection id="
+            //          << connection_id
+            //          << ", message="<<(int)message.type
+            //          << std::endl;
 
             event_queue_.push(std::make_shared<MessageEvent>(
                 connection_id, Origin::FROM_SWITCH, std::move(message)

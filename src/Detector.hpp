@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ConcurrencyPrimitives.hpp"
-#include "Controller.hpp"
 #include "network/Network.hpp"
 #include "network/DependencyGraph.hpp"
 #include "flow_predictor/FlowPredictor.hpp"

@@ -185,7 +185,11 @@ HeaderSpace& HeaderSpace::operator=(HeaderSpace&& other) noexcept
 bool HeaderSpace::operator==(const HeaderSpace &other) const
 {
     assert(length_ == other.length_);
-    return (*this - other).empty() && (other - *this).empty();
+    auto other_copy = other;
+    // TODO: do we need to compact?
+    hs_compact(hs_);
+    hs_compact(other_copy.hs_);
+    return (*this - other_copy).empty() && (other_copy - *this).empty();
     // TODO: maybe compare it in another way?
     //hs_compact(hs_);
     //struct hs* other_hs = hs_copy_a(other.hs_);

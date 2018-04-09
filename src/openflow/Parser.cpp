@@ -143,7 +143,7 @@ of13::Match Parser::get_of_match(const Match& match)
     auto eth_type = bit_vector.getField<Mapping::EthType>();
     if (eth_type) of_match.add_oxm_field(eth_type);
 
-    if (ETH_TYPE_IPv4 == eth_type->value()) {
+    if (ETH_TYPE::IPv4 == eth_type->value()) {
         // IPv4
         auto ip_proto = bit_vector.getField<Mapping::IPProto>();
         if (ip_proto) of_match.add_oxm_field(ip_proto);
@@ -154,7 +154,7 @@ of13::Match Parser::get_of_match(const Match& match)
         auto ipv4_dst = bit_vector.getField<Mapping::IPv4Dst>();
         if (ipv4_dst) of_match.add_oxm_field(ipv4_dst);
 
-        if (IP_PROTO_TCP == ip_proto->value()) {
+        if (IP_PROTO::TCP == ip_proto->value()) {
             // TCP
             auto tcp_src = bit_vector.getField<Mapping::TCPSrc>();
             if (tcp_src) of_match.add_oxm_field(tcp_src);
@@ -162,7 +162,7 @@ of13::Match Parser::get_of_match(const Match& match)
             auto tcp_dst = bit_vector.getField<Mapping::TCPDst>();
             if (tcp_dst) of_match.add_oxm_field(tcp_dst);
         }
-        else if (IP_PROTO_UDP == ip_proto->value()) {
+        else if (IP_PROTO::UDP == ip_proto->value()) {
             // UDP
             auto udp_src = bit_vector.getField<Mapping::UDPSrc>();
             if (udp_src) of_match.add_oxm_field(udp_src);

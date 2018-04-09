@@ -128,7 +128,6 @@ vec_to_str (const struct hs_vec *v, int len, char *res)
   return res;
 }
 
-
 /* Remove elems of V that are covered by another elem. V must be a diff list.
    LEN is length of each array. */
 static void
@@ -411,11 +410,20 @@ hs_minus (struct hs *a, const struct hs *b)
 {
   assert (a->len == b->len);
   struct hs tmp;
-  hs_copy (&tmp, b);
-  hs_cmpl (&tmp);
-  hs_isect (a, &tmp);
-  hs_destroy (&tmp);
-  hs_compact (a);
+  //int diff_num = hs_count_diff(b);
+  //if (diff_num) {
+    hs_copy (&tmp, b);
+    hs_cmpl (&tmp);
+    hs_isect (a, &tmp);
+    hs_destroy (&tmp);
+    hs_compact (a);
+  //}
+  //else {
+  //  for (int i = 0; i < b->list.used; i++) {
+  //    hs_diff(a, b->list.elems[i]);
+  //  }
+  //  hs_compact(a);
+  //}
 }
 
 void
