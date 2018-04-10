@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Types.hpp"
+#include "../Proto.hpp"
 #include "../NetworkSpace.hpp"
 
 #include <fluid/ofcommon/msg.hh>

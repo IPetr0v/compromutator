@@ -61,7 +61,8 @@ add_library(detector STATIC
     ConcurrencyPrimitives.hpp
     Compromutator.cpp
     Compromutator.hpp
-    Types.hpp)
+    Types.hpp
+    Proto.hpp)
 
 target_link_libraries(detector
     header_space

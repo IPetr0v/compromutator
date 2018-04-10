@@ -1,5 +1,7 @@
 #include "Mapping.hpp"
 
+using namespace proto;
+
 // Static helper functions
 static uint64_t get_eth_value(const fluid_msg::EthAddress& eth_address)
 {
@@ -59,14 +61,14 @@ Mapping::EthType::ValueType
 Mapping::EthType::get_fluid_value(uint64_t eth_type)
 {
     // TODO: use all bits if ether type
-    return (1u == eth_type) ? ETH_TYPE::IPv4 : 0x0;
+    return (1u == eth_type) ? Ethernet::TYPE::IPv4 : 0x0;
 }
 
 template<>
 uint64_t Mapping::EthType::get_integer_value(const ValueType& eth_type)
 {
     // TODO: check if eth_type is in network order - then ntoh8() it
-    return (ETH_TYPE::IPv4 == eth_type) ? 1u : 0u;
+    return (Ethernet::IPv4 == eth_type) ? 1u : 0u;
 }
 
 // L3
@@ -75,13 +77,13 @@ Mapping::IPProto::ValueType
 Mapping::IPProto::get_fluid_value(uint64_t ip_proto)
 {
     // TODO: use all bits if ip proto
-    return (1u == ip_proto) ? IP_PROTO::TCP : IP_PROTO::UDP;
+    return (1u == ip_proto) ? IPv4::PROTO::TCP : IPv4::PROTO::UDP;
 }
 
 template<>
 uint64_t Mapping::IPProto::get_integer_value(const ValueType& ip_proto)
 {
-    return (IP_PROTO::TCP == ip_proto) ? 1u : 0u;
+    return (IPv4::PROTO::TCP == ip_proto) ? 1u : 0u;
 }
 
 template<>

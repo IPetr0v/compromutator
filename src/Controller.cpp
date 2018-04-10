@@ -47,12 +47,71 @@ void SwitchManager::deleteSwitch(ConnectionId connection_id)
 }
 
 std::pair<ConnectionId, bool>
-SwitchManager::getConnectionId(SwitchId switch_id)
+SwitchManager::getConnectionId(SwitchId switch_id) const
 {
     auto it = connection_map_.find(switch_id);
     return connection_map_.end() != it
            ? std::make_pair(it->second, true)
            : std::make_pair((ConnectionId)-1, false);
+}
+
+void LinkDiscovery::handleLLDP(ConnectionId connection_id, PortId in_port,
+                               const proto::LLDP& lldp)
+{
+    try {
+        auto src_switch_id = get_switch_id(lldp);
+        auto dst_switch_id = switch_manager_.getSwitch(connection_id)->id;
+
+        // Check source switch
+        auto result = switch_manager_.getConnectionId(src_switch_id);
+        if (result.second) {
+            auto src_port_id = get_port_id(lldp);
+            auto dst_port_id = in_port;
+            detector_.addLink({src_switch_id, src_port_id},
+                              {dst_switch_id, dst_port_id});
+        } else {
+            std::cerr << "LinkDiscovery error: "
+                      << "Source switch is offline"
+                      << std::endl;
+        }
+    }
+    catch (const std::invalid_argument& error) {
+        std::cerr << "LinkDiscovery error: " << error.what() << std::endl;
+    }
+}
+
+SwitchId LinkDiscovery::get_switch_id(const proto::LLDP& lldp) const
+{
+    // TODO: check for hex
+    const std::string& value = lldp.chassis_id->value;
+    switch (lldp.chassis_id->type) {
+    case proto::LLDP::Tlv::ChassisId::MAC:
+        return std::stoi(value, nullptr, 16);
+    case proto::LLDP::Tlv::ChassisId::LOCAL:
+        // Ryu controller LLDP
+        if (value.find("dpid:") != std::string::npos && value.length() > 5) {
+            return std::stoi(value.substr(5, value.length() - 5), nullptr, 16);
+        }
+        else {
+            throw std::invalid_argument("Wrong local Chassis Id");
+        }
+    default:
+        throw std::invalid_argument("Unsupported Chassis Id");
+    }
+}
+
+PortId LinkDiscovery::get_port_id(const proto::LLDP& lldp) const
+{
+    const std::string& value = lldp.port_id->value;
+    switch (lldp.port_id->type) {
+    case proto::LLDP::Tlv::PortId::COMPONENT:
+        return std::stoi(value, nullptr, 10);
+    case proto::LLDP::Tlv::PortId::LOCAL:
+        // OpenDayLight controller LLDP
+        return std::stoi(value, nullptr, 10);
+    default:
+        throw std::invalid_argument("Unsupported Port Id");
+    }
 }
 
 void RuleManager::installRule(const RuleInfo& info)
@@ -121,7 +180,7 @@ Controller::Controller(std::shared_ptr<Alarm> alarm, Sender sender):
     detector(alarm),
     xid_manager(),
     switch_manager(detector),
-    link_discovery(detector),
+    link_discovery(switch_manager, detector),
     rule_manager(xid_manager, switch_manager, sender),
     stats_manager(xid_manager, switch_manager, sender)
 {

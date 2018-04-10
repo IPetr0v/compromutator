@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Proto.hpp"
 #include "Types.hpp"
 #include "Detector.hpp"
 #include "network/Rule.hpp"
@@ -39,7 +40,7 @@ public:
     void addSwitch(ConnectionId connection_id, SwitchInfo&& info);
     void deleteSwitch(ConnectionId connection_id);
 
-    std::pair<ConnectionId, bool> getConnectionId(SwitchId switch_id);
+    std::pair<ConnectionId, bool> getConnectionId(SwitchId switch_id) const;
 
 private:
     Detector& detector_;
@@ -51,11 +52,18 @@ private:
 class LinkDiscovery
 {
 public:
-    explicit LinkDiscovery(Detector& detector): detector_(detector) {}
+    explicit LinkDiscovery(SwitchManager& switch_manager, Detector& detector):
+        switch_manager_(switch_manager), detector_(detector) {}
+
+    void handleLLDP(ConnectionId connection_id, PortId in_port,
+                    const proto::LLDP& lldp);
 
 private:
+    SwitchManager& switch_manager_;
     Detector& detector_;
 
+    SwitchId get_switch_id(const proto::LLDP& lldp) const;
+    PortId get_port_id(const proto::LLDP& lldp) const;
 };
 
 class RuleManager
@@ -73,7 +81,6 @@ private:
     XidManager& xid_manager_;
     SwitchManager& switch_manager_;
     Sender sender_;
-
 };
 
 class StatsQuerier

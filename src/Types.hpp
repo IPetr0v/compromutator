@@ -21,19 +21,6 @@ using Priority = uint16_t;
 constexpr Priority LOW_PRIORITY = 0;
 using RuleId = std::tuple<SwitchId, TableId, Priority, uint64_t>;
 
-enum ETH_TYPE : uint16_t {
-    IPv4  = 0x0800,
-    DOT1Q = 0x8100,
-    IPv6  = 0x86dd,
-    LLDP  = 0x88cc
-};
-
-enum IP_PROTO : uint8_t {
-    ICMP = 0x01,
-    TCP = 0x06,
-    UDP = 0x11
-};
-
 template <typename IdType>
 class IdGenerator
 {

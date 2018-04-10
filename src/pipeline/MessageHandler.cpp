@@ -37,8 +37,6 @@ Action MessageHandler::visit(of13::FlowMod& flow_mod)
 
 Action MessageHandler::visit(of13::PacketOut& packet_out)
 {
-    // TODO: check for LLDP
-
     // TODO: compute path and add stats to the detector
 
     return Action::FORWARD;
@@ -46,10 +44,15 @@ Action MessageHandler::visit(of13::PacketOut& packet_out)
 
 Action MessageHandler::visit(of13::PacketIn& packet_in)
 {
-    // TODO: check for LLDP
-
-    // TODO: compute path and add stats to the detector
-
+    // Check for LLDP
+    try {
+        auto lldp = proto::LLDP(packet_in.data(), packet_in.data_len());
+        auto in_port = packet_in.match().in_port()->value();
+        ctrl_.link_discovery.handleLLDP(connection_id_, in_port, lldp);
+    }
+    catch (const std::invalid_argument& error) {
+        // Ignore the Packet-In message
+    }
     return Action::FORWARD;
 }
 
