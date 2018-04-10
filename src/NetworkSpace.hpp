@@ -5,8 +5,10 @@
 
 enum SpecialPort: PortId
 {
-    NONE = 0x00000000,
-    ANY  = 0xFFFFFFFF
+    NONE       = 0x00000000,
+    ALL        = 0xFFFFFFFC,
+    CONTROLLER = 0xFFFFFFFD,
+    ANY        = 0xFFFFFFFF
 };
 
 class Match

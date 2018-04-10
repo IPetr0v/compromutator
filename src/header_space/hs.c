@@ -163,7 +163,6 @@ vec_isect (struct hs_vec *a, const struct hs_vec *b, int len)
   *a = v;
 }
 
-
 struct hs *
 hs_create (int len)
 {
@@ -183,7 +182,6 @@ hs_free (struct hs *hs)
   free (hs);
 }
 
-
 void
 hs_copy (struct hs *dst, const struct hs *src)
 {
@@ -199,7 +197,6 @@ hs_copy_a (const struct hs *hs)
   return res;
 }
 
-
 int
 hs_count (const struct hs *hs)
 { return hs->list.used; }
@@ -230,7 +227,6 @@ hs_to_str (const struct hs *hs)
   return xstrdup (s);
 } 
 
-
 void
 hs_add (struct hs *hs, array_t *a)
 { vec_append (&hs->list, a, false); }

@@ -14,7 +14,8 @@ public:
 
     ActionsBase popActionsBase() {
         if (actions_.empty()) {
-            this->addDropAction();
+            // Add DROP action if there are other actions
+            actions_.port_actions.emplace_back(PortActionBase::dropAction());
         }
         return std::move(actions_);
     }
@@ -24,13 +25,21 @@ public:
     }
 
     void addPortAction(PortId port_id) {
-        actions_.port_actions.emplace_back(port_id);
-    }
-    void addDropAction() {
-        actions_.port_actions.emplace_back(PortActionBase::dropAction());
-    }
-    void addControllerAction() {
-        actions_.port_actions.emplace_back(PortActionBase::controllerAction());
+        switch (port_id) {
+        case SpecialPort::NONE:
+        case SpecialPort::ANY:
+            std::cerr << "Parser error: Wrong port ID" << std::endl;
+            break;
+        case SpecialPort::ALL:
+            std::cerr << "Parser error: Unsupported ALL action" << std::endl;
+            break;
+        case SpecialPort::CONTROLLER:
+            actions_.port_actions.emplace_back(PortActionBase::controllerAction());
+            break;
+        default:
+            actions_.port_actions.emplace_back(port_id);
+            break;
+        }
     }
     void addGroupAction(GroupId group_id) {
         actions_.group_actions.emplace_back(latest_transfer_, group_id);

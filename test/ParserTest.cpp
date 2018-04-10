@@ -17,6 +17,10 @@ struct ParserTest : public ::testing::Test,
         return Parser::get_of_match(Parser::get_match(match));
     }
 
+    ActionsBase parseActions(of13::InstructionSet instructions) const {
+        return Parser::get_actions(instructions);
+    }
+
     void setEthernet(of13::Match& match) const {
         match.add_oxm_field(new of13::InPort(in_port));
         match.add_oxm_field(new of13::EthSrc(eth_src, eth_full_mask));
@@ -61,9 +65,13 @@ struct ParserTest : public ::testing::Test,
 
     const uint16_t transport_src = 23u;
     const uint16_t transport_dst = 8080u;
+
+    const uint32_t out_group = 1u;
+    const uint32_t out_port = 2u;
+    const uint8_t out_table = 3u;
 };
 
-TEST_F(ParserTest, BasicTest)
+TEST_F(ParserTest, BasicMatchTest)
 {
     // Create match
     of13::Match match;
@@ -141,7 +149,7 @@ TEST_F(ParserTest, EthernetMaskedTest)
     EXPECT_EQ(eth_dst_mask, cross_match.eth_dst()->mask());
 }
 
-/*TEST_F(ParserTest, IPv4Test)
+TEST_F(ParserTest, IPv4Test)
 {
     // Create match
     of13::Match match;
@@ -183,7 +191,7 @@ TEST_F(ParserTest, IPv4MaskedTest)
     EXPECT_EQ(ip_src_mask, cross_match.ipv4_src()->mask());
     EXPECT_EQ(ip_dst_wildcard, cross_match.ipv4_dst()->value());
     EXPECT_EQ(ip_dst_mask, cross_match.ipv4_dst()->mask());
-}*/
+}
 
 TEST_F(ParserTest, ARPTest)
 {
@@ -254,4 +262,61 @@ TEST_F(ParserTest, UDPTest)
     EXPECT_EQ(nullptr, cross_match.tcp_dst());
     EXPECT_EQ(transport_src, cross_match.udp_src()->value());
     EXPECT_EQ(transport_dst, cross_match.udp_dst()->value());
+}
+
+TEST_F(ParserTest, DropActionTest)
+{
+    // Create actions
+    of13::InstructionSet instructions;
+
+    // Check parsed actions
+    auto actions_base = parseActions(instructions);
+    ASSERT_EQ(1u, actions_base.port_actions.size());
+    auto& port_action = actions_base.port_actions.back();
+    EXPECT_EQ(PortType::DROP, port_action.port_type);
+    EXPECT_EQ(SpecialPort::NONE, port_action.port_id);
+}
+
+TEST_F(ParserTest, ControllerActionTest)
+{
+    // Create actions
+    of13::InstructionSet instructions;
+    of13::ApplyActions actions;
+    actions.add_action(new of13::OutputAction(of13::OFPP_CONTROLLER, 2048));
+    instructions.add_instruction(actions);
+
+    // Check parsed actions
+    auto actions_base = parseActions(instructions);
+    ASSERT_EQ(1u, actions_base.port_actions.size());
+    auto& port_action = actions_base.port_actions.back();
+    EXPECT_EQ(PortType::CONTROLLER, port_action.port_type);
+    EXPECT_EQ(SpecialPort::NONE, port_action.port_id);
+}
+
+TEST_F(ParserTest, BasicActionTest)
+{
+    // Create actions
+    of13::InstructionSet instructions;
+    of13::ApplyActions actions;
+    actions.add_action(new of13::GroupAction(out_group));
+    actions.add_action(new of13::OutputAction(out_port, 2048));
+    of13::GoToTable table_instruction(out_table);
+    instructions.add_instruction(actions);
+    instructions.add_instruction(table_instruction);
+
+    // Check parsed actions
+    auto actions_base = parseActions(instructions);
+
+    ASSERT_EQ(1u, actions_base.group_actions.size());
+    auto& group_action = actions_base.group_actions.back();
+    EXPECT_EQ(out_group, group_action.group_id);
+
+    ASSERT_EQ(1u, actions_base.port_actions.size());
+    auto& port_action = actions_base.port_actions.back();
+    EXPECT_EQ(PortType::NORMAL, port_action.port_type);
+    EXPECT_EQ(out_port, port_action.port_id);
+
+    ASSERT_EQ(1u, actions_base.table_actions.size());
+    auto& table_action = actions_base.table_actions.back();
+    EXPECT_EQ(out_table, table_action.table_id);
 }
