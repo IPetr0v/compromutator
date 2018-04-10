@@ -4,10 +4,12 @@ Network::Network()
 {
     // Create special rules
     drop_rule_ = new Rule(RuleType::SINK, nullptr, nullptr,
-                          LOW_PRIORITY, NetworkSpace::wholeSpace(),
+                          LOW_PRIORITY, ZERO_COOKIE,
+                          NetworkSpace::wholeSpace(),
                           Actions::noActions());
     controller_rule_ = new Rule(RuleType::SINK, nullptr, nullptr,
-                                LOW_PRIORITY, NetworkSpace::wholeSpace(),
+                                LOW_PRIORITY, ZERO_COOKIE,
+                                NetworkSpace::wholeSpace(),
                                 Actions::noActions());
 }
 
@@ -109,8 +111,8 @@ RulePtr Network::rule(RuleId id) const
 }
 
 RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
-                         uint16_t priority, NetworkSpace&& domain,
-                         ActionsBase&& actions_base)
+                         Priority priority, Cookie cookie,
+                         NetworkSpace&& domain, ActionsBase&& actions_base)
 {
     // Get getTable
     SwitchPtr sw = getSwitch(switch_id);
@@ -126,7 +128,7 @@ RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
         return nullptr;
     }
     auto actions = std::move(actions_pair.second);
-    RulePtr rule = table->addRule(priority, std::move(domain),
+    RulePtr rule = table->addRule(priority, cookie, std::move(domain),
                                   std::move(actions));
     if (not rule) return nullptr;
 

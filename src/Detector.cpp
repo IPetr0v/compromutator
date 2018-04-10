@@ -102,7 +102,7 @@ void Detector::Impl::addRule(SwitchId switch_id, RuleInfo&& info)
 {
     NetworkSpace domain(std::move(info.match));
     auto rule = network_->addRule(
-        switch_id, info.table_id, info.priority,
+        switch_id, info.table_id, info.priority, info.cookie,
         std::move(domain), std::move(info.actions)
     );
     add_rule_to_predictor(rule);
@@ -126,6 +126,11 @@ void Detector::Impl::addLink(TopoId src_topo_id, TopoId dst_topo_id)
     if (link_added) {
         auto link = link_pair.first;
         add_link_to_predictor(link);
+
+        std::cout << "Detector: new link "
+                  << src_topo_id.first << ":" << src_topo_id.second << " <-> "
+                  << dst_topo_id.first << ":" << dst_topo_id.second 
+                  << std::endl;
     }
 }
 

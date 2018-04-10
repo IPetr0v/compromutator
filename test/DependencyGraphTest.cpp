@@ -225,7 +225,7 @@ TEST_F(DependencyGraphTest, AddRuleTest)
     EXPECT_EQ(N(port11->id()) - N(1, H("0000xxxx")),
               dependency_graph->edge(changed_edge).domain);
 
-    auto top_rule = network->addRule(1, 0, 2, N(1, H("00000011")),
+    auto top_rule = network->addRule(1, 0, 2, 0x0, N(1, H("00000011")),
                                      ActionsBase::portAction(2));
     auto top_diff = dependency_graph->addRule(top_rule);
     ASSERT_EQ(1u, top_diff.changed_edges.size());
@@ -299,7 +299,7 @@ TEST_F(DependencyGraphTest, ExistingLinkTest)
     auto link = network->addLink({1,2}, {2,1}).first;
     dependency_graph->addLink(link);
 
-    auto rule = network->addRule(1, 0, 1, N(1, H("0000xxxx")),
+    auto rule = network->addRule(1, 0, 1, 0x0, N(1, H("0000xxxx")),
                                  ActionsBase::portAction(2));
     auto diff = dependency_graph->addRule(rule);
 
@@ -365,7 +365,7 @@ TEST_F(DependencyGraphTest, EdgeCleanUpTest)
 {
     network->deleteRule(rule1->id());
     network->deleteRule(rule2->id());
-    auto rule = network->addRule(1, 0, 1, N(1, H("xxxxxxxx")),
+    auto rule = network->addRule(1, 0, 1, 0x0, N(1, H("xxxxxxxx")),
                                  ActionsBase::portAction(2));
     auto diff = dependency_graph->addRule(rule);
     ASSERT_EQ(1u, diff.removed_edges.size());
@@ -382,11 +382,11 @@ TEST_F(DependencyGraphTest, TableRuleTest)
     dependency_graph->addRule(rule2);
     dependency_graph->addRule(network->getSwitch(1)->table(1)->tableMissRule());
 
-    auto table1_rule = network->addRule(1, 1, 1, N(1, H("000000xx")),
+    auto table1_rule = network->addRule(1, 1, 1, 0x0, N(1, H("000000xx")),
                                         ActionsBase::portAction(2));
     dependency_graph->addRule(table1_rule);
     // TODO: check this test, may be wrong
-    auto rule = network->addRule(1, 0, 2, N(1, H("00000011")),
+    auto rule = network->addRule(1, 0, 2, 0x0, N(1, H("00000011")),
                                  ActionsBase::tableAction(1));
     auto diff = dependency_graph->addRule(rule);
     ASSERT_EQ(1u, diff.new_edges.size());

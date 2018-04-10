@@ -192,7 +192,8 @@ void DependencyGraph::add_in_edges(RulePtr dst_rule)
                     if (it != new_edges.end()) {
                         auto &new_edge_domain = it->second.domain;
                         new_edge_domain += domain_intersection;
-                    } else {
+                    }
+                    else {
                         new_edges.emplace(std::make_pair(
                             src_rule,
                             EdgeData{edge_transfer, domain_intersection}
@@ -203,7 +204,8 @@ void DependencyGraph::add_in_edges(RulePtr dst_rule)
                     edge_domain -= domain_intersection;
                     if (not edge_domain.empty()) {
                         set_edge_domain(edge, edge_domain);
-                    } else {
+                    }
+                    else {
                         delete_edge(src_rule, low_dst_rule);
                     }
                 }

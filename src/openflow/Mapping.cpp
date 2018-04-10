@@ -61,14 +61,24 @@ Mapping::EthType::ValueType
 Mapping::EthType::get_fluid_value(uint64_t eth_type)
 {
     // TODO: use all bits if ether type
-    return (1u == eth_type) ? Ethernet::TYPE::IPv4 : 0x0;
+    switch (eth_type) {
+    case 1u: return Ethernet::TYPE::IPv4;
+    case 2u: return Ethernet::TYPE::ARP;
+    case 3u: return Ethernet::TYPE::LLDP;
+    default:   return 0x0000;
+    }
 }
 
 template<>
 uint64_t Mapping::EthType::get_integer_value(const ValueType& eth_type)
 {
     // TODO: check if eth_type is in network order - then ntoh8() it
-    return (Ethernet::IPv4 == eth_type) ? 1u : 0u;
+    switch (eth_type) {
+    case Ethernet::TYPE::IPv4: return 1u;
+    case Ethernet::TYPE::ARP:  return 2u;
+    case Ethernet::TYPE::LLDP: return 3u;
+    default:                   return 0u;
+    }
 }
 
 // L3

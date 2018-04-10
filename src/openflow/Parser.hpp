@@ -24,10 +24,11 @@ public:
     static RuleInfo getRuleInfo(SwitchId switch_id, Message& message) {
         auto table_id = message.table_id();
         auto priority = message.priority();
+        auto cookie = message.cookie();
         auto match = get_match(message.match());
         auto actions = get_actions(message.instructions());
 
-        return {switch_id, table_id, priority,
+        return {switch_id, table_id, priority, cookie,
                 std::move(match), std::move(actions)};
     }
 

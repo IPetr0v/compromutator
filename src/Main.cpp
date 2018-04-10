@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     proxy_settings.proxy_address = "127.0.0.1";
     proxy_settings.proxy_port = 6653;
 
-    using H = HeaderSpace;
+    /*using H = HeaderSpace;
 
     cout<<(H("xxxxxxxx") - H("00000000")) <<endl;
     cout<<((H("xxxxxxxx") - H("xxxxx000")) - H("xxxx0000")) +
@@ -91,7 +91,7 @@ int main(int argc, char* argv[])
         if (extra)
             cout << array_to_str(extra, 1u, false);
         cout << endl;
-    }
+    }*/
 
     /*auto arr = array_from_str("xxxxxxx0");
     auto from = array_from_str("1xxxxxxx");
@@ -99,8 +99,8 @@ int main(int argc, char* argv[])
     cout<<array_to_str(from, 1u, false)<<endl;*/
 
     // TODO: fix unhandled exception on destructor!
-    //Compromutator compromutator(proxy_settings);
-    //compromutator.run();
+    Compromutator compromutator(proxy_settings);
+    compromutator.run();
 
     return 0;
 }

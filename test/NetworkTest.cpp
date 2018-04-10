@@ -95,7 +95,7 @@ class NetworkTest : public ::testing::Test
 protected:
     virtual void SetUp() {
         initNetwork();
-        new_rule0 = network->addRule(1, 0, 3, N(1, H("00001111")),
+        new_rule0 = network->addRule(1, 0, 3, 0x0, N(1, H("00001111")),
                                      ActionsBase::portAction(2));
         deleted_rule5_id_ = rule5->id();
         network->deleteRule(deleted_rule5_id_);

@@ -104,7 +104,7 @@ class Rule
 {
 public:
     Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
-         NetworkSpace&& domain, Actions&& actions);
+         Cookie cookie, NetworkSpace&& domain, Actions&& actions);
     Rule(const RulePtr other, const NetworkSpace& domain);
     ~Rule();
 
@@ -114,11 +114,13 @@ public:
     TablePtr table() const {return table_;}
 
     Priority priority() const {return priority_;}
+    Cookie cookie() const {return cookie_;}
     NetworkSpace domain() const {return domain_;}
     PortId inPort() const {return domain_.inPort();}
     const Actions& actions() const {return actions_;}
     uint64_t multiplier() const {return actions_.size();}
 
+    std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os, const Rule& rule);
     friend std::ostream& operator<<(std::ostream& os, const RulePtr rule);
 
@@ -137,6 +139,7 @@ private:
     SwitchPtr sw_;
 
     Priority priority_;
+    Cookie cookie_;
     NetworkSpace domain_;
     Actions actions_;
 
@@ -154,6 +157,7 @@ struct RuleInfo
     SwitchId switch_id;
     TableId table_id;
     Priority priority;
+    Cookie cookie;
     Match match;
     ActionsBase actions;
 };

@@ -6,7 +6,8 @@ Table::Table(SwitchPtr sw, TableId id):
     id_(id), sw_(sw)
 {
     // Create a getTable miss rule
-    table_miss_rule_ = addRule(LOW_PRIORITY, NetworkSpace::wholeSpace(),
+    table_miss_rule_ = addRule(LOW_PRIORITY, ZERO_COOKIE,
+                               NetworkSpace::wholeSpace(),
                                Actions::dropAction());
 }
 
@@ -25,10 +26,10 @@ RulePtr Table::rule(RuleId id) const
     return it != rule_map_.end() ? it->second : nullptr;
 }
 
-RulePtr Table::addRule(Priority priority, NetworkSpace&& domain,
-                       Actions&& actions)
+RulePtr Table::addRule(Priority priority, Cookie cookie,
+                       NetworkSpace&& domain, Actions&& actions)
 {
-    auto rule = new Rule(RuleType::FLOW, sw_, this, priority,
+    auto rule = new Rule(RuleType::FLOW, sw_, this, priority, cookie,
                          std::move(domain), std::move(actions));
     return rule_map_[rule->id()] = rule;
 }
@@ -71,9 +72,11 @@ RuleRange Table::lowerRules(RulePtr rule)
 Port::Port(SwitchPtr sw, PortInfo info):
     id_(info.id), speed_(info.speed), sw_(sw), switch_id_(sw->id())
 {
-    source_rule_ = new Rule(RuleType::SOURCE, sw_, nullptr, LOW_PRIORITY,
+    source_rule_ = new Rule(RuleType::SOURCE, sw_, nullptr,
+                            LOW_PRIORITY, ZERO_COOKIE,
                             NetworkSpace(id_), Actions::noActions());
-    sink_rule_ = new Rule(RuleType::SINK, sw_, nullptr, LOW_PRIORITY,
+    sink_rule_ = new Rule(RuleType::SINK, sw_, nullptr,
+                          LOW_PRIORITY, ZERO_COOKIE,
                           NetworkSpace(id_), Actions::noActions());
 }
 

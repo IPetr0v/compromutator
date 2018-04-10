@@ -85,42 +85,22 @@ Match Parser::get_match(of13::Match match)
     }
 
     // Ethernet
-    if (match.eth_src()) {
-        bit_vector.setField<Mapping::EthSrc>(match.eth_src());
-    }
-    if (match.eth_dst()) {
-        bit_vector.setField<Mapping::EthDst>(match.eth_dst());
-    }
-    if (match.eth_type()) {
-        bit_vector.setField<Mapping::EthType>(match.eth_type());
-    }
+    bit_vector.setField<Mapping::EthSrc>(match.eth_src());
+    bit_vector.setField<Mapping::EthDst>(match.eth_dst());
+    bit_vector.setField<Mapping::EthType>(match.eth_type());
 
     // IPv4
-    if (match.ip_proto()) {
-        bit_vector.setField<Mapping::IPProto>(match.ip_proto());
-    }
-    if (match.ipv4_src()) {
-        bit_vector.setField<Mapping::IPv4Src>(match.ipv4_src());
-    }
-    if (match.ipv4_dst()) {
-        bit_vector.setField<Mapping::IPv4Dst>(match.ipv4_dst());
-    }
+    bit_vector.setField<Mapping::IPProto>(match.ip_proto());
+    bit_vector.setField<Mapping::IPv4Src>(match.ipv4_src());
+    bit_vector.setField<Mapping::IPv4Dst>(match.ipv4_dst());
 
     // TCP
-    if (match.tcp_src()) {
-        bit_vector.setField<Mapping::TCPSrc>(match.tcp_src());
-    }
-    if (match.tcp_dst()) {
-        bit_vector.setField<Mapping::TCPDst>(match.tcp_dst());
-    }
+    bit_vector.setField<Mapping::TCPSrc>(match.tcp_src());
+    bit_vector.setField<Mapping::TCPDst>(match.tcp_dst());
 
     // UDP
-    if (match.udp_src()) {
-        bit_vector.setField<Mapping::UDPSrc>(match.udp_src());
-    }
-    if (match.udp_dst()) {
-        bit_vector.setField<Mapping::UDPDst>(match.udp_dst());
-    }
+    bit_vector.setField<Mapping::UDPSrc>(match.udp_src());
+    bit_vector.setField<Mapping::UDPDst>(match.udp_dst());
 
     return Match(in_port, bit_vector.popBitVector());
 }
@@ -136,41 +116,37 @@ of13::Match Parser::get_of_match(const Match& match)
     }
 
     // Ethernet
-    auto eth_src = bit_vector.getField<Mapping::EthSrc>();
-    if (eth_src) of_match.add_oxm_field(eth_src);
+    of_match.add_oxm_field(bit_vector.getField<Mapping::EthSrc>());
+    of_match.add_oxm_field(bit_vector.getField<Mapping::EthDst>());
+    of_match.add_oxm_field(bit_vector.getField<Mapping::EthType>());
 
-    auto eth_dst = bit_vector.getField<Mapping::EthDst>();
-    if (eth_dst) of_match.add_oxm_field(eth_dst);
+    if (of_match.eth_type()) {
+        switch (of_match.eth_type()->value()) {
+        case Ethernet::TYPE::IPv4: {
+            of_match.add_oxm_field(bit_vector.getField<Mapping::IPv4Src>());
+            of_match.add_oxm_field(bit_vector.getField<Mapping::IPv4Dst>());
+            of_match.add_oxm_field(bit_vector.getField<Mapping::IPProto>());
 
-    auto eth_type = bit_vector.getField<Mapping::EthType>();
-    if (eth_type) of_match.add_oxm_field(eth_type);
-
-    if (Ethernet::TYPE::IPv4 == eth_type->value()) {
-        // IPv4
-        auto ip_proto = bit_vector.getField<Mapping::IPProto>();
-        if (ip_proto) of_match.add_oxm_field(ip_proto);
-
-        auto ipv4_src = bit_vector.getField<Mapping::IPv4Src>();
-        if (ipv4_src) of_match.add_oxm_field(ipv4_src);
-
-        auto ipv4_dst = bit_vector.getField<Mapping::IPv4Dst>();
-        if (ipv4_dst) of_match.add_oxm_field(ipv4_dst);
-
-        if (IPv4::PROTO::TCP == ip_proto->value()) {
-            // TCP
-            auto tcp_src = bit_vector.getField<Mapping::TCPSrc>();
-            if (tcp_src) of_match.add_oxm_field(tcp_src);
-
-            auto tcp_dst = bit_vector.getField<Mapping::TCPDst>();
-            if (tcp_dst) of_match.add_oxm_field(tcp_dst);
+            if (of_match.ip_proto()) {
+                if (IPv4::PROTO::TCP == of_match.ip_proto()->value()) {
+                    of_match.add_oxm_field(bit_vector.getField<Mapping::TCPSrc>());
+                    of_match.add_oxm_field(bit_vector.getField<Mapping::TCPDst>());
+                }
+                else if (IPv4::PROTO::UDP == of_match.ip_proto()->value()) {
+                    of_match.add_oxm_field(bit_vector.getField<Mapping::UDPSrc>());
+                    of_match.add_oxm_field(bit_vector.getField<Mapping::UDPDst>());
+                }
+            }
+            break;
         }
-        else if (IPv4::PROTO::UDP == ip_proto->value()) {
-            // UDP
-            auto udp_src = bit_vector.getField<Mapping::UDPSrc>();
-            if (udp_src) of_match.add_oxm_field(udp_src);
-
-            auto udp_dst = bit_vector.getField<Mapping::UDPDst>();
-            if (udp_dst) of_match.add_oxm_field(udp_dst);
+        case Ethernet::TYPE::ARP: {
+            break;
+        }
+        case Ethernet::TYPE::IPv6: {
+            break;
+        }
+        default:
+            break;
         }
     }
 

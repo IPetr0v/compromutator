@@ -34,8 +34,8 @@ public:
     // Rule management
     RulePtr rule(RuleId id) const;
     RulePtr addRule(SwitchId switch_id, TableId table_id,
-                    uint16_t priority, NetworkSpace&& domain,
-                    ActionsBase&& actions_base);
+                    Priority priority, Cookie cookie,
+                    NetworkSpace&& domain, ActionsBase&& actions_base);
     void deleteRule(RuleId id);
 
     PortPtr adjacentPort(PortPtr port) const;

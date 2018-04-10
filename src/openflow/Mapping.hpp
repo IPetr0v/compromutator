@@ -120,7 +120,7 @@ public:
     // L2
     using EthSrc = Base<fluid_msg::of13::EthSrc, 48u>;
     using EthDst = Base<fluid_msg::of13::EthDst, 48u, EthSrc>;
-    using EthType = Base<fluid_msg::of13::EthType, 1u, EthDst>;
+    using EthType = Base<fluid_msg::of13::EthType, 2u, EthDst>;
 
     // L3
     using IPProto = Base<fluid_msg::of13::IPProto, 1u, EthType>;
@@ -156,13 +156,17 @@ public:
     template<class Map>
     typename Map::FieldType* getField() const {
         auto bitset = get_bits<Map>();
-        return std::move(Map::fromBitSet(std::move(bitset)));
+        return (bitset.mask.none())
+               ? nullptr
+               : std::move(Map::fromBitSet(std::move(bitset)));
     }
 
     template<class Map>
     void setField(const typename Map::FieldType* fluid_object) {
-        auto bitset = Map::toBitSet(fluid_object);
-        set_bits<Map>(std::move(bitset));
+        if (fluid_object) {
+            auto bitset = Map::toBitSet(fluid_object);
+            set_bits<Map>(std::move(bitset));
+        }
     }
 
 private:

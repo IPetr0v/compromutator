@@ -18,7 +18,11 @@ using GroupId = uint32_t;
 using TopoId = std::pair<SwitchId, PortId>;
 
 using Priority = uint16_t;
-constexpr Priority LOW_PRIORITY = 0;
+constexpr Priority LOW_PRIORITY = 0u;
+
+using Cookie = uint64_t;
+constexpr Cookie ZERO_COOKIE = 0x0;
+
 using RuleId = std::tuple<SwitchId, TableId, Priority, uint64_t>;
 
 template <typename IdType>

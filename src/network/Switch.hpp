@@ -16,8 +16,8 @@ public:
     SwitchPtr sw() const {return sw_;}
 
     RulePtr rule(RuleId id) const;
-    RulePtr addRule(Priority priority, NetworkSpace&& domain,
-                    Actions&& actions);
+    RulePtr addRule(Priority priority, Cookie cookie,
+                    NetworkSpace&& domain, Actions&& actions);
     void deleteRule(RuleId id);
 
     RulePtr tableMissRule() const {return table_miss_rule_;}

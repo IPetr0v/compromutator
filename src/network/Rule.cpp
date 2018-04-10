@@ -10,8 +10,8 @@
 IdGenerator<uint64_t> Rule::id_generator_;
 
 Rule::Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
-           NetworkSpace&& domain, Actions&& actions):
-    type_(type), table_(table), sw_(sw), priority_(priority),
+           Cookie cookie, NetworkSpace&& domain, Actions&& actions):
+    type_(type), table_(table), sw_(sw), priority_(priority), cookie_(cookie),
     domain_(std::move(domain)), actions_(std::move(actions)),
     vertex_(VertexDescriptor(nullptr)),
     rule_mapping_(RuleMappingDescriptor(nullptr))
@@ -23,7 +23,7 @@ Rule::Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
 
 Rule::Rule(const RulePtr other, const NetworkSpace& domain):
     type_(other->type()), table_(other->table()), sw_(other->sw()),
-    priority_(other->priority()), domain_(domain),
+    priority_(other->priority()), cookie_(other->cookie()), domain_(domain),
     actions_(other->actions())
 {
     TableId table_id = table_ ? table_->id() : (TableId)-1;
@@ -37,30 +37,38 @@ Rule::~Rule()
     id_generator_.releaseId(rule_num);
 }
 
-std::ostream& operator<<(std::ostream& os, const Rule& rule)
+std::string Rule::toString() const
 {
     std::string type;
-    switch(rule.type_) {
+    switch(type_) {
     case RuleType::FLOW:   type = "FLOW";   break;
     case RuleType::GROUP:  type = "GROUP";  break;
     case RuleType::BUCKET: type = "BUCKET"; break;
     case RuleType::SOURCE: type = "SOURCE"; break;
     case RuleType::SINK:   type = "SINK";   break;
     }
-    auto sw = rule.sw_ ? std::to_string(rule.sw_->id()) : "NULL";
-    auto table = rule.table_ ? std::to_string(rule.table_->id()) : "NULL";
+    auto sw = sw_ ? std::to_string(sw_->id()) : "NULL";
+    auto table = table_ ? std::to_string(table_->id()) : "NULL";
 
+    std::ostringstream os;
     os << "[" << type
        << ": sw=" << sw
        << ", table=" << table
-       << ", prio=" << std::to_string(rule.priority_)
-       << ", domain=" << rule.domain_
+       << ", prio=" << std::to_string(priority_)
+       << ", cookie=" << std::hex << cookie_ << std::dec
+       << ", domain=" << domain_
        << "]";
+    return os.str();
+}
+
+std::ostream& operator<<(std::ostream& os, const Rule& rule)
+{
+    os << rule.toString();
     return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const RulePtr rule)
 {
-    os << *rule;
+    os << rule->toString();
     return os;
 }
