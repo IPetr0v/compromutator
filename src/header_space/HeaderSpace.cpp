@@ -13,40 +13,45 @@ static int get_len(const char* str) {
     return len;
 }
 
-BitVector::BitVector(std::string str):
+BitMask::BitMask(std::string str):
     length_(get_len(str.c_str()))
 {
     assert(length_ > 0);
     array_ = array_from_str(str.c_str());
 }
 
-BitVector::BitVector(const BitVector& other):
+BitMask::~BitMask()
+{
+    delete array_;
+}
+
+BitMask::BitMask(const BitMask& other):
     length_ (other.length_), array_(array_copy(other.array_, length_))
 {
 
 }
 
-BitVector::BitVector(BitVector&& other) noexcept:
+BitMask::BitMask(BitMask&& other) noexcept:
     length_ (other.length_), array_(other.array_)
 {
     other.array_ = nullptr;
 }
 
-BitVector BitVector::wholeSpace(int length)
+BitMask BitMask::wholeSpace(int length)
 {
     array_t* whole_space = array_create(length, BIT_X);
     return {length, whole_space};
 }
 
 
-BitVector& BitVector::operator=(const BitVector& other)
+BitMask& BitMask::operator=(const BitMask& other)
 {
     length_ = other.length_;
     array_ = array_copy(other.array_, length_);
     return *this;
 }
 
-BitVector& BitVector::operator=(BitVector&& other) noexcept
+BitMask& BitMask::operator=(BitMask&& other) noexcept
 {
     length_ = other.length_;
     array_ = other.array_;
@@ -54,27 +59,27 @@ BitVector& BitVector::operator=(BitVector&& other) noexcept
     return *this;
 }
 
-BitVector::BitVector(int length, array_t* array):
-    length_(length), array_(array)
+BitMask::BitMask(int length, array_t* array):
+    length_(length), array_(array_copy(array, length))
 {
 
 }
 
-BitValue BitVector::getBit(uint32_t index) const
+BitValue BitMask::getBit(uint32_t index) const
 {
     int byte = index/CHAR_BIT;
     int bit = index%CHAR_BIT;
     return get_external_bit_value(array_get_bit(array_, byte, bit));
 }
 
-void BitVector::setBit(uint32_t index, BitValue bit_value)
+void BitMask::setBit(uint32_t index, BitValue bit_value)
 {
     uint32_t byte = index/CHAR_BIT;
     uint32_t bit = index%CHAR_BIT;
     array_set_bit(array_, get_internal_bit_value(bit_value), byte, bit);
 }
 
-BitValue BitVector::get_external_bit_value(enum bit_val bit_value) const
+BitValue BitMask::get_external_bit_value(enum bit_val bit_value) const
 {
     switch (bit_value) {
     case BIT_0: return BitValue::ZERO;
@@ -85,7 +90,7 @@ BitValue BitVector::get_external_bit_value(enum bit_val bit_value) const
     }
 }
 
-enum bit_val BitVector::get_internal_bit_value(BitValue bit_value) const
+enum bit_val BitMask::get_internal_bit_value(BitValue bit_value) const
 {
     switch (bit_value) {
     case BitValue::ZERO: return BIT_0;
@@ -104,11 +109,21 @@ HeaderSpace::HeaderSpace(std::string str):
     hs_add(hs_, array_from_str(str.c_str()));
 }
 
-HeaderSpace::HeaderSpace(BitVector&& bit_vector):
+HeaderSpace::HeaderSpace(const BitMask& bit_vector):
     length_(bit_vector.length_)
 {
     hs_ = hs_create(length_);
-    hs_add(hs_, bit_vector.array_);
+    if (bit_vector.array_) {
+        auto array = array_copy(bit_vector.array_, length_);
+        hs_add(hs_, array);
+    }
+}
+
+HeaderSpace::HeaderSpace(BitMask&& bit_vector):
+    length_(bit_vector.length_)
+{
+    hs_ = hs_create(length_);
+    if(bit_vector.array_) hs_add(hs_, bit_vector.array_);
     bit_vector.array_ = nullptr;
 }
 
@@ -185,17 +200,11 @@ HeaderSpace& HeaderSpace::operator=(HeaderSpace&& other) noexcept
 bool HeaderSpace::operator==(const HeaderSpace &other) const
 {
     assert(length_ == other.length_);
-    auto other_copy = other;
-    // TODO: do we need to compact?
-    hs_compact(hs_);
-    hs_compact(other_copy.hs_);
-    return (*this - other_copy).empty() && (other_copy - *this).empty();
-    // TODO: maybe compare it in another way?
-    //hs_compact(hs_);
-    //struct hs* other_hs = hs_copy_a(other.hs_);
-    //bool is_equal = array_is_eq(, , length_);
-    //hs_free(other_hs);
-    //return is_equal;
+    auto inclusion = *this - other;
+    auto exclusion = other - *this;
+    inclusion.computeDifference();
+    exclusion.computeDifference();
+    return inclusion.empty() && exclusion.empty();
 }
 
 bool HeaderSpace::operator!=(const HeaderSpace &other) const
@@ -229,7 +238,15 @@ HeaderSpace& HeaderSpace::operator&=(const HeaderSpace& right)
 
 HeaderSpace& HeaderSpace::operator-=(const HeaderSpace& right)
 {
-    hs_minus(hs_, right.hs_);
+    if (hs_count_diff(right.hs_)) {
+        hs_minus(hs_, right.hs_);
+    }
+    else {
+        for (int i = 0; i < right.hs_->list.used; i++) {
+            hs_diff(hs_, right.hs_->list.elems[i]);
+        }
+        hs_compact(hs_);
+    }
     return *this;
 }
 
@@ -252,37 +269,65 @@ HeaderSpace HeaderSpace::operator-(const HeaderSpace& right) const
     return header;
 }
 
-std::vector<BitVector> HeaderSpace::getBitVectors() const
+HeaderSpace& HeaderSpace::compact()
 {
-    // Perform lazy subtractions
+    hs_compact(hs_);
+    return *this;
+}
+
+HeaderSpace& HeaderSpace::computeDifference()
+{
+    if (not empty()) hs_comp_diff(hs_);
+    return *this;
+}
+
+std::vector<BitSpace> HeaderSpace::getBitSpace() const
+{
     hs_compact(hs_);
 
     // Get bit vectors
-    std::vector<BitVector> bit_vectors;
+    std::vector<BitSpace> bit_space;
     for (int i = 0; i < hs_->list.used; i++) {
-        array_t* array = hs_->list.elems[i];
-        bit_vectors.push_back(BitVector(length_, array));
+        // Get mask
+        BitMask mask(length_, hs_->list.elems[i]);
+        auto space_it = bit_space.emplace(
+            bit_space.end(), std::move(mask)
+        );
+
+        // Get difference
+        if (hs_->list.diff) {
+            for (int j = 0; j < hs_->list.diff[i].used; j++) {
+                BitMask diff_mask(length_, hs_->list.diff[i].elems[j]);
+                space_it->difference.emplace(
+                    space_it->difference.end(), std::move(diff_mask)
+                );
+            }
+        }
     }
-    return std::move(bit_vectors);
+    return bit_space;
+}
+
+std::string HeaderSpace::toString() const
+{
+    // Check header corruption
+    if (nullptr == hs_) {
+        return "CORRUPTED";
+    }
+
+    // Create header string representation
+    struct hs* output_hs = hs_copy_a(hs_);
+
+    char* output_string = hs_to_str(output_hs);
+    std::string result(output_string);
+
+    free(output_string);
+    hs_free(output_hs);
+    return result;
 }
 
 std::ostream& operator<<(std::ostream& os, const HeaderSpace& header)
 {
-    // Check header corruption
-    if (nullptr == header.hs_) {
-        os << "CORRUPTED";
-        return os;
-    }
-
-    // Create header string representation
-    struct hs* output_hs = hs_copy_a(header.hs_);
-    //hs_compact(output_hs);
-
-    char* output_string = hs_to_str(output_hs);
-    os << output_string;
-
-    free(output_string);
-    hs_free(output_hs);
+    os << header.toString();
     return os;
 }
 
@@ -340,7 +385,7 @@ HeaderChanger::HeaderChanger(int length, array_t* transfer_array):
     identity_ = identity_check;
 }
 
-HeaderChanger::HeaderChanger(const BitVector& bit_vector):
+HeaderChanger::HeaderChanger(const BitMask& bit_vector):
     HeaderChanger(bit_vector.length_, bit_vector.array_)
 {
 
@@ -530,26 +575,25 @@ HeaderSpace HeaderChanger::inverse(const HeaderSpace& header) const
     return std::move(new_header);
 }
 
-std::ostream& operator<<(std::ostream& os, const HeaderChanger& transfer)
+std::string HeaderChanger::toString() const
 {
     // Check header changer corruption
-    if (nullptr == transfer.mask_ ||
-        nullptr == transfer.rewrite_ ||
-        nullptr == transfer.inverse_rewrite_) {
-        os << "CORRUPTED";
-        return os;
+    if (nullptr == mask_ ||
+        nullptr == rewrite_ ||
+        nullptr == inverse_rewrite_) {
+        return "CORRUPTED";
     }
 
     // Create header changer string representation
-    int length = transfer.length_;
+    int length = length_;
     array_t* transfer_array = array_create(length, BIT_X);
     for (int i = 0; i < length*CHAR_BIT; i++) {
         int byte = i/CHAR_BIT;
         int bit = i%CHAR_BIT;
 
         enum bit_val transfer_bit;
-        enum bit_val mask_bit = array_get_bit(transfer.mask_, byte, bit);
-        enum bit_val rewrite_bit = array_get_bit(transfer.rewrite_, byte, bit);
+        enum bit_val mask_bit = array_get_bit(mask_, byte, bit);
+        enum bit_val rewrite_bit = array_get_bit(rewrite_, byte, bit);
 
         if(mask_bit == BIT_1) {
             transfer_bit = BIT_X;
@@ -560,7 +604,13 @@ std::ostream& operator<<(std::ostream& os, const HeaderChanger& transfer)
         array_set_bit(transfer_array, transfer_bit, byte, bit);
     }
 
-    os << array_to_str(transfer_array, length, false);
+    std::string result(array_to_str(transfer_array, length, false));
     array_free(transfer_array);
+    return result;
+}
+
+std::ostream& operator<<(std::ostream& os, const HeaderChanger& transfer)
+{
+    os << transfer.toString();
     return os;
 }

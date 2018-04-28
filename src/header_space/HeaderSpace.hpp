@@ -7,6 +7,7 @@ extern "C" {
 #include <climits>
 #include <cstring>
 #include <iostream>
+#include <list>
 #include <memory>
 #include <string>
 #include <vector>
@@ -18,19 +19,17 @@ enum class BitValue {
     NONE
 };
 
-class BitVector
+class BitMask
 {
 public:
-    explicit BitVector(std::string str);
-    BitVector(const BitVector& other);
-    BitVector(BitVector&& other) noexcept;
-    static BitVector wholeSpace(int length);
+    explicit BitMask(std::string str);
+    BitMask(const BitMask& other);
+    BitMask(BitMask&& other) noexcept;
+    static BitMask wholeSpace(int length);
+    ~BitMask();
 
-    // BitVector does not own array_t pointer
-    ~BitVector() = default;
-
-    BitVector& operator=(const BitVector& other);
-    BitVector& operator=(BitVector&& other) noexcept;
+    BitMask& operator=(const BitMask& other);
+    BitMask& operator=(BitMask&& other) noexcept;
 
     BitValue getBit(uint32_t index) const;
     void setBit(uint32_t index, BitValue bit_value);
@@ -42,7 +41,7 @@ public:
     friend class HeaderChanger;
 
 private:
-    BitVector(int length, array_t* array);
+    BitMask(int length, array_t* array);
 
     // TODO: change int to uint32_t
     int length_;
@@ -51,6 +50,15 @@ private:
     // Header space bit value wrapping
     BitValue get_external_bit_value(enum bit_val bit_value) const;
     enum bit_val get_internal_bit_value(BitValue bit_value) const;
+};
+
+using BitMaskList = std::vector<BitMask>;
+
+struct BitSpace {
+    explicit BitSpace(BitMask mask): mask(mask) {}
+
+    BitMask mask;
+    BitMaskList difference;
 };
 
 // TODO: create class inherited from struct hs,
@@ -64,7 +72,8 @@ public:
     // And think how to implement copy on write to hs_
     // that will be needed if I will use smart pointers
     explicit HeaderSpace(std::string str);
-    explicit HeaderSpace(BitVector&& bit_vector);
+    HeaderSpace(const BitMask& bit_vector);
+    HeaderSpace(BitMask&& bit_vector);
     HeaderSpace(const HeaderSpace& other);
     HeaderSpace(HeaderSpace&& other) noexcept;
     static HeaderSpace emptySpace(int length);
@@ -84,16 +93,20 @@ public:
     HeaderSpace operator+(const HeaderSpace& right) const;
     HeaderSpace operator&(const HeaderSpace& right) const;
     HeaderSpace operator-(const HeaderSpace& right) const;
+
+    HeaderSpace& compact();
+    HeaderSpace& computeDifference();
     
     // TODO: check correctness and make more optimal empty()
     // (do not compact every time)
     bool empty() const {return !hs_compact(hs_);}
     int length() const {return length_;}
 
-    std::vector<BitVector> getBitVectors() const;
+    std::vector<BitSpace> getBitSpace() const;
 
     static int GLOBAL_LENGTH;
 
+    std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os,
                                     const HeaderSpace& header);
     friend class HeaderChanger;
@@ -105,13 +118,14 @@ private:
 
     int length_;
     struct hs* hs_;
+    //std::shared_ptr<struct hs> hs__;
     
 };
 
 class HeaderChanger
 {
 public:
-    explicit HeaderChanger(const BitVector& bit_vector);
+    explicit HeaderChanger(const BitMask& bit_vector);
     HeaderChanger(const HeaderChanger& other);
     HeaderChanger(HeaderChanger&& other) noexcept;
     explicit HeaderChanger(const char* transfer_str);
@@ -133,7 +147,8 @@ public:
     
     int length() const {return length_;}
     int identity() const {return identity_;}
-    
+
+    std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os,
                                     const HeaderChanger& transfer);
 

@@ -52,19 +52,19 @@ vec_destroy (struct hs_vec *v)
 static void
 vec_sum (struct hs_vec *dst, const struct hs_vec *src, int len)
 {
-    for (int i = 0; i < src->used; i++) {
-        bool diff = src->diff && src->diff[i].used;
-        array_t* element = array_copy(src->elems[i], len);
-        vec_append(dst, element, false);
-        int idx = dst->used - 1;
-        struct hs_vec *dst_diff = &dst->diff[idx];
-        if (diff) {
-            for(int j = 0; j < src->diff[i].used; j++) {
-                array_t* diff_element = array_copy(src->diff[i].elems[j], len);
-                vec_append(dst_diff, diff_element, true);
-            }
-        }
+  for (int i = 0; i < src->used; i++) {
+    bool diff = src->diff && src->diff[i].used;
+    array_t* element = array_copy(src->elems[i], len);
+    vec_append(dst, element, false);
+    int idx = dst->used - 1;
+    struct hs_vec *dst_diff = &dst->diff[idx];
+    if (diff) {
+      for(int j = 0; j < src->diff[i].used; j++) {
+        array_t* diff_element = array_copy(src->diff[i].elems[j], len);
+        vec_append(dst_diff, diff_element, true);
+      }
     }
+  }
 }
 
 static void
@@ -115,7 +115,12 @@ vec_to_str (const struct hs_vec *v, int len, char *res)
     if (i) res += sprintf (res, " + ");
     char *s = array_to_str (v->elems[i], len, true);
     if (diff) *res++ = '(';
-    res += sprintf (res, "%s", s);
+    //res += sprintf (res, "%s", s);
+    int err = sprintf (res, "%s", s);
+    if (err < 0) {
+      printf("err < 0 = %d\n", err);
+    }
+    res += err;
     free (s);
     if (diff) {
       res += sprintf (res, " - ");
@@ -303,7 +308,9 @@ hs_cmpl (struct hs *hs)
     return;
   }
 
-  hs_compact(hs);
+  if (hs->list.diff) {
+    hs_compact(hs);
+  }
 
   struct hs_vec *v = &hs->list, new_list = {0};
   for (int i = 0; i < v->used; i++) {
@@ -322,8 +329,10 @@ hs_cmpl (struct hs *hs)
     tmp.diff = xcalloc (tmp.alloc, sizeof *tmp.diff);
     if (v->diff) { /* NULL if called from comp_diff */
       struct hs_vec *d = &v->diff[i];
-      for (int j = 0; j < d->used; j++)
-        vec_append (&tmp, d->elems[j], false);
+      for (int j = 0; j < d->used; j++) {
+        vec_append(&tmp, d->elems[j], false);
+        d->elems[j] = NULL;
+      }
     }
 
     if (!new_list.used) new_list = tmp;
@@ -406,20 +415,11 @@ hs_minus (struct hs *a, const struct hs *b)
 {
   assert (a->len == b->len);
   struct hs tmp;
-  //int diff_num = hs_count_diff(b);
-  //if (diff_num) {
-    hs_copy (&tmp, b);
-    hs_cmpl (&tmp);
-    hs_isect (a, &tmp);
-    hs_destroy (&tmp);
-    hs_compact (a);
-  //}
-  //else {
-  //  for (int i = 0; i < b->list.used; i++) {
-  //    hs_diff(a, b->list.elems[i]);
-  //  }
-  //  hs_compact(a);
-  //}
+  hs_copy (&tmp, b);
+  hs_cmpl (&tmp);
+  hs_isect (a, &tmp);
+  hs_destroy (&tmp);
+  hs_compact (a);
 }
 
 void

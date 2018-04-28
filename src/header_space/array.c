@@ -38,7 +38,7 @@ x_count (array_t a, array_t mask)
   return __builtin_popcountll (tmp);
 }
 
-
+static int count = 0;
 array_t *
 array_create (int len, enum bit_val val)
 {
@@ -54,7 +54,6 @@ void
 array_free (array_t *a)
 { free (a); }
 
-
 array_t *
 array_copy (const array_t *a, int len)
 {
