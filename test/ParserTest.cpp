@@ -23,8 +23,8 @@ struct ParserTest : public ::testing::Test,
 
     void setEthernet(of13::Match& match) const {
         match.add_oxm_field(new of13::InPort(in_port));
-        match.add_oxm_field(new of13::EthSrc(eth_src, eth_full_mask));
-        match.add_oxm_field(new of13::EthDst(eth_dst, eth_full_mask));
+        match.add_oxm_field(new of13::EthSrc(eth_src));
+        match.add_oxm_field(new of13::EthDst(eth_dst));
     }
 
     void setMaskedEthernet(of13::Match& match) const {
@@ -35,8 +35,8 @@ struct ParserTest : public ::testing::Test,
 
     void setIPv4(of13::Match& match) const {
         match.add_oxm_field(new of13::EthType(Ethernet::TYPE::IPv4));
-        match.add_oxm_field(new of13::IPv4Src(ip_src, ip_full_mask));
-        match.add_oxm_field(new of13::IPv4Dst(ip_dst, ip_full_mask));
+        match.add_oxm_field(new of13::IPv4Src(ip_src));
+        match.add_oxm_field(new of13::IPv4Dst(ip_dst));
     }
 
     void setMaskedIPv4(of13::Match& match) const {

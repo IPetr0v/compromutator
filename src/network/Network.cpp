@@ -125,6 +125,7 @@ RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
     bool success = actions_pair.first;
     if (not success) {
         // TODO: put this rule on hold
+        std::cerr << "Network error: Wrong rule actions" << std::endl;
         return nullptr;
     }
     auto actions = std::move(actions_pair.second);
@@ -285,7 +286,7 @@ void Network::add_rule_to_topology(RulePtr rule)
     }
 
     // Update dst rules for ports
-    if (sw->isFrontTable(table)) {
+    if (table->isFrontTable()) {
         auto in_port = sw->port(rule->inPort());
         if (in_port) {
             // Rule listens to a one specified getPort
@@ -323,7 +324,7 @@ void Network::delete_rule_from_topology(RulePtr rule)
     }
 
     // Update dst rules for ports
-    if (sw->isFrontTable(table)) {
+    if (table->isFrontTable()) {
         auto in_port = sw->port(rule->inPort());
         if (in_port) {
             // Rule listens to a one specified getPort

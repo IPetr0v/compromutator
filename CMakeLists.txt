@@ -9,12 +9,6 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_FLAGS
     "${CMAKE_CXX_FLAGS} -Wall -Werror -Wno-long-long -pedantic -O0 -g")
 
-
-#link_directories(
-#    ${CMAKE_BINARY_DIR}/fluid/lib
-#)
-#
-
 add_subdirectory(src)
 add_subdirectory(test)
 

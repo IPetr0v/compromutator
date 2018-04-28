@@ -19,7 +19,7 @@ std::string getPortString(PortId port_id)
     return port_string;
 }
 
-Match::Match(PortId in_port, BitVector&& header):
+Match::Match(PortId in_port, BitMask&& header):
     in_port_(in_port), header_(std::move(header))
 {
 
@@ -126,9 +126,15 @@ NetworkSpace NetworkSpace::operator&(const NetworkSpace& right)
                     : NetworkSpace(new_in_port, header_ & right.header_);
 }
 
+std::string NetworkSpace::toString() const
+{
+    return std::string() +
+        "(" + getPortString(in_port_) + "|" + header_.toString() + ")";
+}
+
 std::ostream& operator<<(std::ostream& os, const NetworkSpace& domain)
 {
-    os << "(" << getPortString(domain.in_port_) << "|" << domain.header_ << ")";
+    os << domain.toString();
     return os;
 }
 
@@ -196,6 +202,14 @@ NetworkSpace Transfer::inverse(NetworkSpace domain) const
                          ? domain.header()
                          : header_changer_.inverse(domain.header());
     return NetworkSpace(port, header);
+}
+
+std::string Transfer::toString() const
+{
+    return std::string() +
+        "(" + getPortString(src_port_)
+            + "->" + getPortString(dst_port_)
+            + "|" + header_changer_.toString() + ")";
 }
 
 std::ostream& operator<<(std::ostream& os, const Transfer& transfer)

@@ -18,6 +18,8 @@ void SwitchManager::addSwitch(ConnectionId connection_id, SwitchInfo&& info)
 {
     auto connection_iter = connection_map_.find(info.id);
     if (connection_map_.end() == connection_iter) {
+        std::cout << "Switch dpid=" << info.id << " connected" << std::endl;
+
         // Add switch to the detector
         detector_.addSwitch(info);
 
@@ -36,6 +38,7 @@ void SwitchManager::deleteSwitch(ConnectionId connection_id)
     auto switch_iter = switch_map_.find(connection_id);
     if (switch_map_.end() != switch_iter) {
         auto switch_id = switch_iter->second.id;
+        std::cout << "Switch dpid=" << switch_id << " disconnected" << std::endl;
 
         // Delete switch from the detector
         detector_.deleteSwitch(switch_id);

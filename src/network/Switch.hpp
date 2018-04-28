@@ -25,6 +25,8 @@ public:
     RuleRange upperRules(RulePtr rule);
     RuleRange lowerRules(RulePtr rule);
 
+    bool isFrontTable() const;
+
 private:
     TableId id_;
     SwitchPtr sw_;
@@ -85,12 +87,12 @@ public:
     ~Switch();
 
     SwitchId id() const {return id_;}
-    bool isFrontTable(TablePtr table) const;
 
     PortPtr port(PortId id) const;
     TablePtr table(TableId id) const;
     PortRange ports() {return PortRange(port_map_);}
     TableRange tables() {return TableRange(table_map_);}
+    TablePtr frontTable() {return front_table_;}
 
 private:
     SwitchId id_;

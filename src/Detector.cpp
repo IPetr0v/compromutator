@@ -100,10 +100,12 @@ void Detector::Impl::deleteSwitch(SwitchId id)
 
 void Detector::Impl::addRule(SwitchId switch_id, RuleInfo&& info)
 {
-    NetworkSpace domain(std::move(info.match));
+    NetworkSpace match(NetworkSpace(std::move(info.match)));
+    // TODO: add table miss only if there is a rule that sends packets
+    // to this table, also return vector<rule> from addRule()
     auto rule = network_->addRule(
         switch_id, info.table_id, info.priority, info.cookie,
-        std::move(domain), std::move(info.actions)
+        std::move(match), std::move(info.actions)
     );
     add_rule_to_predictor(rule);
 }

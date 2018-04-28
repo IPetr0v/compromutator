@@ -1,2 +1,3 @@
-g++
 pthreads
+libevent-dev
+#libssl-dev

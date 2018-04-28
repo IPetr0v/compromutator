@@ -16,7 +16,7 @@ TEST(InitSwitchTest, CreationTest)
     ASSERT_NE(sw->tables().begin(), sw->tables().end());
     auto table = *sw->tables().begin();
     ASSERT_NE(nullptr, table);
-    EXPECT_TRUE(sw->isFrontTable(table));
+    EXPECT_TRUE(table->isFrontTable());
     delete sw;
 }
 
@@ -49,14 +49,14 @@ TEST_F(SwitchTest, PortTest)
 
         auto source_rule = port->sourceRule();
         ASSERT_NE(nullptr, source_rule);
-        EXPECT_EQ(N(port_number), source_rule->domain());
+        EXPECT_EQ(N(port_number), source_rule->match());
         const auto& source_actions = source_rule->actions();
         EXPECT_TRUE(source_actions.port_actions.empty());
 
         auto sink_rule = port->sinkRule();
         ASSERT_NE(nullptr, sink_rule);
         EXPECT_EQ(port_number, sink_rule->inPort());
-        EXPECT_EQ(N(port_number), sink_rule->domain());
+        EXPECT_EQ(N(port_number), sink_rule->match());
         const auto& sink_actions = sink_rule->actions();
         EXPECT_TRUE(sink_actions.port_actions.empty());
 
@@ -75,7 +75,7 @@ TEST_F(SwitchTest, TableTest)
     auto rule = *table->rules().begin();
     ASSERT_NE(nullptr, rule);
     EXPECT_EQ(table_miss_rule->id(), rule->id());
-    EXPECT_EQ(NetworkSpace::wholeSpace(), table_miss_rule->domain());
+    EXPECT_EQ(NetworkSpace::wholeSpace(), table_miss_rule->match());
 }
 
 TEST(BasicNetworkTest, CreationTest)

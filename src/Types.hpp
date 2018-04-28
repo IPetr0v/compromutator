@@ -132,6 +132,10 @@ public:
         return queue_.empty();
     }
 
+    size_t size() const {
+        return queue_.size();
+    }
+
     void addBarrier() {
         queue_.push(std::vector<Element>());
     }

@@ -10,10 +10,14 @@
 
 class GraphTest : public ::testing::Test
 {
+    struct Data {
+        explicit Data(int data = 0): data(data) {}
+        int data;
+    };
 protected:
-    using GraphData = Graph<int, int>;
-    using Vertex = Graph<int, int>::VertexDescriptor;
-    using Edge = Graph<int, int>::EdgeDescriptor;
+    using GraphData = Graph<Data, Data>;
+    using Vertex = GraphData::VertexPtr;
+    using Edge = GraphData::EdgePtr;
 
     virtual void SetUp() {
         graph = std::make_shared<GraphData>();
@@ -41,8 +45,8 @@ TEST_F(GraphTest, DataTest)
     bool edge_found = edge_pair.second;
     ASSERT_EQ(true, edge_found);
     auto edge = edge_pair.first;
-    EXPECT_EQ(1, edge->src_vertex->data);
-    EXPECT_EQ(2, edge->dst_vertex->data);
+    EXPECT_EQ(1, edge->src->data);
+    EXPECT_EQ(2, edge->dst->data);
     EXPECT_EQ(3, edge->data);
 }
 
@@ -58,13 +62,13 @@ TEST_F(GraphTest, DeleteEdgesTest)
     EXPECT_EQ(3u, graph->edges().size());
 
     graph->deleteOutEdges(v1);
-    EXPECT_TRUE(v1->out_adjacency_list.empty());
-    EXPECT_EQ(2u, v4->in_adjacency_list.size());
+    EXPECT_EQ(0u, graph->outDegree(v1));
+    EXPECT_EQ(2u, graph->inDegree(v4));
 
     graph->deleteInEdges(v4);
-    EXPECT_TRUE(v2->in_adjacency_list.empty());
-    EXPECT_TRUE(v3->in_adjacency_list.empty());
-    EXPECT_TRUE(v4->in_adjacency_list.empty());
+    EXPECT_EQ(0u, graph->inDegree(v2));
+    EXPECT_EQ(0u, graph->inDegree(v3));
+    EXPECT_EQ(0u, graph->inDegree(v4));
     EXPECT_TRUE(graph->edges().empty());
 }
 
@@ -106,20 +110,15 @@ TEST_F(InitDependencyGraphTest, CreationTest)
     auto diff = dependency_graph->addRule(table_miss);
     ASSERT_EQ(1u, diff.new_edges.size());
     auto new_edge = *diff.new_edges.begin();
-    EXPECT_EQ(table_miss->id(),
-              dependency_graph->edge(new_edge).src_rule->id());
-    EXPECT_EQ(network->dropRule(),
-              dependency_graph->edge(new_edge).dst_rule);
+    EXPECT_EQ(table_miss->id(), new_edge->src->rule->id());
+    EXPECT_EQ(network->dropRule(), new_edge->dst->rule);
     ASSERT_EQ(2u, diff.new_dependent_edges.size());
     std::set<std::pair<RulePtr, RulePtr>> new_dependent_edges {
         {port11->sourceRule(), table_miss},
         {port12->sourceRule(), table_miss}
     };
     for (auto edge : diff.new_dependent_edges) {
-        auto src_rule = dependency_graph->edge(edge).src_rule;
-        auto dst_rule = dependency_graph->edge(edge).dst_rule;
-        auto domain = dependency_graph->edge(edge).domain;
-        auto it = new_dependent_edges.find({src_rule, dst_rule});
+        auto it = new_dependent_edges.find({edge->src->rule, edge->dst->rule});
         EXPECT_NE(new_dependent_edges.end(), it);
         new_dependent_edges.erase(it);
     }
@@ -166,19 +165,18 @@ protected:
         dependency_graph.reset();
     }
 
-    using Desc = EdgeDescriptor;
+    using Desc = EdgePtr;
     struct EdgeInfo {RulePtr src_rule, dst_rule; N domain;};
     EdgeInfo getEdgeInfo(Desc edge) const {
-        auto src_rule = dependency_graph->edge(edge).src_rule;
-        auto dst_rule = dependency_graph->edge(edge).dst_rule;
-        auto domain = dependency_graph->edge(edge).domain;
+        auto src_rule = edge->src->rule;
+        auto dst_rule = edge->dst->rule;
+        auto domain = edge->domain;
         return EdgeInfo{src_rule, dst_rule, domain};
     }
     EdgeInfo findEdgeFrom(const std::vector<Desc>& edges, RulePtr rule) const {
         auto it = std::find_if(edges.begin(), edges.end(),
-            [rule, this](EdgeDescriptor edge) -> bool {
-                auto src_rule = dependency_graph->edge(edge).src_rule;
-                return rule == src_rule;
+            [rule, this](EdgePtr edge) -> bool {
+                return rule == edge->src->rule;
             }
         );
         return it != edges.end() ? getEdgeInfo(*it)
@@ -186,9 +184,8 @@ protected:
     }
     EdgeInfo findEdgeTo(const std::vector<Desc>& edges, RulePtr rule) const {
         auto it = std::find_if(edges.begin(), edges.end(),
-            [rule, this](EdgeDescriptor edge) -> bool {
-               auto dst_rule = dependency_graph->edge(edge).dst_rule;
-               return rule == dst_rule;
+            [rule, this](EdgePtr edge) -> bool {
+               return rule == edge->dst->rule;
             }
         );
         return it != edges.end() ? getEdgeInfo(*it)
@@ -219,9 +216,8 @@ TEST_F(DependencyGraphTest, AddRuleTest)
     EXPECT_EQ(N(2, H("0000xxxx")), out_edge.domain);
 
     auto changed_edge = rule_diff.changed_edges[0];
-    EXPECT_EQ(port11->sourceRule(),
-              dependency_graph->edge(changed_edge).src_rule);
-    EXPECT_EQ(table_miss1, dependency_graph->edge(changed_edge).dst_rule);
+    EXPECT_EQ(port11->sourceRule(), changed_edge->src->rule);
+    EXPECT_EQ(table_miss1, changed_edge->dst->rule);
     EXPECT_EQ(N(port11->id()) - N(1, H("0000xxxx")),
               dependency_graph->edge(changed_edge).domain);
 
@@ -245,10 +241,10 @@ TEST_F(DependencyGraphTest, DeleteRuleTest)
     ASSERT_EQ(1u, rule_diff.removed_edges.size());
     ASSERT_EQ(1u, rule_diff.removed_dependent_edges.size());
 
-    auto& changed_table_miss_edge = rule_diff.changed_edges[0]->data;
-    EXPECT_EQ(port11->sourceRule(), changed_table_miss_edge.src_rule);
-    EXPECT_EQ(table_miss1, changed_table_miss_edge.dst_rule);
-    EXPECT_EQ(N(1, H("xxxxxxxx")), changed_table_miss_edge.domain);
+    auto& changed_table_miss_edge = rule_diff.changed_edges[0];
+    EXPECT_EQ(port11->sourceRule(), changed_table_miss_edge->src->rule);
+    EXPECT_EQ(table_miss1, changed_table_miss_edge->dst->rule);
+    EXPECT_EQ(N(1, H("xxxxxxxx")), changed_table_miss_edge->domain);
 
     auto deleted_out_edge = *rule_diff.removed_edges.begin();
     EXPECT_EQ(rule1, deleted_out_edge.first);

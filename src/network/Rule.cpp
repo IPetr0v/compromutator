@@ -7,13 +7,25 @@
 #include <iostream>
 #include <string>
 
+std::shared_ptr<PortAction> Actions::getPortAction(PortId port_id) const
+{
+    auto it = std::find_if(port_actions.begin(), port_actions.end(),
+        [port_id](const PortAction& port_action) -> bool {
+           return port_action.port_type == PortType::NORMAL &&
+                  port_action.port->id() == port_id;
+        }
+    );
+    return port_actions.end() != it ? std::make_shared<PortAction>(*it)
+                                    : nullptr;
+}
+
 IdGenerator<uint64_t> Rule::id_generator_;
 
 Rule::Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
            Cookie cookie, NetworkSpace&& domain, Actions&& actions):
     type_(type), table_(table), sw_(sw), priority_(priority), cookie_(cookie),
-    domain_(std::move(domain)), actions_(std::move(actions)),
-    vertex_(VertexDescriptor(nullptr)),
+    match_(std::move(domain)), actions_(std::move(actions)),
+    vertex_(VertexPtr(nullptr)),
     rule_mapping_(RuleMappingDescriptor(nullptr))
 {
     TableId table_id = table_ ? table_->id() : (TableId)-1;
@@ -23,7 +35,7 @@ Rule::Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
 
 Rule::Rule(const RulePtr other, const NetworkSpace& domain):
     type_(other->type()), table_(other->table()), sw_(other->sw()),
-    priority_(other->priority()), cookie_(other->cookie()), domain_(domain),
+    priority_(other->priority()), cookie_(other->cookie()), match_(domain),
     actions_(other->actions())
 {
     TableId table_id = table_ ? table_->id() : (TableId)-1;
@@ -35,6 +47,11 @@ Rule::~Rule()
 {
     auto rule_num = std::get<3>(id_);
     id_generator_.releaseId(rule_num);
+}
+
+bool Rule::isTableMiss() const
+{
+    return RuleType::FLOW == type_ && table_->tableMissRule()->id() == id_;
 }
 
 std::string Rule::toString() const
@@ -56,7 +73,7 @@ std::string Rule::toString() const
        << ", table=" << table
        << ", prio=" << std::to_string(priority_)
        << ", cookie=" << std::hex << cookie_ << std::dec
-       << ", domain=" << domain_
+       << ", domain=" << match_
        << "]";
     return os.str();
 }

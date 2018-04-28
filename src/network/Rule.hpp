@@ -56,6 +56,8 @@ struct Actions
     std::vector<TableAction> table_actions;
     std::vector<GroupAction> group_actions;
 
+    std::shared_ptr<PortAction> getPortAction(PortId port_id) const;
+
     bool empty() const {
         return port_actions.empty() &&
                table_actions.empty() &&
@@ -115,18 +117,18 @@ public:
 
     Priority priority() const {return priority_;}
     Cookie cookie() const {return cookie_;}
-    NetworkSpace domain() const {return domain_;}
-    PortId inPort() const {return domain_.inPort();}
+    NetworkSpace match() const {return match_;}
+    PortId inPort() const {return match_.inPort();}
     const Actions& actions() const {return actions_;}
     uint64_t multiplier() const {return actions_.size();}
+
+    bool isTableMiss() const;
 
     std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os, const Rule& rule);
     friend std::ostream& operator<<(std::ostream& os, const RulePtr rule);
 
-    class PtrComparator
-    {
-    public:
+    struct PtrComparator {
         bool operator()(RulePtr first, RulePtr second) const {
             return first->id_ < second->id_;
         }
@@ -140,14 +142,14 @@ private:
 
     Priority priority_;
     Cookie cookie_;
-    NetworkSpace domain_;
+    NetworkSpace match_;
     Actions actions_;
 
     static IdGenerator<uint64_t> id_generator_;
 
     friend class DependencyGraph;
     friend class PathScan;
-    VertexDescriptor vertex_;
+    VertexPtr vertex_;
     RuleMappingDescriptor rule_mapping_;
 
 };

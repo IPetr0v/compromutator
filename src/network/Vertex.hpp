@@ -6,20 +6,36 @@
 
 class Rule;
 
-struct Vertex
-{
-    RulePtr rule;
-};
+struct Influence {
+    Influence(RulePtr src_rule, RulePtr dst_rule, NetworkSpace domain):
+        src_rule(src_rule), dst_rule(dst_rule), domain(domain) {}
 
-struct Edge
-{
     RulePtr src_rule;
     RulePtr dst_rule;
+    NetworkSpace domain;
+};
+
+using InfluenceGraph = Graph<EmptyVertex, Influence>;
+using InfluenceVertex = InfluenceGraph::VertexPtr;
+
+struct Vertex {
+    Vertex(RulePtr rule, NetworkSpace domain, InfluenceVertex influence):
+        rule(rule), domain(domain), influence_vertex(influence) {}
+
+    RulePtr rule;
+    NetworkSpace domain;
+    InfluenceVertex influence_vertex;
+};
+
+struct Edge {
+    Edge(Transfer transfer, NetworkSpace domain):
+        transfer(transfer), domain(domain) {}
+
     Transfer transfer;
     NetworkSpace domain;
 };
 
-using GraphData = Graph<Vertex, Edge>;
-using VertexDescriptor = GraphData::VertexDescriptor;
-using EdgeDescriptor = GraphData::EdgeDescriptor;
-using EdgeRange = GraphData::EdgeRange;
+using RuleGraph = Graph<Vertex, Edge>;
+using VertexPtr = RuleGraph::VertexPtr;
+using EdgePtr = RuleGraph::EdgePtr;
+using EdgeRange = RuleGraph::EdgeRange;

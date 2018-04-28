@@ -85,7 +85,7 @@ Match Parser::get_match(of13::Match match)
 {
     PortId in_port = SpecialPort::ANY;
     auto bit_vector = BitVectorBridge(
-        BitVector::wholeSpace(Mapping::HEADER_SIZE)
+        BitMask::wholeSpace(Mapping::HEADER_SIZE)
     );
 
     // Input port
@@ -245,7 +245,7 @@ Transfer Parser::get_transfer(const of13::SetFieldAction* action)
     PortId in_port = SpecialPort::ANY;
     PortId out_port = SpecialPort::NONE;
     auto bit_vector = BitVectorBridge(
-        BitVector::wholeSpace(Mapping::HEADER_SIZE)
+        BitMask::wholeSpace(Mapping::HEADER_SIZE)
     );
 
     auto field = action->field();

@@ -68,7 +68,7 @@ void PathScan::forEachPathNode(NodeDescriptor source, NodeDescriptor sink,
 NodeDescriptor PathScan::addRootNode(RulePtr rule)
 {
     assert(RuleType::SINK == rule->type());
-    auto domain = rule->domain();
+    auto domain = rule->match();
     auto multiplier = (uint64_t)1;
     auto root_transfer = Transfer::portTransfer(domain.inPort());
     auto node = add_node(rule, std::move(domain),

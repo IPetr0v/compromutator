@@ -24,11 +24,15 @@ void Compromutator::run()
         auto status = alarm_->wait(std::chrono::milliseconds(100));
         if (status == Alarm::Status::TIMEOUT) {
             controller_.detector.prepareInstructions();
-            // TODO: add barrier or flush pipeline
+            pipeline_.addBarrier();
+
+            // TODO: delete this after implementing instruction handler
+            pipeline_.flushPipeline();
         }
         else {
             if (controller_.detector.instructionsExist()) {
                 handle_detector_instruction();
+                pipeline_.flushPipeline();
             }
             if (proxy_.eventsExist()) {
                 handle_proxy_event();
@@ -40,9 +44,9 @@ void Compromutator::run()
 void Compromutator::handle_detector_instruction()
 {
     // TODO: implement instruction handling
-    /*while (detector_.instructionsExist()) {
-        auto instruction = detector_.getInstruction();
-        for (const auto& request : instruction.requests.data) {
+    while (controller_.detector.instructionsExist()) {
+        auto instruction = controller_.detector.getInstruction();
+        /*for (const auto& request : instruction.requests.data) {
             auto request_id = request->id;
             if (auto rule_request = RuleRequest::pointerCast(request)) {
                 auto rule = rule_request->rule;
@@ -65,8 +69,8 @@ void Compromutator::handle_detector_instruction()
 
         for (auto rule_to_add : instruction.interceptor_diff.rules_to_add) {
             controller_.installRule(rule_to_add);
-        }
-    }*/
+        }*/
+    }
 }
 
 void Compromutator::handle_proxy_event()

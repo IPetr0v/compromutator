@@ -14,16 +14,16 @@ enum SpecialPort: PortId
 class Match
 {
 public:
-    Match(PortId in_port, BitVector&& header);
+    Match(PortId in_port, BitMask&& header);
 
     PortId inPort() const {return in_port_;}
-    BitVector header() const {return header_;}
+    BitMask header() const {return header_;}
 
     friend class NetworkSpace;
 
 private:
     PortId in_port_;
-    BitVector header_;
+    BitMask header_;
 
 };
 
@@ -63,6 +63,7 @@ public:
     NetworkSpace operator-(const NetworkSpace& right);
     NetworkSpace operator&(const NetworkSpace& right);
 
+    std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os,
                                     const NetworkSpace& domain);
 
@@ -95,6 +96,7 @@ public:
     NetworkSpace apply(NetworkSpace domain) const;
     NetworkSpace inverse(NetworkSpace domain) const;
 
+    std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os,
                                     const Transfer& transfer);
 

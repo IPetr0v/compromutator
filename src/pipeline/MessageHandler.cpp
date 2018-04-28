@@ -46,6 +46,8 @@ Action MessageHandler::visit(of13::PacketIn& packet_in)
 {
     // Check for LLDP
     try {
+        std::cout<<"New LLDP"<<std::endl;
+
         auto lldp = proto::LLDP(packet_in.data(), packet_in.data_len());
         auto in_port = packet_in.match().in_port()->value();
         ctrl_.link_discovery.handleLLDP(connection_id_, in_port, lldp);

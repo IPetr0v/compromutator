@@ -77,8 +77,13 @@ private:
         >
         static MaskedBitSet to_bitset(const Type* object) {
             auto value = get_integer_value(object->value());
-            auto mask = get_integer_value(object->mask());
-            return MaskedBitSet(value, mask);
+            if (object->has_mask()) {
+                auto mask = get_integer_value(object->mask());
+                return MaskedBitSet(value, mask);
+            }
+            else {
+                return MaskedBitSet(value);
+            }
         }
 
         template<
@@ -141,15 +146,15 @@ public:
 class BitVectorBridge
 {
 public:
-    explicit BitVectorBridge(const BitVector& bit_vector):
+    explicit BitVectorBridge(const BitMask& bit_vector):
         bit_vector_(bit_vector) {}
-    explicit BitVectorBridge(BitVector&& bit_vector):
+    explicit BitVectorBridge(BitMask&& bit_vector):
         bit_vector_(std::move(bit_vector)) {}
 
-    BitVector copyBitVector() const {
+    BitMask copyBitVector() const {
         return bit_vector_;
     }
-    BitVector popBitVector() {
+    BitMask popBitVector() {
         return std::move(bit_vector_);
     }
 
@@ -170,7 +175,7 @@ public:
     }
 
 private:
-    BitVector bit_vector_;
+    BitMask bit_vector_;
 
     template<class Map>
     typename Map::MaskedBitSet get_bits() const {

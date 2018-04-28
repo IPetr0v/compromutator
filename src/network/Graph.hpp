@@ -2,88 +2,100 @@
 
 #include <algorithm>
 #include <list>
+#include <type_traits>
+#include <utility>
 
-template<typename VertexDataType, typename EdgeDataType = int>
-class Graph
-{
+struct EmptyVertex {};
+
+template<typename VertexData, typename EdgeData = EmptyVertex>
+class Graph {
 public:
     struct Vertex;
     struct Edge;
-    using VertexDescriptor = typename std::list<Vertex>::iterator;
-    using EdgeDescriptor = typename std::list<Edge>::iterator;
-    using AdjacencyPair = typename std::pair<VertexDescriptor, EdgeDescriptor>;
+    using VertexPtr = typename std::list<Vertex>::iterator;
+    using EdgePtr   = typename std::list<Edge>::iterator;
+    using AdjacencyPair = typename std::pair<VertexPtr, EdgePtr>;
     using AdjacencyList = typename std::list<AdjacencyPair>;
 
-    struct Vertex
-    {
-        explicit Vertex(VertexDataType&& data) : data(std::move(data)) {}
+    struct Vertex: public VertexData {
+        template<typename... Args>
+        explicit Vertex(Args... args):
+            VertexData(std::forward<Args>(args)...) {}
 
+    private:
         AdjacencyList out_adjacency_list;
         AdjacencyList in_adjacency_list;
-        VertexDataType data;
+
+        friend class Graph;
     };
 
-    struct Edge
-    {
-        explicit Edge(VertexDescriptor src_vertex,
-                      VertexDescriptor dst_vertex,
-                      EdgeDataType&& data):
-            src_vertex(src_vertex),
-            dst_vertex(dst_vertex),
-            data(std::move(data)) {}
+    struct Edge: EdgeData {
+        template<typename... Args>
+        Edge(VertexPtr src, VertexPtr dst, Args... args):
+            EdgeData(std::forward<Args>(args)...), src(src), dst(dst) {}
 
-        VertexDescriptor src_vertex;
-        VertexDescriptor dst_vertex;
-        EdgeDataType data;
+        VertexPtr src;
+        VertexPtr dst;
     };
 
-    struct AdjacencyIterator
-    {
-        explicit AdjacencyIterator(typename AdjacencyList::iterator iterator) :
+    template<class Elem>
+    struct Iterator {
+        explicit Iterator(typename AdjacencyList::iterator iterator):
             adjacency_iterator_(iterator) {}
 
-        bool operator!=(const AdjacencyIterator& other)
-        {
+        bool operator!=(const Iterator<Elem>& other) {
             return adjacency_iterator_ != other.adjacency_iterator_;
         }
 
-        const AdjacencyIterator& operator++()
-        {
+        const Iterator<Elem>& operator++() {
             adjacency_iterator_++;
             return *this;
         }
 
-    protected:
+        Iterator<Elem> operator++(int) {
+            auto iter_copy = *this;
+            adjacency_iterator_++;
+            return iter_copy;
+        }
+
+        Elem& operator*() const {
+            return getElem<Elem>();
+        }
+
+    private:
         typename AdjacencyList::iterator adjacency_iterator_;
-    };
 
-    struct VertexIterator : public AdjacencyIterator
-    {
-        explicit VertexIterator(typename AdjacencyList::iterator iterator) :
-            AdjacencyIterator(iterator) {}
+        template<
+            typename T,
+            typename std::enable_if_t<
+                std::is_same<T, VertexPtr>::value
+            >* = nullptr
+        >
+        Elem& getElem() const {
+            return adjacency_iterator_->first;
+        }
 
-        VertexDescriptor& operator*() const
-        {
-            return this->adjacency_iterator_->first;
+        template<
+            typename T,
+            typename std::enable_if_t<
+                std::is_same<T, EdgePtr>::value
+            >* = nullptr
+        >
+        Elem& getElem() const {
+            return adjacency_iterator_->second;
         }
     };
 
-    struct EdgeIterator : public AdjacencyIterator
-    {
-        explicit EdgeIterator(typename AdjacencyList::iterator iterator) :
-            AdjacencyIterator(iterator) {}
+    using VertexIterator = Iterator<VertexPtr>;
+    using EdgeIterator   = Iterator<EdgePtr>;
 
-        EdgeDescriptor& operator*() const
-        {
-            return this->adjacency_iterator_->second;
-        }
-    };
-
-    struct AdjacencyRange
-    {
-        explicit AdjacencyRange(AdjacencyList& list) :
+    template<class Elem>
+    struct Range {
+        explicit Range(AdjacencyList& list):
             begin_(list.begin()), end_(list.end()) {}
 
+        Iterator<Elem> begin() {return Iterator<Elem>(this->begin_);}
+        Iterator<Elem> end()   {return Iterator<Elem>(this->end_);}
         bool empty() const {return not (begin_ != end_);}
 
     protected:
@@ -91,51 +103,33 @@ public:
         typename AdjacencyList::iterator end_;
     };
 
-    struct VertexRange : public AdjacencyRange
-    {
-        explicit VertexRange(AdjacencyList& list) :
-            AdjacencyRange(list) {}
+    using VertexRange = Range<VertexPtr>;
+    using EdgeRange   = Range<EdgePtr>;
 
-        VertexIterator begin() {return VertexIterator(this->begin_);}
-        VertexIterator end() {return VertexIterator(this->end_);}
-    };
-
-    struct EdgeRange : public AdjacencyRange
-    {
-        explicit EdgeRange(AdjacencyList& list) :
-            AdjacencyRange(list) {}
-
-        EdgeIterator begin() {return EdgeIterator(this->begin_);}
-        EdgeIterator end() {return EdgeIterator(this->end_);}
-    };
-
-    VertexDescriptor addVertex(VertexDataType&& data)
-    {
-        return vertex_list_.emplace(vertex_list_.end(), std::move(data));
+    template<typename... Args>
+    VertexPtr addVertex(Args... args) {
+        return vertex_list_.emplace(vertex_list_.end(),
+            std::forward<Args>(args)...
+        );
     }
 
-    void deleteVertex(VertexDescriptor vertex)
-    {
+    void deleteVertex(VertexPtr vertex) {
         deleteEdges(vertex);
         vertex_list_.erase(vertex);
     }
 
-    EdgeDescriptor addEdge(VertexDescriptor src_vertex,
-                           VertexDescriptor dst_vertex,
-                           EdgeDataType&& data = EdgeDataType())
-    {
+    template<typename... Args>
+    EdgePtr addEdge(VertexPtr src, VertexPtr dst, Args... args) {
         auto edge = edge_list_.emplace(edge_list_.end(),
-            src_vertex, dst_vertex, std::move(data)
+            src, dst, std::forward<Args>(args)...
         );
-        src_vertex->out_adjacency_list.emplace_back(dst_vertex, edge);
-        dst_vertex->in_adjacency_list.emplace_back(src_vertex, edge);
+        src->out_adjacency_list.emplace_back(dst, edge);
+        dst->in_adjacency_list.emplace_back(src, edge);
         return edge;
     }
 
-    void deleteEdge(VertexDescriptor src_vertex,
-                    VertexDescriptor dst_vertex)
-    {
-        auto edge_pair = edge(src_vertex, dst_vertex);
+    void deleteEdge(VertexPtr src, VertexPtr dst) {
+        auto edge_pair = edge(src, dst);
         bool edge_exists = edge_pair.second;
         if (edge_exists) {
             auto edge = edge_pair.first;
@@ -143,20 +137,16 @@ public:
         }
     }
 
-    void deleteEdge(EdgeDescriptor edge)
-    {
-        auto src_vertex = edge->src_vertex;
-        auto dst_vertex = edge->dst_vertex;
-        auto& out_list = src_vertex->out_adjacency_list;
-        auto& in_list = dst_vertex->in_adjacency_list;
+    void deleteEdge(EdgePtr edge) {
+        auto& out_list = edge->src->out_adjacency_list;
+        auto& in_list = edge->dst->in_adjacency_list;
 
         delete_from_list(edge, out_list);
         delete_from_list(edge, in_list);
         edge_list_.erase(edge);
     }
 
-    void deleteOutEdges(VertexDescriptor vertex)
-    {
+    void deleteOutEdges(VertexPtr vertex) {
         for (auto adjacency_pair : vertex->out_adjacency_list) {
             auto dst_vertex = adjacency_pair.first;
             auto edge = adjacency_pair.second;
@@ -171,8 +161,7 @@ public:
         vertex->out_adjacency_list.clear();
     }
 
-    void deleteInEdges(VertexDescriptor vertex)
-    {
+    void deleteInEdges(VertexPtr vertex) {
         for (auto adjacency_pair : vertex->in_adjacency_list) {
             auto src_vertex = adjacency_pair.first;
             auto edge = adjacency_pair.second;
@@ -187,79 +176,67 @@ public:
         vertex->in_adjacency_list.clear();
     }
 
-    void deleteEdges(VertexDescriptor vertex)
-    {
+    void deleteEdges(VertexPtr vertex) {
         deleteOutEdges(vertex);
         deleteInEdges(vertex);
     }
 
-    VertexDataType& vertexData(VertexDescriptor vertex_desc)
-    {
-        return vertex_desc->data;
-    }
-
-    EdgeDataType& edgeData(EdgeDescriptor edge_desc)
-    {
-        return edge_desc->data;
-    }
-
-    std::pair<EdgeDescriptor, bool> edge(VertexDescriptor src_vertex,
-                                         VertexDescriptor dst_vertex)
-    {
-        auto& src_out_list = src_vertex->out_adjacency_list;
+    std::pair<EdgePtr, bool> edge(VertexPtr src, VertexPtr dst) {
+        auto& src_out_list = src->out_adjacency_list;
         auto it = std::find_if(src_out_list.begin(), src_out_list.end(),
-            [dst_vertex](AdjacencyPair pair) -> bool {
-                return pair.first == dst_vertex;
+            [dst](AdjacencyPair pair) -> bool {
+                return pair.first == dst;
             }
         );
         if (it != src_out_list.end()) {
             auto found_edge = it->second;
             return {found_edge, true};
         }
-        return {EdgeDescriptor(nullptr), false};
+        return {EdgePtr(nullptr), false};
     }
 
-    VertexDescriptor srcVertex(EdgeDescriptor edge_desc)
-    {
+    VertexPtr srcVertex(EdgePtr edge_desc) {
         return edge_desc->src_vertex;
     }
 
-    VertexDescriptor dstVertex(EdgeDescriptor edge_desc)
-    {
+    VertexPtr dstVertex(EdgePtr edge_desc) {
         return edge_desc->dst_vertex;
     }
 
     // TODO: return descriptors
     const std::list<Vertex>& vertices() {return vertex_list_;}
 
-    VertexRange outVertices(VertexDescriptor vertex)
-    {
+    VertexRange outVertices(VertexPtr vertex) {
         return VertexRange(vertex->out_adjacency_list);
     }
 
-    VertexRange inVertices(VertexDescriptor vertex)
-    {
+    VertexRange inVertices(VertexPtr vertex) {
         return VertexRange(vertex->in_adjacency_list);
     }
 
     const std::list<Edge>& edges() {return edge_list_;}
 
-    EdgeRange outEdges(VertexDescriptor vertex)
-    {
+    EdgeRange outEdges(VertexPtr vertex) {
         return EdgeRange(vertex->out_adjacency_list);
     }
 
-    EdgeRange inEdges(VertexDescriptor vertex)
-    {
+    EdgeRange inEdges(VertexPtr vertex) {
         return EdgeRange(vertex->in_adjacency_list);
+    }
+
+    size_t outDegree(VertexPtr vertex) const {
+        return vertex->out_adjacency_list.size();
+    }
+
+    size_t inDegree(VertexPtr vertex) const {
+        return vertex->in_adjacency_list.size();
     }
 
 private:
     std::list<Vertex> vertex_list_;
     std::list<Edge> edge_list_;
 
-    void delete_from_list(EdgeDescriptor edge, AdjacencyList& list)
-    {
+    void delete_from_list(EdgePtr edge, AdjacencyList& list) {
         list.erase(std::remove_if(list.begin(), list.end(),
                                   [edge](AdjacencyPair pair) -> bool {
                                       return pair.second == edge;

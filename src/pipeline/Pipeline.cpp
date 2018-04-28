@@ -89,9 +89,10 @@ void Pipeline::addBarrier()
 
 void Pipeline::flushPipeline()
 {
-    // TODO: check pipeline for emptiness
-    for (auto message : queue_.pop()) {
-        forward_message(message);
+    if (not queue_.empty()) {
+        for (auto message : queue_.pop()) {
+            forward_message(message);
+        }
     }
 }
 

@@ -31,6 +31,8 @@ public:
     void addBarrier();
     void flushPipeline();
 
+    size_t queueSize() const {return queue_.size();}
+
 private:
     Sender sender_;
     Controller& controller_;

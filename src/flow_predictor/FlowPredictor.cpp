@@ -60,9 +60,7 @@ void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
     }
 
     for (auto& changed_edge : edge_diff.changed_edges) {
-        auto src_rule = dependency_graph_->edge(changed_edge).src_rule;
-        auto dst_rule = dependency_graph_->edge(changed_edge).dst_rule;
-        delete_subtrees({src_rule, dst_rule});
+        delete_subtrees({changed_edge->src->rule, changed_edge->dst->rule});
         add_subtrees(changed_edge);
     }
 
@@ -150,9 +148,9 @@ void FlowPredictor::process_link_query(const LinkStatsPtr& query)
 
 }
 
-void FlowPredictor::add_subtrees(EdgeDescriptor edge)
+void FlowPredictor::add_subtrees(EdgePtr edge)
 {
-    auto dst_rule = dependency_graph_->edge(edge).dst_rule;
+    auto dst_rule = edge->dst->rule;
 
     bool is_new_rule = not path_scan_->ruleExists(dst_rule);
     if (RuleType::SINK == dst_rule->type() && is_new_rule) {
@@ -184,9 +182,9 @@ void FlowPredictor::delete_subtrees(std::pair<RulePtr, RulePtr> edge)
 }
 
 bool FlowPredictor::is_existing_child(NodeDescriptor parent,
-                                      EdgeDescriptor edge) const
+                                      EdgePtr edge) const
 {
-    auto src_rule = dependency_graph_->edge(edge).src_rule;
+    auto src_rule = edge->src->rule;
     for (auto child : path_scan_->getChildNodes(parent)) {
         auto child_rule = path_scan_->node(child).rule;
         if (src_rule->id() == child_rule->id()) {
@@ -197,16 +195,16 @@ bool FlowPredictor::is_existing_child(NodeDescriptor parent,
 }
 
 std::pair<NodeDescriptor, bool>
-FlowPredictor::add_child_node(NodeDescriptor parent, EdgeDescriptor edge)
+FlowPredictor::add_child_node(NodeDescriptor parent, EdgePtr edge)
 {
     auto parent_domain = path_scan_->node(parent).domain;
     auto parent_multiplier = path_scan_->node(parent).multiplier;
     auto edge_domain = dependency_graph_->edge(edge).domain;
 
-    auto rule = dependency_graph_->edge(edge).src_rule;
+    auto rule = edge->src->rule;
     auto& transfer = dependency_graph_->edge(edge).transfer;
     auto domain =
-        transfer.inverse(edge_domain & parent_domain) & rule->domain();
+        transfer.inverse(edge_domain & parent_domain) & rule->match();
     auto multiplier = rule->multiplier() * parent_multiplier;
 
     // Create node

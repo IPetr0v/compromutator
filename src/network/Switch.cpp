@@ -47,7 +47,7 @@ RuleRange Table::upperRules(RulePtr rule)
 {
     auto it = rule_map_.upper_bound(rule->id());
     RuleMap::reverse_iterator reverse_it(it);
-    auto upper_bound = std::find_if(reverse_it, rule_map_.rbegin(),
+    auto upper_bound = std::find_if(reverse_it, rule_map_.rend(),
         [rule](const std::pair<RuleId, RulePtr>& rule_pair) -> bool {
             auto upper_rule = rule_pair.second;
             return rule->priority() < upper_rule->priority();
@@ -67,6 +67,11 @@ RuleRange Table::lowerRules(RulePtr rule)
     );
     // TODO: CRITICAL - check std::greater<> with upper/lower bounds
     return {rule_map_, lower_bound, rule_map_.end()};
+}
+
+bool Table::isFrontTable() const
+{
+    return sw_->frontTable()->id() == id_;
 }
 
 Port::Port(SwitchPtr sw, PortInfo info):
@@ -124,11 +129,6 @@ Switch::~Switch()
         delete it.second;
     }
     table_map_.clear();
-}
-
-bool Switch::isFrontTable(TablePtr table) const
-{
-    return (table->sw()->id() == id_) && (table->id() == front_table_->id());
 }
 
 PortPtr Switch::port(PortId id) const

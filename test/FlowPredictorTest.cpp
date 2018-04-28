@@ -153,7 +153,7 @@ protected:
             [sw_id, domain](RulePtr rule) {
                 if (rule->sw()) {
                     return rule->sw()->id() == sw_id &&
-                           rule->domain() == domain;
+                        rule->match() == domain;
                 }
                 return false;
             }
@@ -172,7 +172,7 @@ protected:
                 auto rule = rule_request->rule;
                 if (rule->sw()) {
                     return rule->sw()->id() == sw_id &&
-                           rule->domain() == domain;
+                        rule->match() == domain;
                 }
                 return false;
             }

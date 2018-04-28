@@ -72,8 +72,8 @@ set(FLUID_BASE_SRC
     ${FLUID_BASE_SRC_DIR}/base/of.hh
     ${FLUID_BASE_SRC_DIR}/OFClient.hh
     ${FLUID_BASE_SRC_DIR}/OFClient.cc
-    ${FLUID_BASE_SRC_DIR}/TLS.hh
-    ${FLUID_BASE_SRC_DIR}/TLS.cc
+    #${FLUID_BASE_SRC_DIR}/TLS.hh
+    #${FLUID_BASE_SRC_DIR}/TLS.cc
 )
 
 # Build fluid_msg
@@ -135,7 +135,8 @@ include_directories(SYSTEM
 )
 
 find_package(Threads MODULE REQUIRED)
-find_package(OpenSSL MODULE REQUIRED)
+# TODO: fix config.h and delete openssl dependency
+#find_package(OpenSSL MODULE REQUIRED)
 
 if (EVENT_INCLUDE_DIR AND EVENT_LIBRARY)
     # Already in cache, be silent
@@ -159,11 +160,11 @@ find_library(EVENT_CORE_LIBRARY
     )
 set(EVENT_CORE_LIBRARIES ${EVENT_CORE_LIBRARY})
 
-find_library(EVENT_OPENSSL_LIBRARY
-    NAMES event_openssl
-    PATHS /usr/lib /usr/local/lib
-)
-set(EVENT_OPENSSL_LIBRARIES ${EVENT_OPENSSL_LIBRARY})
+#find_library(EVENT_OPENSSL_LIBRARY
+#    NAMES event_openssl
+#    PATHS /usr/lib /usr/local/lib
+#)
+#set(EVENT_OPENSSL_LIBRARIES ${EVENT_OPENSSL_LIBRARY})
 
 find_library(EVENT_PTHREADS_LIBRARY
     NAMES event_pthreads

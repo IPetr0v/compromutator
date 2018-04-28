@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -55,7 +56,7 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         Item item = std::move(items_.front());
         items_.pop();
-        return std::move(item);
+        return item;
     }
 
 private:
@@ -87,7 +88,7 @@ public:
         }
         Item item = std::move(items_.front());
         items_.pop();
-        return std::move(item);
+        return item;
     }
 
 private:

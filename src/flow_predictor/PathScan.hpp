@@ -7,6 +7,7 @@
 #include "../network/Network.hpp"
 #include "../network/Rule.hpp"
 
+#include <functional>
 #include <map>
 #include <memory>
 
