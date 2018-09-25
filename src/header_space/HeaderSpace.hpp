@@ -31,6 +31,10 @@ public:
     BitMask& operator=(const BitMask& other);
     BitMask& operator=(BitMask&& other) noexcept;
 
+    bool operator==(const BitMask& other) const;
+    bool operator<=(const BitMask& other) const;
+    bool operator>=(const BitMask& other) const;
+
     BitValue getBit(uint32_t index) const;
     void setBit(uint32_t index, BitValue bit_value);
     //void operator[](uint32_t index);

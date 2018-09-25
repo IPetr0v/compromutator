@@ -146,7 +146,7 @@ void StatsManager::requestRule(RulePtr rule)
     bucket->addStats(stats);
 }
 
-void StatsManager::requestPath(PathId id, DomainPathDescriptor path,
+void StatsManager::requestPath(PathId id, DomainPathPtr path,
                                RulePtr source_interceptor,
                                RulePtr sink_interceptor)
 {

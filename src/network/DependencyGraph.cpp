@@ -12,7 +12,9 @@ EdgeInstaller::EdgeInstaller(RuleGraph& graph):
 EdgeDiff EdgeInstaller::popEdgeDiff()
 {
     clearEmptyEdges();
-    return std::move(diff_);
+    auto diff = std::move(diff_);
+    diff_.clear();
+    return diff;
 }
 
 EdgePtr EdgeInstaller::addEdge(VertexPtr src, VertexPtr dst,
@@ -37,7 +39,7 @@ EdgePtr EdgeInstaller::addEdge(VertexPtr src, VertexPtr dst,
 
 void EdgeInstaller::updateEdge(EdgePtr edge)
 {
-    auto src_domain = (edge->src->rule->match());
+    auto src_domain = edge->src->rule->match();
     auto domain = edge->transfer.apply(src_domain) & edge->dst->domain;
     if (not domain.empty()) {
         edge->domain = domain;
@@ -89,6 +91,7 @@ void EdgeInstaller::clearEmptyEdges()
         ));
         rule_graph_.deleteEdge(empty_edge);
     }
+    empty_edges_.clear();
 }
 
 DependencyGraph::DependencyGraph(std::shared_ptr<Network> network):

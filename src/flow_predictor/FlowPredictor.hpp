@@ -71,23 +71,23 @@ private:
 
     Timestamp current_time() const {return stats_manager_->frontTime();}
 
-    void predict_subtree(NodeDescriptor root);
+    void predict_subtree(NodePtr root);
 
     void process_stats_list(std::list<StatsPtr>&& stats_list);
     void process_rule_query(const RuleStatsPtr& query);
     void process_path_query(const PathStatsPtr& query);
     void process_link_query(const LinkStatsPtr& query);
 
-    bool is_existing_child(NodeDescriptor parent, EdgePtr edge) const;
-    std::pair<NodeDescriptor, bool> add_child_node(NodeDescriptor parent,
+    bool is_existing_child(NodePtr parent, EdgePtr edge) const;
+    std::pair<NodePtr, bool> add_child_node(NodePtr parent,
                                                    EdgePtr edge);
     void add_subtrees(EdgePtr edge);
     void delete_subtrees(std::pair<RulePtr, RulePtr> edge);
-    void add_subtree(NodeDescriptor subtree_root);
-    void delete_subtree(NodeDescriptor subtree_root);
+    void add_subtree(NodePtr subtree_root);
+    void delete_subtree(NodePtr subtree_root);
 
-    void query_domain_path(NodeDescriptor source, NodeDescriptor sink);
-    void add_domain_path(NodeDescriptor source, NodeDescriptor sink);
-    void delete_domain_path(NodeDescriptor source, NodeDescriptor sink);
+    void query_domain_path(NodePtr source, NodePtr sink);
+    void add_domain_path(NodePtr source, NodePtr sink);
+    void delete_domain_path(NodePtr source, NodePtr sink);
 
 };

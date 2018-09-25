@@ -10,13 +10,11 @@ Client::Client(ConnectionManager* connection_manager, uint32_t thread_num,
                OFServerSettings settings):
     OFClient(thread_num, settings), connection_manager_(connection_manager)
 {
-    //std::cout<<"Starting Client"<<std::endl;
     OFClient::start();
 }
 
 Client::~Client()
 {
-    //std::cout<<"Finishing Client"<<std::endl;
     OFClient::stop();
 }
 
@@ -39,13 +37,11 @@ Server::Server(ConnectionManager* connection_manager,
     OFServer(address.c_str(), port, thread_num, false, settings),
     connection_manager_(connection_manager)
 {
-    //std::cout<<"Starting Server"<<std::endl;
     OFServer::start();
 }
 
 Server::~Server()
 {
-    //std::cout<<"Finishing Server"<<std::endl;
     OFServer::stop();
 }
 
@@ -317,12 +313,6 @@ void ConnectionManager::delete_proxy_connection(OFConnection* connection)
     auto id = get_id(connection);
     auto waiting_it = waiting_connections_.find(id);
     auto connection_it = connections_.find(id);
-    // There cannot be same waiting connections and proxy connections
-    bool is_waiting = waiting_connections_.end() != waiting_it and
-                      connections_.end() == connection_it;
-    bool is_connected = waiting_connections_.end() == waiting_it and
-                        connections_.end() != connection_it;
-    assert(is_waiting or is_connected);
 
     if (waiting_connections_.end() != waiting_it) {
         // TODO: delete old connections and their messages

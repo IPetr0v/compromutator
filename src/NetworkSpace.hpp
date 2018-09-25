@@ -15,6 +15,15 @@ class Match
 {
 public:
     Match(PortId in_port, BitMask&& header);
+    Match(const Match&) = default;
+    Match(Match&&) = default;
+
+    Match& operator=(const Match& other) = default;
+    Match& operator=(Match&& other) noexcept = default;
+
+    bool operator==(const Match& other) const;
+    bool operator<=(const Match& other) const;
+    bool operator>=(const Match& other) const;
 
     PortId inPort() const {return in_port_;}
     BitMask header() const {return header_;}

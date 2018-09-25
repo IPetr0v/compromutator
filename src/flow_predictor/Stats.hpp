@@ -31,13 +31,13 @@ using RuleStatsPtr = std::shared_ptr<RuleStats>;
 
 struct PathStats : public Stats
 {
-    PathStats(Timestamp time, DomainPathDescriptor path,
+    PathStats(Timestamp time, DomainPathPtr path,
               RulePtr source_interceptor, RulePtr sink_interceptor):
         Stats(time), path(path),
         source_interceptor(source_interceptor),
         sink_interceptor(sink_interceptor) {}
 
-    DomainPathDescriptor path;
+    DomainPathPtr path;
     RulePtr source_interceptor;
     RulePtr sink_interceptor;
 
@@ -175,7 +175,7 @@ public:
     Timestamp backTime() const;
 
     void requestRule(RulePtr rule);
-    void requestPath(PathId id, DomainPathDescriptor path,
+    void requestPath(PathId id, DomainPathPtr path,
                      RulePtr source_interceptor,
                      RulePtr sink_interceptor);
     void requestLink(PortPtr src_port, PortPtr dst_port);

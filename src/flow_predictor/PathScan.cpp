@@ -11,7 +11,7 @@ Node::Node(NodeId id, RulePtr rule, NetworkSpace&& domain,
 
 }
 
-DomainPath::DomainPath(PathId id, NodeDescriptor source, NodeDescriptor sink,
+DomainPath::DomainPath(PathId id, NodePtr source, NodePtr sink,
                        Timestamp starting_time):
     id(id), source(source), sink(sink), source_domain(source->domain),
     sink_domain(source->root_transfer.apply(source_domain)),
@@ -20,9 +20,9 @@ DomainPath::DomainPath(PathId id, NodeDescriptor source, NodeDescriptor sink,
 
 }
 
-void PathScan::forEachSubtreeNode(NodeDescriptor root, NodeVisitor visitor)
+void PathScan::forEachSubtreeNode(NodePtr root, NodeVisitor visitor)
 {
-    std::queue<NodeDescriptor> node_queue;
+    std::queue<NodePtr> node_queue;
     node_queue.push(root);
     while (not node_queue.empty()) {
         // Save child nodes to the queue
@@ -43,10 +43,10 @@ void PathScan::forEachSubtreeNode(NodeDescriptor root, NodeVisitor visitor)
     }
 }
 
-void PathScan::forEachPathNode(NodeDescriptor source, NodeDescriptor sink,
+void PathScan::forEachPathNode(NodePtr source, NodePtr sink,
                                NodeDeletingVisitor deleting_visitor)
 {
-    std::queue<NodeDescriptor> node_queue;
+    std::queue<NodePtr> node_queue;
     node_queue.push(source);
     while (not node_queue.empty()) {
         // Save the parent node to the queue
@@ -65,7 +65,7 @@ void PathScan::forEachPathNode(NodeDescriptor source, NodeDescriptor sink,
     }
 }
 
-NodeDescriptor PathScan::addRootNode(RulePtr rule)
+NodePtr PathScan::addRootNode(RulePtr rule)
 {
     assert(RuleType::SINK == rule->type());
     auto domain = rule->match();
@@ -74,11 +74,11 @@ NodeDescriptor PathScan::addRootNode(RulePtr rule)
     auto node = add_node(rule, std::move(domain),
                          root_transfer, multiplier);
     node->root = node;
-    node->parent = NodeDescriptor(nullptr);
+    node->parent = NodePtr(nullptr);
     return node;
 }
 
-NodeDescriptor PathScan::addChildNode(NodeDescriptor parent, RulePtr rule,
+NodePtr PathScan::addChildNode(NodePtr parent, RulePtr rule,
                                       NetworkSpace&& domain,
                                       const Transfer& transfer,
                                       uint64_t multiplier)
@@ -96,7 +96,7 @@ NodeDescriptor PathScan::addChildNode(NodeDescriptor parent, RulePtr rule,
     return node;
 }
 
-void PathScan::setNodeFinalTime(NodeDescriptor node, Timestamp final_time)
+void PathScan::setNodeFinalTime(NodePtr node, Timestamp final_time)
 {
     // Node version becomes old
     assert(Timestamp::max() != final_time);
@@ -120,26 +120,26 @@ void PathScan::setNodeFinalTime(NodeDescriptor node, Timestamp final_time)
     }
 }
 
-void PathScan::deleteNode(NodeDescriptor node)
+void PathScan::deleteNode(NodePtr node)
 {
     // We must delete only old versions
     assert(Timestamp::max() != node->final_time_);
     node_list_.erase(node);
 }
 
-const DomainPath& PathScan::domainPath(DomainPathDescriptor desc) const
+const DomainPath& PathScan::domainPath(DomainPathPtr desc) const
 {
     return *desc;
 }
-DomainPathDescriptor PathScan::outDomainPath(NodeDescriptor source) const
+DomainPathPtr PathScan::outDomainPath(NodePtr source) const
 {
     assert(source->rule->type() == RuleType::SOURCE);
-    assert(source->out_path_ != DomainPathDescriptor(nullptr));
+    assert(source->out_path_ != DomainPathPtr(nullptr));
     return source->out_path_;
 }
 
-DomainPathDescriptor PathScan::addDomainPath(NodeDescriptor source,
-                                             NodeDescriptor sink,
+DomainPathPtr PathScan::addDomainPath(NodePtr source,
+                                             NodePtr sink,
                                              Timestamp starting_time)
 {
     assert(source->rule->type() == RuleType::SOURCE);
@@ -155,13 +155,13 @@ DomainPathDescriptor PathScan::addDomainPath(NodeDescriptor source,
     return path;
 }
 
-void PathScan::setDomainPathFinalTime(DomainPathDescriptor path,
+void PathScan::setDomainPathFinalTime(DomainPathPtr path,
                                       Timestamp final_time)
 {
     path->final_time = final_time;
 }
 
-void PathScan::deleteDomainPath(DomainPathDescriptor path)
+void PathScan::deleteDomainPath(DomainPathPtr path)
 {
 
 }
@@ -181,7 +181,7 @@ void PathScan::delete_rule_mapping(RulePtr rule)
     rule->rule_mapping_ = RuleMappingDescriptor(nullptr);
 }
 
-NodeDescriptor PathScan::add_node(RulePtr rule, NetworkSpace&& domain,
+NodePtr PathScan::add_node(RulePtr rule, NetworkSpace&& domain,
                                   const Transfer& root_transfer,
                                   uint64_t multiplier)
 {

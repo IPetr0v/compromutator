@@ -45,7 +45,7 @@ TEST_F(StatsManagerTest, BasicTest)
 
     stats_manager->requestRule(rule1);
     stats_manager->requestPath(
-        path_id, DomainPathDescriptor(nullptr), rule1, rule2
+        path_id, DomainPathPtr(nullptr), rule1, rule2
     );
     stats_manager->discardPathRequest(path_id);
 

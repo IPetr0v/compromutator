@@ -107,6 +107,7 @@ void Detector::Impl::addRule(SwitchId switch_id, RuleInfo&& info)
         switch_id, info.table_id, info.priority, info.cookie,
         std::move(match), std::move(info.actions)
     );
+    std::cout<<"New rule "<<rule<<std::endl;
     add_rule_to_predictor(rule);
 }
 
@@ -126,13 +127,13 @@ void Detector::Impl::addLink(TopoId src_topo_id, TopoId dst_topo_id)
     auto link_pair = network_->addLink(src_topo_id, dst_topo_id);
     bool link_added = link_pair.second;
     if (link_added) {
+        std::cout << "Link "
+                  << src_topo_id.first << ":" << src_topo_id.second << " <-> "
+                  << dst_topo_id.first << ":" << dst_topo_id.second
+                  << " discovered" << std::endl;
+
         auto link = link_pair.first;
         add_link_to_predictor(link);
-
-        std::cout << "Detector: new link "
-                  << src_topo_id.first << ":" << src_topo_id.second << " <-> "
-                  << dst_topo_id.first << ":" << dst_topo_id.second 
-                  << std::endl;
     }
 }
 
@@ -141,6 +142,11 @@ void Detector::Impl::deleteLink(TopoId src_topo_id, TopoId dst_topo_id)
     auto link_pair = network_->deleteLink(src_topo_id, dst_topo_id);
     bool link_exists = link_pair.second;
     if (link_exists) {
+        std::cout << "Link "
+                  << src_topo_id.first << ":" << src_topo_id.second << " <-> "
+                  << dst_topo_id.first << ":" << dst_topo_id.second
+                  << " broken" << std::endl;
+
         auto link = link_pair.first;
         delete_link_from_predictor(link);
     }

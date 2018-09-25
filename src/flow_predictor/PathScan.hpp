@@ -20,9 +20,9 @@ struct Node
     Node& operator=(Node&& other) noexcept = default;
 
     NodeId id;
-    NodeDescriptor root;
-    NodeDescriptor parent;
-    std::list<NodeDescriptor> children_;
+    NodePtr root;
+    NodePtr parent;
+    std::list<NodePtr> children_;
 
     RulePtr rule;
     NetworkSpace domain;
@@ -39,17 +39,17 @@ struct Node
     NodeRemovalIterator parent_backward_iterator_;
     NodeRemovalIterator vertex_backward_iterator_;
     Timestamp final_time_;
-    DomainPathDescriptor out_path_;
+    DomainPathPtr out_path_;
 };
 
 struct DomainPath
 {
-    DomainPath(PathId id, NodeDescriptor source, NodeDescriptor sink,
+    DomainPath(PathId id, NodePtr source, NodePtr sink,
                Timestamp starting_time);
 
     PathId id;
-    NodeDescriptor source;
-    NodeDescriptor sink;
+    NodePtr source;
+    NodePtr sink;
 
     NetworkSpace source_domain;
     NetworkSpace sink_domain;
@@ -65,47 +65,47 @@ struct DomainPath
 class PathScan
 {
 public:
-    using NodeVisitor = std::function<void(NodeDescriptor node)>;
-    using NodeDeletingVisitor = std::function<bool(NodeDescriptor node)>;
+    using NodeVisitor = std::function<void(NodePtr node)>;
+    using NodeDeletingVisitor = std::function<bool(NodePtr node)>;
 
     PathScan(): last_node_id_(0), last_path_id_(0) {}
 
     bool ruleExists(RulePtr rule) const {
         return RuleMappingDescriptor(nullptr) != rule->rule_mapping_;
     }
-    const Node& node(NodeDescriptor desc) const {return *desc;}
-    const std::list<NodeDescriptor>& getNodes(RulePtr rule) const {
+    const Node& node(NodePtr desc) const {return *desc;}
+    const std::list<NodePtr>& getNodes(RulePtr rule) const {
         return rule->rule_mapping_->node_list;
     }
-    const std::list<NodeDescriptor>& getChildNodes(NodeDescriptor node) const {
+    const std::list<NodePtr>& getChildNodes(NodePtr node) const {
         return node->children_;
     }
     uint64_t getRuleCounter(RulePtr rule) const {
         return rule->rule_mapping_->counter;
     }
-    uint64_t addNodeCounter(NodeDescriptor node, uint64_t new_counter) {
+    uint64_t addNodeCounter(NodePtr node, uint64_t new_counter) {
         return node->addCounter(new_counter);
     }
 
-    void forEachSubtreeNode(NodeDescriptor root, NodeVisitor visitor);
-    void forEachPathNode(NodeDescriptor source, NodeDescriptor sink,
+    void forEachSubtreeNode(NodePtr root, NodeVisitor visitor);
+    void forEachPathNode(NodePtr source, NodePtr sink,
                          NodeDeletingVisitor deleting_visitor);
 
-    NodeDescriptor addRootNode(RulePtr rule);
-    NodeDescriptor addChildNode(NodeDescriptor parent, RulePtr rule,
+    NodePtr addRootNode(RulePtr rule);
+    NodePtr addChildNode(NodePtr parent, RulePtr rule,
                                 NetworkSpace&& domain, const Transfer& transfer,
                                 uint64_t multiplier);
-    void setNodeFinalTime(NodeDescriptor node, Timestamp final_time);
-    void deleteNode(NodeDescriptor node);
+    void setNodeFinalTime(NodePtr node, Timestamp final_time);
+    void deleteNode(NodePtr node);
 
-    const DomainPath& domainPath(DomainPathDescriptor desc) const;
-    DomainPathDescriptor outDomainPath(NodeDescriptor source) const;
-    DomainPathDescriptor addDomainPath(NodeDescriptor source,
-                                       NodeDescriptor sink,
+    const DomainPath& domainPath(DomainPathPtr desc) const;
+    DomainPathPtr outDomainPath(NodePtr source) const;
+    DomainPathPtr addDomainPath(NodePtr source,
+                                       NodePtr sink,
                                        Timestamp starting_time);
-    void setDomainPathFinalTime(DomainPathDescriptor path,
+    void setDomainPathFinalTime(DomainPathPtr path,
                                 Timestamp final_time);
-    void deleteDomainPath(DomainPathDescriptor path);
+    void deleteDomainPath(DomainPathPtr path);
 
 private:
     std::list<RuleMapping> rule_mapping_list_;
@@ -116,7 +116,7 @@ private:
 
     RuleMappingDescriptor add_rule_mapping(RulePtr rule);
     void delete_rule_mapping(RulePtr rule);
-    NodeDescriptor add_node(RulePtr rule, NetworkSpace&& domain,
+    NodePtr add_node(RulePtr rule, NetworkSpace&& domain,
                             const Transfer& root_transfer,
                             uint64_t multiplier);
 

@@ -1,9 +1,13 @@
 #pragma once
 
+#include <fluid/util/util.h>
+
 #include <cstdint>
 #include <cstring>
 #include <arpa/inet.h>
+#include <iterator>
 #include <memory>
+#include <sstream>
 #include <vector>
 
 namespace proto {
@@ -62,16 +66,20 @@ class LLDP
 public:
     struct Tlv {
         explicit Tlv(const uint8_t* data):
-            type(*data), length(*(data + 1)), value(nullptr) {
+            value(nullptr)
+        {
+            auto header = reinterpret_cast<const uint16_t*>(data);
+            type = ntoh16(*header) >> 9;
+            length = ntoh16(*header) & 0x01FF;
             if (length > 0) {
-                auto value = new uint8_t[length];
+                value = new uint8_t[length];
                 std::memcpy(value, data + 2, length);
             }
         }
         Tlv(const Tlv& other):
             type(other.type), length(other.length), value(nullptr) {
             if (length > 0) {
-                auto value = new uint8_t[length];
+                value = new uint8_t[length];
                 std::memcpy(value, other.value, length);
             }
         }
@@ -101,13 +109,26 @@ public:
         struct Id {
             Id(uint8_t tlv_length, const uint8_t* tlv_value):
                 type(*tlv_value),
-                value(std::string(
-                    reinterpret_cast<const char*>(tlv_value + 1u),
-                    tlv_length - 1u
-                )) {}
+                value(tlv_value + 1u, tlv_value + tlv_length) {}
 
             uint8_t type;
-            std::string value;
+            std::vector<uint8_t> value;
+
+            std::string stringValue() const {
+                std::ostringstream oss;
+                std::copy(value.begin(), value.end(),
+                          std::ostream_iterator<uint8_t>(oss));
+                return oss.str();
+            }
+
+            uint64_t decimalValue() const {
+                uint64_t result = 0u;
+                for (auto digit : value) {
+                    result *= 10u;
+                    result += digit;
+                }
+                return result;
+            }
         };
 
         struct ChassisId: public Id {
@@ -140,14 +161,14 @@ public:
         auto data = reinterpret_cast<uint8_t*>(raw_data);
         if (sizeof(Ethernet) <= length) {
             auto eth = reinterpret_cast<Ethernet*>(data);
-            if (Ethernet::TYPE::LLDP == eth->type) {
+            if (Ethernet::TYPE::LLDP == ntoh16(eth->type)) {
                 init_tlv_list(data + sizeof(Ethernet),
                               length - sizeof(Ethernet));
             }
-            else if (Ethernet::TYPE::DOT1Q == eth->type) {
+            else if (Ethernet::TYPE::DOT1Q == ntoh16(eth->type)) {
                 // TODO: add QinQ
                 auto dot1q = reinterpret_cast<Dot1Q*>(data + sizeof(Ethernet));
-                if (Ethernet::TYPE::LLDP == dot1q->type) {
+                if (Ethernet::TYPE::LLDP == ntoh16(dot1q->type)) {
                     init_tlv_list(data + sizeof(Ethernet) + sizeof(Dot1Q),
                                   length - sizeof(Ethernet) - sizeof(Dot1Q));
                 }

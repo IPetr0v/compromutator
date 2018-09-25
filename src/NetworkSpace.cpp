@@ -25,6 +25,22 @@ Match::Match(PortId in_port, BitMask&& header):
 
 }
 
+bool Match::operator==(const Match& other) const
+{
+    return in_port_ == other.in_port_ && header_ == other.header_;
+}
+
+bool Match::operator<=(const Match& other) const
+{
+    // Ports are not comparable (can be only equal or non-equal)
+    return in_port_ == other.in_port_ && header_ <= other.header_;
+}
+
+bool Match::operator>=(const Match& other) const
+{
+    return in_port_ == other.in_port_ && header_ >= other.header_;
+}
+
 NetworkSpace::NetworkSpace(std::string str):
     in_port_(SpecialPort::ANY), header_(std::move(str))
 {

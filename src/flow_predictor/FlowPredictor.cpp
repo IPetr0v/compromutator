@@ -78,9 +78,9 @@ void FlowPredictor::predictCounter(RulePtr rule)
     }
 }
 
-void FlowPredictor::predict_subtree(NodeDescriptor root)
+void FlowPredictor::predict_subtree(NodePtr root)
 {
-    path_scan_->forEachSubtreeNode(root, [this, root](NodeDescriptor node) {
+    path_scan_->forEachSubtreeNode(root, [this, root](NodePtr node) {
         auto rule = path_scan_->node(node).rule;
         if (rule->type() == RuleType::SOURCE) {
             query_domain_path(node, root);
@@ -135,7 +135,7 @@ void FlowPredictor::process_path_query(const PathStatsPtr& query)
     auto source = path_scan_->domainPath(path).source;
     auto sink = path_scan_->domainPath(path).sink;
     path_scan_->forEachPathNode(source, sink,
-        [this, traversing_counter](NodeDescriptor node) -> bool {
+        [this, traversing_counter](NodePtr node) -> bool {
             path_scan_->addNodeCounter(node, traversing_counter);
             auto node_final_time = path_scan_->node(node).final_time_;
             return node_final_time < current_time();
@@ -181,7 +181,7 @@ void FlowPredictor::delete_subtrees(std::pair<RulePtr, RulePtr> edge)
     }
 }
 
-bool FlowPredictor::is_existing_child(NodeDescriptor parent,
+bool FlowPredictor::is_existing_child(NodePtr parent,
                                       EdgePtr edge) const
 {
     auto src_rule = edge->src->rule;
@@ -194,8 +194,8 @@ bool FlowPredictor::is_existing_child(NodeDescriptor parent,
     return false;
 }
 
-std::pair<NodeDescriptor, bool>
-FlowPredictor::add_child_node(NodeDescriptor parent, EdgePtr edge)
+std::pair<NodePtr, bool>
+FlowPredictor::add_child_node(NodePtr parent, EdgePtr edge)
 {
     auto parent_domain = path_scan_->node(parent).domain;
     auto parent_multiplier = path_scan_->node(parent).multiplier;
@@ -215,13 +215,13 @@ FlowPredictor::add_child_node(NodeDescriptor parent, EdgePtr edge)
         return std::make_pair(new_node, true);
     }
     else {
-        return std::make_pair(NodeDescriptor(), false);
+        return std::make_pair(NodePtr(), false);
     }
 }
 
-void FlowPredictor::add_subtree(NodeDescriptor subtree_root)
+void FlowPredictor::add_subtree(NodePtr subtree_root)
 {
-    std::queue<NodeDescriptor> node_queue;
+    std::queue<NodePtr> node_queue;
     node_queue.push(subtree_root);
     while (not node_queue.empty()) {
         auto& node = node_queue.front();
@@ -248,10 +248,10 @@ void FlowPredictor::add_subtree(NodeDescriptor subtree_root)
     }
 }
 
-void FlowPredictor::delete_subtree(NodeDescriptor subtree_root)
+void FlowPredictor::delete_subtree(NodePtr subtree_root)
 {
     path_scan_->forEachSubtreeNode(subtree_root,
-        [this, subtree_root](NodeDescriptor node) {
+        [this, subtree_root](NodePtr node) {
             // TODO: delete path from getPort
 
             // Set node to be an old version
@@ -266,8 +266,8 @@ void FlowPredictor::delete_subtree(NodeDescriptor subtree_root)
     );
 }
 
-void FlowPredictor::query_domain_path(NodeDescriptor source,
-                                      NodeDescriptor sink)
+void FlowPredictor::query_domain_path(NodePtr source,
+                                      NodePtr sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
     auto path_id = path_scan_->domainPath(path).id;
@@ -276,8 +276,8 @@ void FlowPredictor::query_domain_path(NodeDescriptor source,
     stats_manager_->requestPath(path_id, path, source_rule, sink_rule);
 }
 
-void FlowPredictor::add_domain_path(NodeDescriptor source,
-                                    NodeDescriptor sink)
+void FlowPredictor::add_domain_path(NodePtr source,
+                                    NodePtr sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
     auto source_rule = path_scan_->domainPath(path).source_interceptor;
@@ -290,8 +290,8 @@ void FlowPredictor::add_domain_path(NodeDescriptor source,
     latest_interceptor_diff_ += new_diff;
 }
 
-void FlowPredictor::delete_domain_path(NodeDescriptor source,
-                                       NodeDescriptor sink)
+void FlowPredictor::delete_domain_path(NodePtr source,
+                                       NodePtr sink)
 {
     auto path = path_scan_->outDomainPath(source);
     auto path_id = path_scan_->domainPath(path).id;

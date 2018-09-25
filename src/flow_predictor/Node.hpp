@@ -9,12 +9,11 @@ using NodeId = uint64_t;
 using PathId = uint64_t;
 
 struct Node;
-using NodePtr = Node*;
-using NodeDescriptor = std::list<Node>::iterator;
-using NodeRemovalIterator = std::list<NodeDescriptor>::iterator;
+using NodePtr = std::list<Node>::iterator;
+using NodeRemovalIterator = std::list<NodePtr>::iterator;
 
 struct DomainPath;
-using DomainPathDescriptor = std::list<DomainPath>::iterator;
+using DomainPathPtr = std::list<DomainPath>::iterator;
 
 struct RuleMapping
 {
@@ -22,7 +21,7 @@ struct RuleMapping
     bool empty() const {return node_list.empty();}
 
     uint64_t counter;
-    std::list<NodeDescriptor> node_list;
+    std::list<NodePtr> node_list;
     Timestamp final_time;
 };
 using RuleMappingDescriptor = std::list<RuleMapping>::iterator;

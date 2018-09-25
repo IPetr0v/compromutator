@@ -59,6 +59,21 @@ BitMask& BitMask::operator=(BitMask&& other) noexcept
     return *this;
 }
 
+bool BitMask::operator==(const BitMask& other) const
+{
+    return array_is_eq(array_, other.array_, length_);
+}
+
+bool BitMask::operator<=(const BitMask& other) const
+{
+    return array_is_sub(other.array_, array_, length_);
+}
+
+bool BitMask::operator>=(const BitMask& other) const
+{
+    return array_is_sub(array_, other.array_, length_);
+}
+
 BitMask::BitMask(int length, array_t* array):
     length_(length), array_(array_copy(array, length))
 {

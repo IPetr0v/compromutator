@@ -91,6 +91,7 @@ void Pipeline::flushPipeline()
 {
     if (not queue_.empty()) {
         for (auto message : queue_.pop()) {
+            std::cout<<"Flush: "<<queue_.size()<<std::endl;
             forward_message(message);
         }
     }
@@ -118,6 +119,7 @@ void Pipeline::handle_message(Message message)
             forward_message(new_message);
             break;
         case Action::ENQUEUE:
+            std::cout<<"ENQUEUE"<<std::endl;
             enqueue_message(new_message);
             break;
         case Action::DROP:

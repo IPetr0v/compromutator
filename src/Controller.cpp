@@ -72,7 +72,8 @@ void LinkDiscovery::handleLLDP(ConnectionId connection_id, PortId in_port,
             auto dst_port_id = in_port;
             detector_.addLink({src_switch_id, src_port_id},
                               {dst_switch_id, dst_port_id});
-        } else {
+        }
+        else {
             std::cerr << "LinkDiscovery error: "
                       << "Source switch is offline"
                       << std::endl;
@@ -86,18 +87,18 @@ void LinkDiscovery::handleLLDP(ConnectionId connection_id, PortId in_port,
 SwitchId LinkDiscovery::get_switch_id(const proto::LLDP& lldp) const
 {
     // TODO: check for hex
-    const std::string& value = lldp.chassis_id->value;
     switch (lldp.chassis_id->type) {
     case proto::LLDP::Tlv::ChassisId::MAC:
-        return std::stoi(value, nullptr, 16);
-    case proto::LLDP::Tlv::ChassisId::LOCAL:
+        return lldp.chassis_id->decimalValue();
+    case proto::LLDP::Tlv::ChassisId::LOCAL: {
         // Ryu controller LLDP
+        auto value = lldp.chassis_id->stringValue();
         if (value.find("dpid:") != std::string::npos && value.length() > 5) {
             return std::stoi(value.substr(5, value.length() - 5), nullptr, 16);
+        } else {
+            throw std::invalid_argument("Wrong Local Chassis Id");
         }
-        else {
-            throw std::invalid_argument("Wrong local Chassis Id");
-        }
+    }
     default:
         throw std::invalid_argument("Unsupported Chassis Id");
     }
@@ -105,13 +106,12 @@ SwitchId LinkDiscovery::get_switch_id(const proto::LLDP& lldp) const
 
 PortId LinkDiscovery::get_port_id(const proto::LLDP& lldp) const
 {
-    const std::string& value = lldp.port_id->value;
     switch (lldp.port_id->type) {
     case proto::LLDP::Tlv::PortId::COMPONENT:
-        return std::stoi(value, nullptr, 10);
+        return lldp.port_id->decimalValue();
     case proto::LLDP::Tlv::PortId::LOCAL:
         // OpenDayLight controller LLDP
-        return std::stoi(value, nullptr, 10);
+        return lldp.port_id->decimalValue();
     default:
         throw std::invalid_argument("Unsupported Port Id");
     }
