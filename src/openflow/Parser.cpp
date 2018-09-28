@@ -64,11 +64,13 @@ of13::FlowMod Parser::getFlowMod(RuleInfo rule)
     of13::FlowMod flow_mod;
 
     flow_mod.table_id(rule.table_id);
+    flow_mod.cookie(rule.cookie);
     flow_mod.priority(rule.priority);
     flow_mod.match(get_of_match(rule.match));
-    flow_mod.instructions(get_instructions(rule.actions));
+    auto of_instr = get_of_instructions(rule.actions);
+    flow_mod.instructions(of_instr);
 
-    return std::move(flow_mod);
+    return flow_mod;
 }
 
 of13::MultipartRequestFlow Parser::getMultipartRequestFlow(RuleInfo rule)
@@ -78,7 +80,7 @@ of13::MultipartRequestFlow Parser::getMultipartRequestFlow(RuleInfo rule)
     request_flow.table_id(rule.table_id);
     request_flow.match(get_of_match(rule.match));
 
-    return std::move(request_flow);
+    return request_flow;
 }
 
 Match Parser::get_match(of13::Match match)
@@ -159,7 +161,7 @@ of13::Match Parser::get_of_match(const Match& match)
         }
     }
 
-    return std::move(of_match);
+    return of_match;
 }
 
 ActionsBase Parser::get_actions(of13::InstructionSet instructions)
@@ -237,7 +239,7 @@ Parser::get_apply_actions(of13::ApplyActions* actions)
             break;
         }
     }
-    return std::move(actions_bridge);
+    return actions_bridge;
 }
 
 Transfer Parser::get_transfer(const of13::SetFieldAction* action)
@@ -294,8 +296,44 @@ Transfer Parser::get_transfer(const of13::SetFieldAction* action)
                     HeaderChanger(bit_vector.popBitVector()));
 }
 
-of13::InstructionSet Parser::get_instructions(ActionsBase actions)
+of13::InstructionSet Parser::get_of_instructions(ActionsBase actions)
 {
     of13::InstructionSet instructions;
-    return std::move(instructions);
+    // TODO: implement instruction creation
+    for (const auto& port_action : actions.port_actions) {
+        // TODO: rewrite action creation, implement general case
+        // Output action
+        of13::ApplyActions actions;
+        of13::OutputAction* output_action;
+        switch (port_action.port_id) {
+        case SpecialPort::NONE:
+            std::cerr << "Parser error: Wrong port ID" << std::endl;
+        case SpecialPort::ANY:
+            output_action = new of13::OutputAction(
+                of13::OFPP_ANY, of13::OFPCML_NO_BUFFER);
+            break;
+        case SpecialPort::ALL:
+            output_action = new of13::OutputAction(
+                of13::OFPP_ALL, of13::OFPCML_NO_BUFFER);
+            break;
+        case SpecialPort::CONTROLLER:
+            output_action = new of13::OutputAction(
+                of13::OFPP_CONTROLLER, of13::OFPCML_NO_BUFFER);
+            break;
+        default:
+            output_action = new of13::OutputAction(
+                port_action.port_id, of13::OFPCML_NO_BUFFER);
+            break;
+        }
+        actions.add_action(output_action);
+        instructions.add_instruction(actions);
+
+        // Set field
+        //port_action.transfer;
+    }
+    for (const auto& table_action : actions.table_actions) {
+        of13::GoToTable goto_table(table_action.table_id);
+        instructions.add_instruction(goto_table);
+    }
+    return instructions;
 }

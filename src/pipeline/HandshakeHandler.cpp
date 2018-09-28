@@ -62,6 +62,7 @@ void HandshakeHandler::try_establish()
 {
     if (not is_established_ && info_status_.isFull()) {
         switch_manager_.addSwitch(connection_id_, std::move(info_));
+        rule_manager_.initSwitch(info_.id);
         is_established_ = true;
     }
 }

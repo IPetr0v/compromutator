@@ -117,7 +117,11 @@ RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
     // Get getTable
     SwitchPtr sw = getSwitch(switch_id);
     TablePtr table = sw ? sw->table(table_id) : nullptr;
-    if (not table) return nullptr;
+    if (not table) {
+        auto msg = "Wrong table:" + std::to_string(table_id) +
+                   " for dpid:" + std::to_string(switch_id);
+        throw std::invalid_argument(msg);
+    }
 
     // Create rule
     // TODO: check group existence
@@ -265,6 +269,7 @@ std::pair<bool, Actions> Network::get_actions(SwitchPtr sw,
 
 void Network::add_rule_to_topology(RulePtr rule)
 {
+    std::cout<<"New rule "<<rule<<std::endl;
     auto sw = rule->sw();
     auto table = rule->table();
 
@@ -303,6 +308,7 @@ void Network::add_rule_to_topology(RulePtr rule)
 
 void Network::delete_rule_from_topology(RulePtr rule)
 {
+    std::cout<<"Delete rule "<<rule<<std::endl;
     auto sw = rule->sw();
     auto table = rule->table();
 

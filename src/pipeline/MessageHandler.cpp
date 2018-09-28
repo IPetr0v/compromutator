@@ -6,6 +6,7 @@ using namespace fluid_msg;
 
 Action MessageHandler::visit(of13::FlowMod& flow_mod)
 {
+    std::cout<<"Incoming FlowMod\n";
     auto switch_id = ctrl_.switch_manager.getSwitch(connection_id_)->id;
     auto rule_info = Parser::getRuleInfo(switch_id, flow_mod);
     switch (flow_mod.command()) {
@@ -37,6 +38,7 @@ Action MessageHandler::visit(of13::FlowMod& flow_mod)
 
 Action MessageHandler::visit(of13::PacketOut& packet_out)
 {
+    std::cout<<"Incoming PacketOut\n";
     // TODO: compute path and add stats to the detector
 
     return Action::FORWARD;
@@ -44,6 +46,7 @@ Action MessageHandler::visit(of13::PacketOut& packet_out)
 
 Action MessageHandler::visit(of13::PacketIn& packet_in)
 {
+    std::cout<<"Incoming PacketIn\n";
     // Check for LLDP
     try {
         auto lldp = proto::LLDP(packet_in.data(), packet_in.data_len());

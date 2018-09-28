@@ -43,7 +43,7 @@ protected:
     static ActionsBase get_actions(of13::InstructionSet instructions);
     static ActionsBaseBridge get_apply_actions(of13::ApplyActions* actions);
     static Transfer get_transfer(const of13::SetFieldAction* action);
-    static of13::InstructionSet get_instructions(ActionsBase actions);
+    static of13::InstructionSet get_of_instructions(ActionsBase actions);
 };
 
 // Messages that contain rule information

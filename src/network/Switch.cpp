@@ -79,7 +79,9 @@ Port::Port(SwitchPtr sw, PortInfo info):
 {
     source_rule_ = new Rule(RuleType::SOURCE, sw_, nullptr,
                             LOW_PRIORITY, ZERO_COOKIE,
-                            NetworkSpace(id_), Actions::noActions());
+                            NetworkSpace(id_),
+                            Actions::forwardAction(
+                                sw_->frontTable()->id(), sw_->frontTable()));
     sink_rule_ = new Rule(RuleType::SINK, sw_, nullptr,
                           LOW_PRIORITY, ZERO_COOKIE,
                           NetworkSpace(id_), Actions::noActions());
@@ -102,17 +104,16 @@ void Port::delete_rule(RulePtr rule, RuleMap& rule_map)
 }
 
 Switch::Switch(const SwitchInfo& info):
-    id_(info.id)
+    id_(info.id), table_number_(info.table_number)
 {
+    // Create tables
+    front_table_ = addTable(0);
+
     // Create ports
     for (const auto& port : info.ports) {
-        add_port(port);
-    }
-
-    // Create tables
-    front_table_ = add_table(0);
-    for (TableId table_id = 1; table_id < info.table_number; table_id++) {
-        add_table(table_id);
+        if (port.id != SpecialPort::LOCAL) {
+            add_port(port);
+        }
     }
 }
 
@@ -150,9 +151,17 @@ TablePtr Switch::table(TableId id) const
     return it != table_map_.end() ? it->second : nullptr;
 }
 
-TablePtr Switch::add_table(TableId id)
+TablePtr Switch::addTable(TableId id)
 {
-    // Check existing getTable
-    TablePtr old_table = table(id);
-    return old_table ? old_table : table_map_[id] = new Table(this, id);
+    if (id < table_number_) {
+        // Check existing getTable
+        TablePtr old_table = table(id);
+        if (not old_table) {
+            return table_map_[id] = new Table(this, id);
+        }
+        return old_table;
+    }
+    else {
+        return nullptr;
+    }
 }

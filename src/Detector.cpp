@@ -107,7 +107,6 @@ void Detector::Impl::addRule(SwitchId switch_id, RuleInfo&& info)
         switch_id, info.table_id, info.priority, info.cookie,
         std::move(match), std::move(info.actions)
     );
-    std::cout<<"New rule "<<rule<<std::endl;
     add_rule_to_predictor(rule);
 }
 

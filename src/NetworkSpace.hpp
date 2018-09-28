@@ -8,6 +8,7 @@ enum SpecialPort: PortId
     NONE       = 0x00000000,
     ALL        = 0xFFFFFFFC,
     CONTROLLER = 0xFFFFFFFD,
+    LOCAL      = 0xFFFFFFFE,
     ANY        = 0xFFFFFFFF
 };
 

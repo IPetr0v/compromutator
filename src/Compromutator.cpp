@@ -61,15 +61,19 @@ void Compromutator::handle_detector_instruction()
             else {
                 assert(0);
             }
-        }
-
-        for (auto rule_to_delete : instruction.interceptor_diff.rules_to_delete) {
-            controller_.deleteRule(rule_to_delete);
-        }
-
-        for (auto rule_to_add : instruction.interceptor_diff.rules_to_add) {
-            controller_.installRule(rule_to_add);
         }*/
+
+        auto rules_to_delete = instruction.interceptor_diff.getRulesToDelete();
+        for (const auto& rule_to_delete : rules_to_delete) {
+            //std::cout<<"Delete: "<<rule_to_delete<<std::endl;
+            controller_.rule_manager.deleteRule(rule_to_delete);
+        }
+
+        auto rules_to_add = instruction.interceptor_diff.getRulesToAdd();
+        for (const auto& rule_to_add : rules_to_add) {
+            //std::cout<<"Add: "<<rule_to_add<<std::endl;
+            controller_.rule_manager.installRule(rule_to_add);
+        }
     }
 }
 

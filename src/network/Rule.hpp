@@ -82,10 +82,17 @@ struct Actions
     static Actions portAction(PortId port_id, PortPtr port) {
         Actions actions;
         actions.port_actions.emplace_back(
-            PortAction(PortActionBase(port_id), port)
-        );
+            PortAction(PortActionBase(port_id), port));
         return std::move(actions);
     }
+
+    static Actions forwardAction(TableId table_id, TablePtr table) {
+        Actions actions;
+        actions.table_actions.emplace_back(
+            TableAction(TableActionBase(table_id), table));
+        return std::move(actions);
+    }
+
     static Actions noActions() {
         return Actions();
     }
@@ -120,6 +127,7 @@ public:
     NetworkSpace match() const {return match_;}
     PortId inPort() const {return match_.inPort();}
     const Actions& actions() const {return actions_;}
+    ActionsBase actionsBase() const;
     uint64_t multiplier() const {return actions_.size();}
 
     bool isTableMiss() const;
@@ -156,6 +164,11 @@ private:
 
 struct RuleInfo
 {
+    RuleInfo(SwitchId switch_id, TableId table_id, Priority priority,
+             Cookie cookie, Match match, ActionsBase actions):
+        switch_id(switch_id), table_id(table_id), priority(priority),
+        cookie(cookie), match(std::move(match)), actions(std::move(actions)) {}
+
     SwitchId switch_id;
     TableId table_id;
     Priority priority;

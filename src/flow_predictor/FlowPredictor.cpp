@@ -28,6 +28,49 @@ InterceptorDiff& InterceptorDiff::operator+=(const InterceptorDiff& other)
     return *this;
 }
 
+std::vector<RuleInfo> InterceptorDiff::getRulesToAdd() const
+{
+    return getRules(rules_to_add);
+}
+
+std::vector<RuleInfo> InterceptorDiff::getRulesToDelete() const
+{
+    return getRules(rules_to_delete);
+}
+
+std::vector<RuleInfo>
+InterceptorDiff::getRules(std::vector<RulePtr> original_rules) const
+{
+    std::vector<RuleInfo> rules;
+    for (auto rule : original_rules) {
+        auto in_port = rule->match().inPort();
+        auto header = rule->match().header();
+        for (auto &bit_space: header.getBitSpace()) {
+            auto switch_id = rule->sw()->id();
+            auto table_id = rule->table() ? rule->table()->id() : 0;
+            auto cookie = rule->cookie();
+            auto priority = rule->priority();
+            auto match = Match(in_port, std::move(bit_space.mask));
+            auto actions = rule->actionsBase();
+
+            // TODO: make shift in another place
+            // Shift tables
+            for (auto& action : actions.table_actions) {
+                action.table_id += 1;
+            }
+
+            // Add main rule
+            rules.emplace_back(
+                switch_id, table_id, priority, cookie, match, actions);
+
+            // TODO: add auxiliary difference rules
+            // Add auxiliary rules
+            //rules.emplace_back()
+        }
+    }
+    return rules;
+}
+
 FlowPredictor::FlowPredictor(std::shared_ptr<DependencyGraph> dependency_graph,
                              std::shared_ptr<RequestIdGenerator> xid_generator):
     dependency_graph_(dependency_graph),

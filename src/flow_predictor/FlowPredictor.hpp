@@ -26,6 +26,11 @@ struct InterceptorDiff
         rules_to_add.clear();
         rules_to_delete.clear();
     }
+
+    // TODO: move parsing to the new InterceptorDiff (with graph and priorities)
+    std::vector<RuleInfo> getRulesToAdd() const;
+    std::vector<RuleInfo> getRulesToDelete() const;
+    std::vector<RuleInfo> getRules(std::vector<RulePtr> original_rules) const;
 };
 
 struct Instruction

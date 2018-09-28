@@ -82,6 +82,10 @@ struct TableActionBase : public Action
     TableActionBase& operator=(const TableActionBase& other) = default;
     TableActionBase& operator=(TableActionBase&& other) noexcept = default;
 
+    //static TableActionBase forwardAction(TableId table_id) {
+    //    return {Transfer::identityTransfer(), table_id};
+    //}
+
     TableId table_id;
 };
 

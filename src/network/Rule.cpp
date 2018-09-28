@@ -49,6 +49,24 @@ Rule::~Rule()
     id_generator_.releaseId(rule_num);
 }
 
+ActionsBase Rule::actionsBase() const
+{
+    ActionsBase base;
+    for (auto port_action : actions_.port_actions) {
+        base.port_actions.push_back(
+            static_cast<PortActionBase>(std::move(port_action)));
+    }
+    for (auto group_action : actions_.group_actions) {
+        base.group_actions.push_back(
+            static_cast<GroupActionBase>(std::move(group_action)));
+    }
+    for (auto table_action : actions_.table_actions) {
+        base.table_actions.push_back(
+            static_cast<TableActionBase>(std::move(table_action)));
+    }
+    return base;
+}
+
 bool Rule::isTableMiss() const
 {
     return RuleType::FLOW == type_ && table_->tableMissRule()->id() == id_;

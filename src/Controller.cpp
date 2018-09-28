@@ -26,6 +26,9 @@ void SwitchManager::addSwitch(ConnectionId connection_id, SwitchInfo&& info)
         // Save switch
         connection_map_.emplace(info.id, connection_id);
         switch_map_.emplace(connection_id, std::move(info));
+
+        // Install auxiliary rules
+
     }
     else {
         std::cerr << "Controller error: Already existing switch"
@@ -119,12 +122,50 @@ PortId LinkDiscovery::get_port_id(const proto::LLDP& lldp) const
 
 void RuleManager::installRule(const RuleInfo& info)
 {
-
+    auto flow_mod = Parser::getFlowMod(info);
+    flow_mod.command(of13::OFPFC_ADD);
+    send_flow_mod(info.switch_id, flow_mod);
 }
 
 void RuleManager::deleteRule(const RuleInfo& info)
 {
+    auto flow_mod = Parser::getFlowMod(info);
+    flow_mod.command(of13::OFPFC_DELETE);
+    send_flow_mod(info.switch_id, flow_mod);
+}
 
+void RuleManager::initSwitch(SwitchId id)
+{
+    // Install traverse rule
+    of13::FlowMod flow_mod;
+    flow_mod.command(of13::OFPFC_ADD);
+    flow_mod.priority(NULL_PRIORITY);
+    flow_mod.xid(0);
+    flow_mod.table_id(0);
+    flow_mod.cookie(0xDEF);
+    of13::GoToTable goto_table(1u);
+    flow_mod.add_instruction(goto_table);
+    send_flow_mod(id, flow_mod);
+}
+
+void RuleManager::send_flow_mod(SwitchId switch_id,
+                                fluid_msg::of13::FlowMod flow_mod)
+{
+    auto result = switch_manager_.getConnectionId(switch_id);
+    if (result.second) {
+        // Save request id
+        auto xid = xid_manager_.getXid();
+        flow_mod.xid(xid);
+
+        // Send rule stats request
+        auto connection_id = result.first;
+        sender_.send(connection_id, Destination::TO_SWITCH, flow_mod);
+    }
+    else {
+        std::cerr << "Controller error: "
+                  << "Sending flow mod to an offline switch"
+                  << std::endl;
+    }
 }
 
 void StatsQuerier::getRuleStats(RequestId request_id, const RuleInfo& info)

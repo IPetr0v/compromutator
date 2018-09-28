@@ -283,14 +283,16 @@ void DependencyGraph::delete_in_edges(RulePtr dst_rule)
 
 void DependencyGraph::add_out_edges(RulePtr src_rule)
 {
-    for (const auto& port_action : src_rule->actions().port_actions) {
-        add_edges_to_port(src_rule, port_action);
-    }
-    for (const auto& table_action : src_rule->actions().table_actions) {
-        add_edges_to_table(src_rule, table_action);
-    }
-    for (const auto& group_action : src_rule->actions().group_actions) {
-        add_edges_to_group(src_rule, group_action);
+    if (src_rule->type() == RuleType::FLOW) {
+        for (const auto &port_action : src_rule->actions().port_actions) {
+            add_edges_to_port(src_rule, port_action);
+        }
+        for (const auto &table_action : src_rule->actions().table_actions) {
+            add_edges_to_table(src_rule, table_action);
+        }
+        for (const auto &group_action : src_rule->actions().group_actions) {
+            add_edges_to_group(src_rule, group_action);
+        }
     }
 }
 

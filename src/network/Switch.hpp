@@ -87,6 +87,7 @@ public:
     ~Switch();
 
     SwitchId id() const {return id_;}
+    TablePtr addTable(TableId id);
 
     PortPtr port(PortId id) const;
     TablePtr table(TableId id) const;
@@ -100,8 +101,8 @@ private:
     std::map<PortId, PortPtr> port_map_;
     std::map<TableId, TablePtr> table_map_;
     TablePtr front_table_;
+    uint8_t table_number_;
 
     PortPtr add_port(PortInfo info);
-    TablePtr add_table(TableId id);
 
 };

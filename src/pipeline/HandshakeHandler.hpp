@@ -25,7 +25,7 @@ class HandshakeHandler : public Visitor<fluid_msg::of13::Hello>,
 public:
     HandshakeHandler(ConnectionId id, Controller& controller):
         connection_id_(id), switch_manager_(controller.switch_manager),
-        is_established_(false) {}
+        rule_manager_(controller.rule_manager), is_established_(false) {}
 
     bool established() const {return is_established_;}
 
@@ -42,6 +42,7 @@ public:
 private:
     ConnectionId connection_id_;
     SwitchManager& switch_manager_;
+    RuleManager& rule_manager_;
 
     bool is_established_;
     SwitchInfoStatus info_status_;

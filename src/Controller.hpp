@@ -19,16 +19,17 @@
 class XidManager
 {
 public:
+    XidManager(): last_id_(1u) {}
     // TODO: CRITICAL - xid from the real controller may be equal to detectors!
     uint32_t getXid() {
         // TODO: implement
-        return 1u;
+        return last_id_++;
     }
     void deleteXid(uint32_t xid) {
 
     }
 private:
-
+    uint32_t last_id_;
 };
 
 class SwitchManager
@@ -76,11 +77,14 @@ public:
 
     void installRule(const RuleInfo& info);
     void deleteRule(const RuleInfo& info);
+    void initSwitch(SwitchId id);
 
 private:
     XidManager& xid_manager_;
     SwitchManager& switch_manager_;
     Sender sender_;
+
+    void send_flow_mod(SwitchId switch_id, fluid_msg::of13::FlowMod flow_mod);
 };
 
 class StatsQuerier
