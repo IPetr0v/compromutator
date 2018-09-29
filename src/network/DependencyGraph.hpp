@@ -28,6 +28,7 @@ struct EdgeDiff
         removed_edges.clear();
         removed_dependent_edges.clear();
     }
+    friend std::ostream& operator<<(std::ostream& os, const EdgeDiff& diff);
 };
 
 class EdgeInstaller {

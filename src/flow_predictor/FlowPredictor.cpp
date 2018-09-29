@@ -48,7 +48,7 @@ InterceptorDiff::getRules(std::vector<RulePtr> original_rules) const
         for (auto &bit_space: header.getBitSpace()) {
             auto switch_id = rule->sw()->id();
             auto table_id = rule->table() ? rule->table()->id() : 0;
-            auto cookie = rule->cookie();
+            auto cookie = 0x1337;//rule->cookie();
             auto priority = rule->priority();
             auto match = Match(in_port, std::move(bit_space.mask));
             auto actions = rule->actionsBase();
@@ -69,6 +69,13 @@ InterceptorDiff::getRules(std::vector<RulePtr> original_rules) const
         }
     }
     return rules;
+}
+
+std::ostream& operator<<(std::ostream& os, const InterceptorDiff& diff)
+{
+    os<<"+"<<diff.rules_to_add.size()
+      <<" -"<<diff.rules_to_delete.size();
+    return os;
 }
 
 FlowPredictor::FlowPredictor(std::shared_ptr<DependencyGraph> dependency_graph,
@@ -110,6 +117,9 @@ void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
     for (auto& new_edge : edge_diff.new_edges) {
         add_subtrees(new_edge);
     }
+
+    std::cout<<"[Dependency] "<<edge_diff
+             <<" | "<<latest_interceptor_diff_<<std::endl;
 }
 
 void FlowPredictor::predictCounter(RulePtr rule)

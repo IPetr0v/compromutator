@@ -1,8 +1,8 @@
 #include "gtest/gtest.h"
 
 #include "ExampleDependencyGraph.hpp"
-#include "../src/network/DependencyGraph.hpp"
-#include "../src/flow_predictor/FlowPredictor.hpp"
+#include "../../src/network/DependencyGraph.hpp"
+#include "../../src/flow_predictor/FlowPredictor.hpp"
 
 class StatsManagerTest : public ::testing::Test
                        , public SimpleTwoSwitchGraph

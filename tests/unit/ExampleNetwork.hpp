@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../src/NetworkSpace.hpp"
-#include "../src/network/Network.hpp"
+#include "../../src/NetworkSpace.hpp"
+#include "../../src/network/Network.hpp"
 
 #include <memory>
 

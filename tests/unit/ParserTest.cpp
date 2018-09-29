@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "../src/Proto.hpp"
-#include "../src/openflow/Parser.hpp"
+#include "../../src/Proto.hpp"
+#include "../../src/openflow/Parser.hpp"
 
 #include <fluid/ofcommon/msg.hh>
 #include <fluid/of13/openflow-13.h>

@@ -144,6 +144,7 @@ RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
 
 void Network::deleteRule(RuleId id)
 {
+    std::cout<<"deleteRule!\n";
     auto switch_id = std::get<0>(id);
     auto table_id = std::get<1>(id);
 
@@ -269,7 +270,7 @@ std::pair<bool, Actions> Network::get_actions(SwitchPtr sw,
 
 void Network::add_rule_to_topology(RulePtr rule)
 {
-    std::cout<<"New rule "<<rule<<std::endl;
+    std::cout<<"[Network] ADD "<<rule<<std::endl;
     auto sw = rule->sw();
     auto table = rule->table();
 
@@ -308,7 +309,7 @@ void Network::add_rule_to_topology(RulePtr rule)
 
 void Network::delete_rule_from_topology(RulePtr rule)
 {
-    std::cout<<"Delete rule "<<rule<<std::endl;
+    std::cout<<"[Network] DELETE "<<rule<<std::endl;
     auto sw = rule->sw();
     auto table = rule->table();
 

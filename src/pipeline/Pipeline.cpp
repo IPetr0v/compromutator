@@ -115,7 +115,6 @@ void Pipeline::handle_message(Message message)
         // Process message
         switch (action) {
         case Action::FORWARD:
-            std::cout<<"Forward packet\n";
             forward_message(new_message);
             break;
         case Action::ENQUEUE:

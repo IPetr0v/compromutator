@@ -3,6 +3,14 @@
 #include <map>
 #include <memory>
 
+std::ostream& operator<<(std::ostream& os, const EdgeDiff& diff)
+{
+    os<<"+"<<diff.new_edges.size()+diff.new_dependent_edges.size()
+      <<" /"<<diff.changed_edges.size()
+      <<" -"<<diff.removed_edges.size()+diff.removed_dependent_edges.size();
+    return os;
+}
+
 EdgeInstaller::EdgeInstaller(RuleGraph& graph):
     rule_graph_(graph)
 {

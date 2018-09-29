@@ -2,7 +2,7 @@
 
 #include "ExampleNetwork.hpp"
 
-#include "../src/network/DependencyGraph.hpp"
+#include "../../src/network/DependencyGraph.hpp"
 
 #include <memory>
 

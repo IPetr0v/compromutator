@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "../src/header_space/HeaderSpace.hpp"
-#include "../src/NetworkSpace.hpp"
+#include "../../src/header_space/HeaderSpace.hpp"
+#include "../../src/NetworkSpace.hpp"
 
 class HeaderSpaceTest : public ::testing::Test
 {

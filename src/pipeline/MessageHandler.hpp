@@ -11,7 +11,8 @@ class MessageHandler : public Visitor<fluid_msg::of13::FlowMod>,
                        public Visitor<fluid_msg::of13::PacketOut>,
                        public Visitor<fluid_msg::of13::PacketIn>,
                        public Visitor<fluid_msg::of13::MultipartReplyFlow>,
-                       public Visitor<fluid_msg::OFMsg>
+                       public Visitor<fluid_msg::OFMsg>,
+                       public HandlerBase
 {
 public:
     MessageHandler(ConnectionId id, Controller& controller):

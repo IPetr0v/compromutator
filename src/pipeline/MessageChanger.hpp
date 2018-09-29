@@ -9,7 +9,8 @@ namespace pipeline {
 struct MessageChanger : public Changer<fluid_msg::of13::FlowMod>,
                         public Changer<fluid_msg::of13::MultipartRequestFlow>,
                         public Changer<fluid_msg::of13::MultipartReplyFlow>,
-                        public Changer<fluid_msg::OFMsg>
+                        public Changer<fluid_msg::OFMsg>,
+                        public HandlerBase
 {
     // Controller messages
     RawMessage visit(fluid_msg::of13::FlowMod& flow_mod) override;

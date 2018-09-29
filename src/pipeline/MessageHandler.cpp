@@ -6,12 +6,14 @@ using namespace fluid_msg;
 
 Action MessageHandler::visit(of13::FlowMod& flow_mod)
 {
-    std::cout<<"Incoming FlowMod\n";
     auto switch_id = ctrl_.switch_manager.getSwitch(connection_id_)->id;
     auto rule_info = Parser::getRuleInfo(switch_id, flow_mod);
     switch (flow_mod.command()) {
     case of13::OFPFC_ADD:
-        ctrl_.detector.addRule(switch_id, rule_info);
+        // Do not consider LLDP rules
+        if (not isLLDP(flow_mod)) {
+            ctrl_.detector.addRule(switch_id, rule_info);
+        }
         break;
     case of13::OFPFC_MODIFY:
         // TODO: delete rule only by Domain (without Actions)
@@ -38,7 +40,6 @@ Action MessageHandler::visit(of13::FlowMod& flow_mod)
 
 Action MessageHandler::visit(of13::PacketOut& packet_out)
 {
-    std::cout<<"Incoming PacketOut\n";
     // TODO: compute path and add stats to the detector
 
     return Action::FORWARD;
@@ -46,7 +47,6 @@ Action MessageHandler::visit(of13::PacketOut& packet_out)
 
 Action MessageHandler::visit(of13::PacketIn& packet_in)
 {
-    std::cout<<"Incoming PacketIn\n";
     // Check for LLDP
     try {
         auto lldp = proto::LLDP(packet_in.data(), packet_in.data_len());

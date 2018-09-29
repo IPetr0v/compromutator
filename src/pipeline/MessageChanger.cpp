@@ -6,7 +6,12 @@ using namespace fluid_msg;
 
 RawMessage MessageChanger::visit(of13::FlowMod& flow_mod)
 {
-    flow_mod.table_id(flow_mod.table_id() + 1);
+    if (not isLLDP(flow_mod)) {
+        flow_mod.table_id(flow_mod.table_id() + 1);
+    }
+    else {
+        flow_mod.cookie(0x11D);
+    }
     return {flow_mod};
 }
 

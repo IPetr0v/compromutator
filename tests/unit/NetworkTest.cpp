@@ -1,8 +1,8 @@
 #include "gtest/gtest.h"
 
 #include "ExampleNetwork.hpp"
-#include "../src/NetworkSpace.hpp"
-#include "../src/network/Network.hpp"
+#include "../../src/NetworkSpace.hpp"
+#include "../../src/network/Network.hpp"
 
 #include <memory>
 #include <set>

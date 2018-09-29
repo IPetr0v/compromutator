@@ -6,7 +6,7 @@ Table::Table(SwitchPtr sw, TableId id):
     id_(id), sw_(sw)
 {
     // Create a getTable miss rule
-    table_miss_rule_ = addRule(LOW_PRIORITY, ZERO_COOKIE,
+    table_miss_rule_ = addRule(ZERO_PRIORITY, ZERO_COOKIE,
                                NetworkSpace::wholeSpace(),
                                Actions::dropAction());
 }

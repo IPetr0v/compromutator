@@ -26,6 +26,8 @@ struct InterceptorDiff
         rules_to_add.clear();
         rules_to_delete.clear();
     }
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const InterceptorDiff& diff);
 
     // TODO: move parsing to the new InterceptorDiff (with graph and priorities)
     std::vector<RuleInfo> getRulesToAdd() const;

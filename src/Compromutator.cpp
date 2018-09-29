@@ -74,6 +74,19 @@ void Compromutator::handle_detector_instruction()
             //std::cout<<"Add: "<<rule_to_add<<std::endl;
             controller_.rule_manager.installRule(rule_to_add);
         }
+
+        if (not rules_to_add.empty() or not rules_to_delete.empty()) {
+            std::cout<<"--- ADD_FLOW: "<<rules_to_add.size()
+                     <<" | REMOVE_FLOW: "<<rules_to_delete.size()
+                     <<std::endl;
+        }
+        for (const auto& rule_to_delete : instruction.interceptor_diff.rules_to_delete) {
+            std::cout<<"------ Delete: "<<rule_to_delete<<std::endl;
+        }
+        for (const auto& rule_to_add : instruction.interceptor_diff.rules_to_add) {
+            std::cout<<"------ Add: "<<rule_to_add<<std::endl;
+        }
+        std::cout<<std::endl;
     }
 }
 

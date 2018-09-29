@@ -18,7 +18,7 @@ using GroupId = uint32_t;
 using TopoId = std::pair<SwitchId, PortId>;
 
 using Priority = uint16_t;
-constexpr Priority NULL_PRIORITY = 0u;
+constexpr Priority ZERO_PRIORITY = 0u;
 constexpr Priority LOW_PRIORITY = 1u;
 
 using Cookie = uint64_t;

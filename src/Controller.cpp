@@ -136,10 +136,19 @@ void RuleManager::deleteRule(const RuleInfo& info)
 
 void RuleManager::initSwitch(SwitchId id)
 {
+    // TODO: remove this (should be done by the controller)
+    // Clear rules
+    for (auto table_id : {0, 1}) {
+        of13::FlowMod flow_mod_clear;
+        flow_mod_clear.table_id(table_id);
+        flow_mod_clear.command(of13::OFPFC_DELETE);
+        send_flow_mod(id, flow_mod_clear);
+    }
+
     // Install traverse rule
     of13::FlowMod flow_mod;
     flow_mod.command(of13::OFPFC_ADD);
-    flow_mod.priority(NULL_PRIORITY);
+    flow_mod.priority(ZERO_PRIORITY);
     flow_mod.xid(0);
     flow_mod.table_id(0);
     flow_mod.cookie(0xDEF);

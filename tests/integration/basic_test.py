@@ -81,6 +81,7 @@ class BasicTest(TestBase):
         drop_rate = self.network.pingAll()
         self.assertEqual(0.0, drop_rate)
 
+    # TODO: iperf deletes link between switches (check lldp)
     #def test_iperf(self):
     #    rates = self.network.iperf()
     #    self.assertLess(0.0, float(rates[0].split(' ')[0]))
