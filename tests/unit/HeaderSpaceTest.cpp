@@ -97,6 +97,35 @@ TEST_F(HeaderSpaceTest, EqualityTest)
     EXPECT_EQ(whole(), empty() = std::move(whole_header));
 }
 
+TEST_F(HeaderSpaceTest, ExclusionTest)
+{
+    EXPECT_GE(whole(), empty());
+    EXPECT_GE(whole(), zeros());
+    EXPECT_GE(whole(), ones());
+    EXPECT_GE(whole(), whole());
+
+    EXPECT_LE(empty(), whole());
+    EXPECT_LE(zeros(), whole());
+    EXPECT_LE(ones(), whole());
+    EXPECT_LE(whole(), whole());
+
+    EXPECT_FALSE(whole() <= empty());
+    EXPECT_FALSE(whole() <= zeros());
+    EXPECT_FALSE(whole() <= ones());
+    EXPECT_FALSE(ones() <= zeros());
+    EXPECT_FALSE(zeros() <= ones());
+
+    EXPECT_LE(H("00000001"), H("0000000x"));
+    EXPECT_LE(H("00001010"), H("0000x01x"));
+    EXPECT_LE(H("0xxx1010"), H("0xxxx010"));
+    EXPECT_LE(H("0xxxxxxx"), whole());
+
+    EXPECT_FALSE(H("0000000x") <= H("00000001"));
+    EXPECT_FALSE(H("0000x01x") <= H("00001010"));
+    EXPECT_FALSE(H("0xxxx010") <= H("0xxx1010"));
+    EXPECT_FALSE(whole() <= H("0xxxxxxx"));
+}
+
 TEST_F(HeaderSpaceTest, UnionTest)
 {
     EXPECT_EQ(empty(), empty() + empty());

@@ -193,7 +193,9 @@ void Detector::Impl::addPortStats(RequestId request_id, PortInfo&& info,
 void Detector::Impl::prepareInstructions()
 {
     auto instruction = flow_predictor_->getInstruction();
-    instruction_queue_.push(std::move(instruction));
+    if (not instruction.empty()) {
+        instruction_queue_.push(std::move(instruction));
+    }
 }
 
 void Detector::Impl::add_rule_to_predictor(RulePtr rule)

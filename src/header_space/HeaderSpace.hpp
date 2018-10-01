@@ -90,6 +90,11 @@ public:
     bool operator==(const HeaderSpace &other) const;
     bool operator!=(const HeaderSpace &other) const;
 
+    bool operator>=(const HeaderSpace &other) const;
+    bool operator<=(const HeaderSpace &other) const;
+    //bool operator>(const HeaderSpace &other) const;
+    //bool operator<(const HeaderSpace &other) const;
+
     HeaderSpace& operator~();
     HeaderSpace& operator+=(const HeaderSpace& right);
     HeaderSpace& operator&=(const HeaderSpace& right);

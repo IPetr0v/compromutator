@@ -66,12 +66,12 @@ bool BitMask::operator==(const BitMask& other) const
 
 bool BitMask::operator<=(const BitMask& other) const
 {
-    return array_is_sub(other.array_, array_, length_);
+    return array_is_sub(array_, other.array_, length_);
 }
 
 bool BitMask::operator>=(const BitMask& other) const
 {
-    return array_is_sub(array_, other.array_, length_);
+    return array_is_sub(other.array_, array_, length_);
 }
 
 BitMask::BitMask(int length, array_t* array):
@@ -226,6 +226,32 @@ bool HeaderSpace::operator!=(const HeaderSpace &other) const
 {
     return !(*this == other);
 }
+
+bool HeaderSpace::operator>=(const HeaderSpace &other) const
+{
+    assert(length_ == other.length_);
+    auto exclusion = other - *this;
+    exclusion.computeDifference();
+    return exclusion.empty();
+}
+
+bool HeaderSpace::operator<=(const HeaderSpace &other) const
+{
+    assert(length_ == other.length_);
+    auto inclusion = *this - other;
+    inclusion.computeDifference();
+    return inclusion.empty();
+}
+
+//bool HeaderSpace::operator>(const HeaderSpace &other) const
+//{
+//    return *this <= other;
+//}
+
+//bool HeaderSpace::operator<(const HeaderSpace &other) const
+//{
+//    return *this >= other;
+//}
 
 HeaderSpace& HeaderSpace::operator~()
 {

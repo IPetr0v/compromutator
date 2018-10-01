@@ -33,9 +33,9 @@ Rule::Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
     id_ = RuleId{switch_id, table_id, priority, id_generator_.getId()};
 }
 
-Rule::Rule(const RulePtr other, const NetworkSpace& domain):
+Rule::Rule(const RulePtr other, Cookie cookie, const NetworkSpace& domain):
     type_(other->type()), table_(other->table()), sw_(other->sw()),
-    priority_(other->priority()), cookie_(other->cookie()), match_(domain),
+    priority_(other->priority()), cookie_(cookie), match_(domain),
     actions_(other->actions())
 {
     TableId table_id = table_ ? table_->id() : (TableId)-1;

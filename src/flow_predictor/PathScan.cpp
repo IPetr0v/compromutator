@@ -138,9 +138,8 @@ DomainPathPtr PathScan::outDomainPath(NodePtr source) const
     return source->out_path_;
 }
 
-DomainPathPtr PathScan::addDomainPath(NodePtr source,
-                                             NodePtr sink,
-                                             Timestamp starting_time)
+DomainPathPtr PathScan::addDomainPath(NodePtr source, NodePtr sink,
+                                      Timestamp starting_time)
 {
     assert(source->rule->type() == RuleType::SOURCE);
     assert(sink->rule->type() == RuleType::SINK);
@@ -149,10 +148,8 @@ DomainPathPtr PathScan::addDomainPath(NodePtr source,
     );
 
     // TODO: delete these rules or make them shared
-    path->source_interceptor = new Rule(
-        source->rule, path->source_domain);
-    path->sink_interceptor = new Rule(
-        sink->rule, path->sink_domain);
+    //path->sink_interceptor = new Rule(
+    //    sink->rule, cookie, path->sink_domain);
     source->out_path_ = path;
     return path;
 }

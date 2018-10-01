@@ -80,8 +80,9 @@ Port::Port(SwitchPtr sw, PortInfo info):
     source_rule_ = new Rule(RuleType::SOURCE, sw_, nullptr,
                             LOW_PRIORITY, ZERO_COOKIE,
                             NetworkSpace(id_),
-                            Actions::forwardAction(
-                                sw_->frontTable()->id(), sw_->frontTable()));
+                            Actions::noActions());
+                            //Actions::forwardAction(
+                            //    sw_->frontTable()->id(), sw_->frontTable()));
     sink_rule_ = new Rule(RuleType::SINK, sw_, nullptr,
                           LOW_PRIORITY, ZERO_COOKIE,
                           NetworkSpace(id_), Actions::noActions());

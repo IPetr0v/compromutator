@@ -86,7 +86,7 @@ struct Actions
         return std::move(actions);
     }
 
-    static Actions forwardAction(TableId table_id, TablePtr table) {
+    static Actions tableAction(TableId table_id, TablePtr table) {
         Actions actions;
         actions.table_actions.emplace_back(
             TableAction(TableActionBase(table_id), table));
@@ -108,13 +108,14 @@ enum class RuleType
 };
 
 struct Descriptor;
+struct RuleInfo;
 
 class Rule
 {
 public:
     Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
          Cookie cookie, NetworkSpace&& domain, Actions&& actions);
-    Rule(const RulePtr other, const NetworkSpace& domain);
+    Rule(const RulePtr other, Cookie cookie, const NetworkSpace& domain);
     ~Rule();
 
     RuleType type() const {return type_;}

@@ -77,6 +77,7 @@ public:
 
     void installRule(const RuleInfo& info);
     void deleteRule(const RuleInfo& info);
+    void deleteRulesByCookie(const RuleInfo& info);
     void initSwitch(SwitchId id);
 
 private:
@@ -84,7 +85,7 @@ private:
     SwitchManager& switch_manager_;
     Sender sender_;
 
-    void send_flow_mod(SwitchId switch_id, fluid_msg::of13::FlowMod flow_mod);
+    void send_flow_mod(SwitchId switch_id, fluid_msg::of13::FlowMod& flow_mod);
 };
 
 class StatsQuerier

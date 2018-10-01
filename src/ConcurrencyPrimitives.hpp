@@ -46,6 +46,11 @@ public:
         return items_.empty();
     }
 
+    size_t size() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return items_.size();
+    }
+
     void push(Item&& item) {
         std::lock_guard<std::mutex> lock(mutex_);
         items_.push(std::move(item));

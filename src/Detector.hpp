@@ -21,6 +21,10 @@ public:
         return not instruction_queue_.empty();
     }
 
+    size_t instructionNumber() {
+        return instruction_queue_.size();
+    }
+
     Instruction getInstruction() {
         return instruction_queue_.pop();
     }

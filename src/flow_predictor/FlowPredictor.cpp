@@ -4,73 +4,6 @@
 #include <memory>
 #include <queue>
 
-InterceptorDiff& InterceptorDiff::operator+=(const InterceptorDiff& other)
-{
-    // Delete nonexistent rules
-    auto it = std::remove_if(rules_to_add.begin(), rules_to_add.end(),
-        [other](RulePtr rule) {
-            for (const auto other_rule : other.rules_to_delete) {
-                if (other_rule->id() == rule->id()) {
-                 return true;
-                }
-            }
-            return false;
-        }
-    );
-    rules_to_add.erase(it, rules_to_add.end());
-
-    rules_to_add.insert(rules_to_add.end(),
-                        other.rules_to_add.begin(),
-                        other.rules_to_add.end());
-    rules_to_delete.insert(rules_to_delete.end(),
-                           other.rules_to_delete.begin(),
-                           other.rules_to_delete.end());
-    return *this;
-}
-
-std::vector<RuleInfo> InterceptorDiff::getRulesToAdd() const
-{
-    return getRules(rules_to_add);
-}
-
-std::vector<RuleInfo> InterceptorDiff::getRulesToDelete() const
-{
-    return getRules(rules_to_delete);
-}
-
-std::vector<RuleInfo>
-InterceptorDiff::getRules(std::vector<RulePtr> original_rules) const
-{
-    std::vector<RuleInfo> rules;
-    for (auto rule : original_rules) {
-        auto in_port = rule->match().inPort();
-        auto header = rule->match().header();
-        for (auto &bit_space: header.getBitSpace()) {
-            auto switch_id = rule->sw()->id();
-            auto table_id = rule->table() ? rule->table()->id() : 0;
-            auto cookie = 0x1337;//rule->cookie();
-            auto priority = rule->priority();
-            auto match = Match(in_port, std::move(bit_space.mask));
-            auto actions = rule->actionsBase();
-
-            // TODO: make shift in another place
-            // Shift tables
-            for (auto& action : actions.table_actions) {
-                action.table_id += 1;
-            }
-
-            // Add main rule
-            rules.emplace_back(
-                switch_id, table_id, priority, cookie, match, actions);
-
-            // TODO: add auxiliary difference rules
-            // Add auxiliary rules
-            //rules.emplace_back()
-        }
-    }
-    return rules;
-}
-
 std::ostream& operator<<(std::ostream& os, const InterceptorDiff& diff)
 {
     os<<"+"<<diff.rules_to_add.size()
@@ -82,6 +15,7 @@ FlowPredictor::FlowPredictor(std::shared_ptr<DependencyGraph> dependency_graph,
                              std::shared_ptr<RequestIdGenerator> xid_generator):
     dependency_graph_(dependency_graph),
     path_scan_(std::make_unique<PathScan>()),
+    interceptor_manager_(std::make_unique<InterceptorManager>()),
     stats_manager_(std::make_unique<StatsManager>(xid_generator))
 {
 
@@ -90,10 +24,11 @@ FlowPredictor::FlowPredictor(std::shared_ptr<DependencyGraph> dependency_graph,
 Instruction FlowPredictor::getInstruction()
 {
     auto instruction = Instruction{
-        std::move(stats_manager_->getNewRequests()),
-        std::move(latest_interceptor_diff_)
+        stats_manager_->getNewRequests(),
+        //std::move(latest_interceptor_diff_)
+        interceptor_manager_->popInterceptorDiff()
     };
-    return std::move(instruction);
+    return instruction;
 }
 
 void FlowPredictor::passRequest(RequestPtr request)
@@ -119,7 +54,7 @@ void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
     }
 
     std::cout<<"[Dependency] "<<edge_diff
-             <<" | "<<latest_interceptor_diff_<<std::endl;
+             <<" | "<<interceptor_manager_->diffToString()<<std::endl;
 }
 
 void FlowPredictor::predictCounter(RulePtr rule)
@@ -333,14 +268,14 @@ void FlowPredictor::add_domain_path(NodePtr source,
                                     NodePtr sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
-    auto source_rule = path_scan_->domainPath(path).source_interceptor;
+    interceptor_manager_->createInterceptor(path);
+    //auto source_rule = path_scan_->domainPath(path).source_interceptor;
     //auto sink_rule = path_scan_->domainPath(path).sink_interceptor;
 
     // Add interceptors
-    InterceptorDiff new_diff;
-    new_diff.rules_to_add.push_back(source_rule);
-    //new_diff.rules_to_add.push_back(sink_rule);
-    latest_interceptor_diff_ += new_diff;
+    //InterceptorDiff new_diff;
+    //new_diff.rules_to_add.push_back(source_rule);
+    //latest_interceptor_diff_ += new_diff;
 }
 
 void FlowPredictor::delete_domain_path(NodePtr source,
@@ -354,12 +289,12 @@ void FlowPredictor::delete_domain_path(NodePtr source,
         auto source_rule = path_scan_->domainPath(path).source_interceptor;
         auto sink_rule = path_scan_->domainPath(path).sink_interceptor;
         stats_manager_->requestPath(path_id, path, source_rule, sink_rule);
+        interceptor_manager_->deleteInterceptor(path);
 
         // Delete interceptors
-        InterceptorDiff new_diff;
-        new_diff.rules_to_delete.push_back(source_rule);
-        //new_diff.rules_to_delete.push_back(sink_rule);
-        latest_interceptor_diff_ += new_diff;
+        //InterceptorDiff new_diff;
+        //new_diff.rules_to_delete.push_back(source_rule);
+        //latest_interceptor_diff_ += new_diff;
     }
     else {
         // Delete domain path because it hasn't produced any interceptor

@@ -97,7 +97,7 @@ SwitchId LinkDiscovery::get_switch_id(const proto::LLDP& lldp) const
         // Ryu controller LLDP
         auto value = lldp.chassis_id->stringValue();
         if (value.find("dpid:") != std::string::npos && value.length() > 5) {
-            return std::stoi(value.substr(5, value.length() - 5), nullptr, 16);
+            return std::stoull(value.substr(5, value.length() - 5), nullptr, 16);
         } else {
             throw std::invalid_argument("Wrong Local Chassis Id");
         }
@@ -134,6 +134,15 @@ void RuleManager::deleteRule(const RuleInfo& info)
     send_flow_mod(info.switch_id, flow_mod);
 }
 
+void RuleManager::deleteRulesByCookie(const RuleInfo& info)
+{
+    of13::FlowMod flow_mod;
+    flow_mod.cookie(info.cookie);
+    flow_mod.cookie_mask((uint64_t)-1);
+    flow_mod.command(of13::OFPFC_DELETE);
+    send_flow_mod(info.switch_id, flow_mod);
+}
+
 void RuleManager::initSwitch(SwitchId id)
 {
     // TODO: remove this (should be done by the controller)
@@ -158,7 +167,7 @@ void RuleManager::initSwitch(SwitchId id)
 }
 
 void RuleManager::send_flow_mod(SwitchId switch_id,
-                                fluid_msg::of13::FlowMod flow_mod)
+                                fluid_msg::of13::FlowMod& flow_mod)
 {
     auto result = switch_manager_.getConnectionId(switch_id);
     if (result.second) {

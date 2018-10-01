@@ -46,17 +46,19 @@ void Compromutator::handle_detector_instruction()
     // TODO: implement instruction handling
     while (controller_.detector.instructionsExist()) {
         auto instruction = controller_.detector.getInstruction();
+
+
         /*for (const auto& request : instruction.requests.data) {
             auto request_id = request->id;
             if (auto rule_request = RuleRequest::pointerCast(request)) {
                 auto rule = rule_request->rule;
-                pending_requests_.emplace(request_id, rule_request);
-                controller_.getRuleStats(request_id, rule);
+                //pending_requests_.emplace(request_id, rule_request);
+                controller_.stats_manager.getRuleStats(request_id, rule);
             }
             else if (auto port_request = PortRequest::pointerCast(request)) {
                 auto port = port_request->port;
-                pending_requests_.emplace(request_id, port_request);
-                controller_.getPortStats(request_id, port);
+                //pending_requests_.emplace(request_id, port_request);
+                controller_.stats_manager.getPortStats(request_id, port);
             }
             else {
                 assert(0);
@@ -65,18 +67,18 @@ void Compromutator::handle_detector_instruction()
 
         auto rules_to_delete = instruction.interceptor_diff.getRulesToDelete();
         for (const auto& rule_to_delete : rules_to_delete) {
-            //std::cout<<"Delete: "<<rule_to_delete<<std::endl;
-            controller_.rule_manager.deleteRule(rule_to_delete);
+            controller_.rule_manager.deleteRulesByCookie(rule_to_delete);
         }
 
         auto rules_to_add = instruction.interceptor_diff.getRulesToAdd();
         for (const auto& rule_to_add : rules_to_add) {
-            //std::cout<<"Add: "<<rule_to_add<<std::endl;
             controller_.rule_manager.installRule(rule_to_add);
         }
 
+        // DEBUG
         if (not rules_to_add.empty() or not rules_to_delete.empty()) {
-            std::cout<<"--- ADD_FLOW: "<<rules_to_add.size()
+            std::cout<<"--- REQUEST: "<<instruction.requests.data.size()
+                     <<" | ADD_FLOW: "<<rules_to_add.size()
                      <<" | REMOVE_FLOW: "<<rules_to_delete.size()
                      <<std::endl;
         }

@@ -54,6 +54,7 @@ struct DomainPath
     NetworkSpace source_domain;
     NetworkSpace sink_domain;
     RulePtr source_interceptor;
+    //InterceptorPtr source_interceptor;
     RulePtr sink_interceptor;
 
     uint64_t last_counter;
@@ -68,7 +69,7 @@ public:
     using NodeVisitor = std::function<void(NodePtr node)>;
     using NodeDeletingVisitor = std::function<bool(NodePtr node)>;
 
-    PathScan(): last_node_id_(0), last_path_id_(0) {}
+    PathScan(): last_node_id_(0), last_path_id_(1) {}
 
     bool ruleExists(RulePtr rule) const {
         return RuleMappingDescriptor(nullptr) != rule->rule_mapping_;
