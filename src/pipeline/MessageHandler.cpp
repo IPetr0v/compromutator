@@ -17,8 +17,7 @@ Action MessageHandler::visit(of13::FlowMod& flow_mod)
         break;
     case of13::OFPFC_MODIFY:
         // TODO: delete rule only by Domain (without Actions)
-        ctrl_.detector.deleteRule(switch_id, rule_info);
-        ctrl_.detector.addRule(switch_id, rule_info);
+        ctrl_.detector.changeRule(switch_id, rule_info);
         break;
     case of13::OFPFC_MODIFY_STRICT:
         // TODO: implement modify strict

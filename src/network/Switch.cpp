@@ -7,7 +7,7 @@ Table::Table(SwitchPtr sw, TableId id):
 {
     // Create a getTable miss rule
     table_miss_rule_ = addRule(ZERO_PRIORITY, ZERO_COOKIE,
-                               NetworkSpace::wholeSpace(),
+                               NetworkSpace::wholeSpace().match(),
                                Actions::dropAction());
 }
 
@@ -26,11 +26,30 @@ RulePtr Table::rule(RuleId id) const
     return it != rule_map_.end() ? it->second : nullptr;
 }
 
-RulePtr Table::addRule(Priority priority, Cookie cookie,
-                       NetworkSpace&& domain, Actions&& actions)
+RulePtr Table::rule(Priority priority, const Match& match)
 {
+    RuleId id(sw_->id(), id_, priority, 0x0);
+    //auto upper_bound = rule_map_.upper_bound(id);
+    auto it = std::find_if(rule_map_.begin(), rule_map_.end(),//upper_bound,
+        [priority, match](const std::pair<RuleId, RulePtr>& rule_pair) -> bool {
+            auto lower_rule = rule_pair.second;
+            if (priority == lower_rule->priority()) {
+                return match == lower_rule->match();
+            }
+            else {
+                return false;
+            }
+        }
+    );
+    return it != rule_map_.end() ? it->second : nullptr;
+}
+
+RulePtr Table::addRule(Priority priority, Cookie cookie,
+                       Match&& match, Actions&& actions)
+{
+    // TODO: Check rule rewrite (and table-miss rewrite)
     auto rule = new Rule(RuleType::FLOW, sw_, this, priority, cookie,
-                         std::move(domain), std::move(actions));
+                         std::move(match), std::move(actions));
     return rule_map_[rule->id()] = rule;
 }
 

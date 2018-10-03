@@ -33,9 +33,11 @@ public:
 
     // Rule management
     RulePtr rule(RuleId id) const;
+    RulePtr rule(SwitchId switch_id, TableId table_id, Priority priority,
+                 const Match& match);
     RulePtr addRule(SwitchId switch_id, TableId table_id,
                     Priority priority, Cookie cookie,
-                    NetworkSpace&& domain, ActionsBase&& actions_base);
+                    Match&& match, ActionsBase&& actions_base);
     void deleteRule(RuleId id);
 
     PortPtr adjacentPort(PortPtr port) const;

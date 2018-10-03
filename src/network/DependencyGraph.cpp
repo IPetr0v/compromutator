@@ -6,8 +6,10 @@
 std::ostream& operator<<(std::ostream& os, const EdgeDiff& diff)
 {
     os<<"+"<<diff.new_edges.size()+diff.new_dependent_edges.size()
-      <<" /"<<diff.changed_edges.size()
-      <<" -"<<diff.removed_edges.size()+diff.removed_dependent_edges.size();
+      <<"("<<diff.new_edges.size()<<")"
+      <<" ~"<<diff.changed_edges.size()
+      <<" -"<<diff.removed_edges.size()+diff.removed_dependent_edges.size()
+      <<"("<<diff.removed_edges.size()<<")";
     return os;
 }
 
@@ -28,7 +30,7 @@ EdgeDiff EdgeInstaller::popEdgeDiff()
 EdgePtr EdgeInstaller::addEdge(VertexPtr src, VertexPtr dst,
                                Transfer transfer, bool is_dependent)
 {
-    auto src_domain = src->rule->match();
+    auto src_domain = src->rule->domain();
     auto domain = transfer.apply(src_domain) & dst->domain;
     if (not domain.empty()) {
         auto edge = rule_graph_.addEdge(
@@ -47,7 +49,7 @@ EdgePtr EdgeInstaller::addEdge(VertexPtr src, VertexPtr dst,
 
 void EdgeInstaller::updateEdge(EdgePtr edge)
 {
-    auto src_domain = edge->src->rule->match();
+    auto src_domain = edge->src->rule->domain();
     auto domain = edge->transfer.apply(src_domain) & edge->dst->domain;
     if (not domain.empty()) {
         edge->domain = domain;
@@ -195,7 +197,7 @@ const Edge& DependencyGraph::edge(EdgePtr edge) const
 VertexPtr DependencyGraph::add_vertex(RulePtr rule)
 {
     auto vertex_desc = rule_graph_.addVertex(
-        Vertex(rule, rule->match(), influence_graph_.addVertex())
+        Vertex(rule, rule->domain(), influence_graph_.addVertex())
     );
     rule->vertex_ = vertex_desc;
     return vertex_desc;
@@ -227,7 +229,7 @@ void DependencyGraph::add_in_edges(RulePtr dst_rule)
     else {
         // Create influence from upper rules
         for (auto upper_rule : table->upperRules(dst_rule)) {
-            auto influence_domain = upper_rule->match() & dst_rule->match();
+            auto influence_domain = upper_rule->domain() & dst_rule->domain();
             if (not influence_domain.empty()) {
                 add_influence(upper_rule, dst_rule, influence_domain);
             }
@@ -236,7 +238,7 @@ void DependencyGraph::add_in_edges(RulePtr dst_rule)
 
         // Move edges from lower rules to the dst rule
         for (auto lower_rule : table->lowerRules(dst_rule)) {
-            auto influence_domain = dst_rule->match() & lower_rule->match();
+            auto influence_domain = dst_rule->domain() & lower_rule->domain();
             if (not influence_domain.empty()) {
                 add_influence(dst_rule, lower_rule, influence_domain);
                 update_domain(lower_rule);
@@ -372,7 +374,7 @@ void DependencyGraph::add_edges(RulePtr src_rule, RuleRange dst_rules,
 
 void DependencyGraph::update_domain(RulePtr rule)
 {
-    rule->vertex_->domain = rule->match();
+    rule->vertex_->domain = rule->domain();
     for (auto influence : influence_graph_.inEdges(rule->vertex_->influence_vertex)) {
         rule->vertex_->domain -= influence->domain;
     }

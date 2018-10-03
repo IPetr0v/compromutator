@@ -43,6 +43,7 @@ public:
     explicit NetworkSpace(std::string str);
     explicit NetworkSpace(PortId in_port);
     explicit NetworkSpace(const HeaderSpace& header);
+    explicit NetworkSpace(const Match& match);
     explicit NetworkSpace(Match&& match);
     NetworkSpace(PortId in_port, const HeaderSpace& header);
     NetworkSpace(PortId in_port, HeaderSpace&& header);
@@ -53,6 +54,7 @@ public:
 
     PortId inPort() const {return in_port_;}
     HeaderSpace header() const {return header_;}
+    Match match() const;
     bool empty() const {
         return in_port_ == SpecialPort::NONE || header_.empty();
     }

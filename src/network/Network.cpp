@@ -110,11 +110,24 @@ RulePtr Network::rule(RuleId id) const
     return table ? table->rule(id) : nullptr;
 }
 
+RulePtr Network::rule(SwitchId switch_id, TableId table_id,
+                      Priority priority, const Match& match)
+{
+    SwitchPtr sw = getSwitch(switch_id);
+    TablePtr table = sw ? sw->table(table_id) : nullptr;
+    if (table) {
+        return table->rule(priority, match);
+    }
+    else {
+        return nullptr;
+    }
+}
+
 RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
                          Priority priority, Cookie cookie,
-                         NetworkSpace&& domain, ActionsBase&& actions_base)
+                         Match&& match, ActionsBase&& actions_base)
 {
-    // Get getTable
+    // Get Table
     SwitchPtr sw = getSwitch(switch_id);
     TablePtr table = sw ? sw->table(table_id) : nullptr;
     if (not table) {
@@ -133,9 +146,11 @@ RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
         return nullptr;
     }
     auto actions = std::move(actions_pair.second);
-    RulePtr rule = table->addRule(priority, cookie, std::move(domain),
+    RulePtr rule = table->addRule(priority, cookie, std::move(match),
                                   std::move(actions));
     if (not rule) return nullptr;
+
+    //std::cout<<"[Network] ADD "<<rule<<std::endl;
 
     // Update topology
     add_rule_to_topology(rule);
@@ -144,7 +159,6 @@ RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
 
 void Network::deleteRule(RuleId id)
 {
-    std::cout<<"deleteRule!\n";
     auto switch_id = std::get<0>(id);
     auto table_id = std::get<1>(id);
 
@@ -152,6 +166,8 @@ void Network::deleteRule(RuleId id)
     TablePtr table = sw ? sw->table(table_id) : nullptr;
     RulePtr rule = table ? table->rule(id) : nullptr;
     if (rule && table) {
+        //std::cout<<"[Network] DELETE "<<rule<<std::endl;
+
         delete_rule_from_topology(rule);
         table->deleteRule(id);
     }
@@ -270,7 +286,6 @@ std::pair<bool, Actions> Network::get_actions(SwitchPtr sw,
 
 void Network::add_rule_to_topology(RulePtr rule)
 {
-    std::cout<<"[Network] ADD "<<rule<<std::endl;
     auto sw = rule->sw();
     auto table = rule->table();
 
@@ -309,7 +324,6 @@ void Network::add_rule_to_topology(RulePtr rule)
 
 void Network::delete_rule_from_topology(RulePtr rule)
 {
-    std::cout<<"[Network] DELETE "<<rule<<std::endl;
     auto sw = rule->sw();
     auto table = rule->table();
 

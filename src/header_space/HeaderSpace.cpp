@@ -355,6 +355,11 @@ std::string HeaderSpace::toString() const
         return "CORRUPTED";
     }
 
+    // Check whole space
+    if (*this == HeaderSpace::wholeSpace(length_)) {
+        return "ANY";
+    }
+
     // Create header string representation
     struct hs* output_hs = hs_copy_a(hs_);
 

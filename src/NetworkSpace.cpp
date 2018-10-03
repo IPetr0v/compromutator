@@ -60,6 +60,12 @@ NetworkSpace::NetworkSpace(const HeaderSpace& header):
     
 }
 
+NetworkSpace::NetworkSpace(const Match& match):
+    in_port_(match.in_port_), header_(match.header_)
+{
+
+}
+
 NetworkSpace::NetworkSpace(Match&& match):
     in_port_(match.in_port_), header_(std::move(match.header_))
 {
@@ -93,6 +99,13 @@ NetworkSpace NetworkSpace::wholeSpace()
         SpecialPort::ANY,
         HeaderSpace::wholeSpace(HeaderSpace::GLOBAL_LENGTH)
     );
+}
+
+Match NetworkSpace::match() const
+{
+    auto headers = header_.getBitSpace();
+    assert(not headers.empty());
+    return Match(in_port_, std::move(headers[0].mask));
 }
 
 NetworkSpace& NetworkSpace::operator+=(const NetworkSpace& right)

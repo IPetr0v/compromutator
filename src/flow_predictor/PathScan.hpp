@@ -18,6 +18,7 @@ struct Node
     Node(Node&& other) noexcept = default;
 
     Node& operator=(Node&& other) noexcept = default;
+    friend std::ostream& operator<<(std::ostream& os, const Node& node);
 
     NodeId id;
     NodePtr root;

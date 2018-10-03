@@ -22,10 +22,22 @@ std::shared_ptr<PortAction> Actions::getPortAction(PortId port_id) const
 IdGenerator<uint64_t> Rule::id_generator_;
 
 Rule::Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
+           Cookie cookie, Match&& match, Actions&& actions):
+    type_(type), table_(table), sw_(sw), priority_(priority), cookie_(cookie),
+    match_(match), domain_(NetworkSpace(match)),
+    actions_(std::move(actions)), vertex_(VertexPtr(nullptr)),
+    rule_mapping_(RuleMappingDescriptor(nullptr))
+{
+    TableId table_id = table_ ? table_->id() : (TableId)-1;
+    SwitchId switch_id = sw_ ? sw_->id() : (SwitchId)-1;
+    id_ = RuleId{switch_id, table_id, priority, id_generator_.getId()};
+}
+
+Rule::Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
            Cookie cookie, NetworkSpace&& domain, Actions&& actions):
     type_(type), table_(table), sw_(sw), priority_(priority), cookie_(cookie),
-    match_(std::move(domain)), actions_(std::move(actions)),
-    vertex_(VertexPtr(nullptr)),
+    match_(domain.match()), domain_(std::move(domain)),
+    actions_(std::move(actions)), vertex_(VertexPtr(nullptr)),
     rule_mapping_(RuleMappingDescriptor(nullptr))
 {
     TableId table_id = table_ ? table_->id() : (TableId)-1;
@@ -35,8 +47,8 @@ Rule::Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
 
 Rule::Rule(const RulePtr other, Cookie cookie, const NetworkSpace& domain):
     type_(other->type()), table_(other->table()), sw_(other->sw()),
-    priority_(other->priority()), cookie_(cookie), match_(domain),
-    actions_(other->actions())
+    priority_(other->priority()), cookie_(cookie), match_(domain.match()),
+    domain_(domain), actions_(other->actions())
 {
     TableId table_id = table_ ? table_->id() : (TableId)-1;
     SwitchId switch_id = sw_ ? sw_->id() : (SwitchId)-1;
@@ -53,18 +65,11 @@ RuleInfoPtr Rule::info() const
 {
     auto switch_id = sw()->id();
     auto table_id = table() ? table()->id() : (TableId) 0;
-    auto match = baseMatch();
+    auto match = match_;
     auto actions = actionsBase();
     return std::make_shared<RuleInfo>(
         switch_id, table_id, priority_, cookie_,
-        std::move(match), std::move(actions));
-}
-
-Match Rule::baseMatch() const
-{
-    auto headers = match_.header().getBitSpace();
-    assert(headers.size() == 1u);
-    return Match(match_.inPort(), std::move(headers[0].mask));
+        std::move(match), std::move(actions), id_);
 }
 
 ActionsBase Rule::actionsBase() const
@@ -114,7 +119,7 @@ std::string Rule::toString() const
        << ", table=" << table
        << ", prio=" << std::to_string(priority_)
        << ", cookie=" << std::hex << cookie_ << std::dec
-       << ", domain=" << match_
+       << ", domain=" << domain_
        << "]";
     return os.str();
 }
@@ -153,11 +158,10 @@ bool RuleInfo::operator==(const RuleInfo& other) const
 
 std::ostream& operator<<(std::ostream& os, const RuleInfo& rule)
 {
-    auto table = rule.table_id ? std::to_string(rule.table_id) : "NULL";
     auto domain = rule.match;
     os << "[" << "INFO"
        << ": sw=" << rule.switch_id
-       << ", table=" << table
+       << ", table=" << std::to_string(rule.table_id)
        << ", prio=" << std::to_string(rule.priority)
        << ", cookie=" << std::hex << rule.cookie << std::dec
        << ", domain=" << NetworkSpace(std::move(domain))

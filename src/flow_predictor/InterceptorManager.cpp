@@ -6,7 +6,9 @@ InterceptorDiff& InterceptorDiff::operator+=(const InterceptorDiff& other)
     auto it = std::remove_if(rules_to_add.begin(), rules_to_add.end(),
         [other](RuleInfoPtr rule) {
          for (const auto& other_rule : other.rules_to_delete) {
+             //std::cout<<"------ this"<<*rule<<" | other"<<*other_rule<<std::endl;
              if (*other_rule == *rule) {
+                 //std::cout<<"INLINE DELETE: "<<rule<<std::endl;
                  return true;
              }
          }
@@ -37,7 +39,7 @@ void InterceptorManager::createInterceptor(DomainPathPtr path)
     interceptor_map_[switch_id].insert(interceptor);
     path->set_interceptor(interceptor);
 
-    std::cout<<"ADD RULE "<<interceptor<<std::endl;
+    //std::cout<<"[Interceptor] New "<<interceptor<<std::endl;
 
     // Add interceptors
     InterceptorDiff new_diff;
@@ -51,7 +53,7 @@ void InterceptorManager::deleteInterceptor(DomainPathPtr path)
     new_diff.rules_to_delete.push_back(path->interceptor);
     diff_ += new_diff;
 
-    std::cout<<"DELETE RULE "<<path->interceptor_rule_<<std::endl;
+    //std::cout<<"[Interceptor] Delete "<<path->interceptor_rule_<<std::endl;
 
     auto switch_id = path->source->rule->sw()->id();
     interceptor_map_[switch_id].erase(path->interceptor_rule_);
@@ -91,7 +93,7 @@ Priority InterceptorManager::get_priority(DomainPathPtr path) const
     auto it = interceptor_map_.find(path->source->rule->sw()->id());
     if (it != interceptor_map_.end()) {
         for (const auto &interceptor : it->second) {
-            auto header = interceptor->match().header();
+            auto header = interceptor->domain().header();
             for (auto &bit_space: header.getBitSpace()) {
                 for (auto &diff: bit_space.difference) {
                     if (domain_above_mask(path->source_domain, diff)) {

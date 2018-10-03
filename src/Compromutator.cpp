@@ -21,7 +21,7 @@ void Compromutator::run()
 {
     is_running_ = true;
     while (is_running_) {
-        auto status = alarm_->wait(std::chrono::milliseconds(100));
+        auto status = alarm_->wait(std::chrono::milliseconds(50));
         if (status == Alarm::Status::TIMEOUT) {
             controller_.detector.prepareInstructions();
             pipeline_.addBarrier();

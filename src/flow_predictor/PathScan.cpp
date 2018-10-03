@@ -11,6 +11,28 @@ Node::Node(NodeId id, RulePtr rule, NetworkSpace&& domain,
 
 }
 
+std::ostream& operator<<(std::ostream& os, const Node& node)
+{
+    auto type = node.rule->type() == RuleType::SOURCE ? "SOURCE" : "FLOW";
+    std::string children = "(";
+    for (auto child : node.children_) {
+        children += std::to_string(child->id) + ",";
+    }
+    //if (not node.children_.empty()) {
+    //    children = children.substr(0, children.size() - 2);
+    //}
+    children += ")";
+
+    os << "[" << type
+       << ": id=" << node.id
+       << ", parent=" << node.parent->id
+       << ", child=" << children
+       << ", domain=" << node.domain
+       << ", mult=" << node.multiplier
+       << "]";
+    return os;
+}
+
 DomainPath::DomainPath(PathId id, NodePtr source, NodePtr sink,
                        Timestamp starting_time):
     id(id), source(source), sink(sink), source_domain(source->domain),
@@ -76,7 +98,7 @@ void PathScan::forEachPathNode(NodePtr source, NodePtr sink,
 NodePtr PathScan::addRootNode(RulePtr rule)
 {
     assert(RuleType::SINK == rule->type());
-    auto domain = rule->match();
+    auto domain = rule->domain();
     auto multiplier = (uint64_t)1;
     auto root_transfer = Transfer::portTransfer(domain.inPort());
     auto node = add_node(rule, std::move(domain),

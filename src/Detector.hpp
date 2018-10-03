@@ -33,6 +33,7 @@ public:
     void deleteSwitch(SwitchId id);
 
     void addRule(SwitchId switch_id, RuleInfo info);
+    void changeRule(SwitchId switch_id, RuleInfo info);
     void deleteRule(SwitchId switch_id, RuleInfo info);
 
     void addLink(TopoId src_topo_id, TopoId dst_topo_id);

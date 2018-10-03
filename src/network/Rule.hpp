@@ -118,6 +118,8 @@ class Rule
 {
 public:
     Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
+         Cookie cookie, Match&& match, Actions&& actions);
+    Rule(RuleType type, SwitchPtr sw, TablePtr table, Priority priority,
          Cookie cookie, NetworkSpace&& domain, Actions&& actions);
     Rule(const RulePtr other, Cookie cookie, const NetworkSpace& domain);
     ~Rule();
@@ -131,9 +133,9 @@ public:
 
     Priority priority() const {return priority_;}
     Cookie cookie() const {return cookie_;}
-    NetworkSpace match() const {return match_;}
-    Match baseMatch() const;
-    PortId inPort() const {return match_.inPort();}
+    Match match() const {return match_;}
+    NetworkSpace domain() const {return domain_;}
+    PortId inPort() const {return domain_.inPort();}
     const Actions& actions() const {return actions_;}
     ActionsBase actionsBase() const;
     uint64_t multiplier() const {return actions_.size();}
@@ -170,7 +172,8 @@ private:
 
     Priority priority_;
     Cookie cookie_;
-    NetworkSpace match_;
+    Match match_;
+    NetworkSpace domain_;
     Actions actions_;
 
     static IdGenerator<uint64_t> id_generator_;
