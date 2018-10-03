@@ -4,15 +4,14 @@ InterceptorDiff& InterceptorDiff::operator+=(const InterceptorDiff& other)
 {
     // Delete nonexistent rules
     auto it = std::remove_if(rules_to_add.begin(), rules_to_add.end(),
-                             [other](RulePtr rule) {
-                                 for (const auto other_rule : other.rules_to_delete) {
-                                     if (other_rule->id() == rule->id()) {
-                                         return true;
-                                     }
-                                 }
-                                 return false;
-                             }
-    );
+        [other](RuleInfoPtr rule) {
+         for (const auto& other_rule : other.rules_to_delete) {
+             if (*other_rule == *rule) {
+                 return true;
+             }
+         }
+         return false;
+    });
     rules_to_add.erase(it, rules_to_add.end());
 
     rules_to_add.insert(rules_to_add.end(),
@@ -24,44 +23,96 @@ InterceptorDiff& InterceptorDiff::operator+=(const InterceptorDiff& other)
     return *this;
 }
 
-std::vector<RuleInfo> InterceptorDiff::getRulesToAdd() const
+std::ostream& operator<<(std::ostream& os, const InterceptorDiff& diff)
 {
-    return getRules(rules_to_add);
+    os<<"+"<<diff.rules_to_add.size()
+      <<" -"<<diff.rules_to_delete.size();
+    return os;
 }
 
-std::vector<RuleInfo> InterceptorDiff::getRulesToDelete() const
+void InterceptorManager::createInterceptor(DomainPathPtr path)
 {
-    return getRules(rules_to_delete);
+    auto switch_id = path->source->rule->sw()->id();
+    auto interceptor = new_interceptor(path);
+    interceptor_map_[switch_id].insert(interceptor);
+    path->set_interceptor(interceptor);
+
+    std::cout<<"ADD RULE "<<interceptor<<std::endl;
+
+    // Add interceptors
+    InterceptorDiff new_diff;
+    new_diff.rules_to_add.push_back(path->interceptor);
+    diff_ += new_diff;
+}
+void InterceptorManager::deleteInterceptor(DomainPathPtr path)
+{
+    // Delete interceptors
+    InterceptorDiff new_diff;
+    new_diff.rules_to_delete.push_back(path->interceptor);
+    diff_ += new_diff;
+
+    std::cout<<"DELETE RULE "<<path->interceptor_rule_<<std::endl;
+
+    auto switch_id = path->source->rule->sw()->id();
+    interceptor_map_[switch_id].erase(path->interceptor_rule_);
+    path->set_interceptor(RulePtr(nullptr));
 }
 
-std::vector<RuleInfo>
-InterceptorDiff::getRules(std::vector<RulePtr> original_rules) const
+InterceptorDiff InterceptorManager::popInterceptorDiff()
 {
-    std::vector<RuleInfo> rules;
-    for (auto rule : original_rules) {
-        auto in_port = rule->match().inPort();
-        auto header = rule->match().header();
-        for (auto& bit_space: header.getBitSpace()) {
-            auto switch_id = rule->sw()->id();
-            auto table_id = rule->table() ? rule->table()->id() : 0;
-            auto cookie = rule->cookie();//0x1337;
-            auto priority = rule->priority();
-            auto match = Match(in_port, std::move(bit_space.mask));
-            auto actions = ActionsBase::tableAction(1u);
+    auto diff = std::move(diff_);
+    diff_.clear();
+    return diff;
+}
 
-            // Add main rule
-            rules.emplace_back(
-                switch_id, table_id, priority, cookie, match, actions);
+std::string InterceptorManager::diffToString() const
+{
+    std::stringstream ss;
+    ss << diff_;
+    return ss.str();
+}
 
-            /*// TODO: add auxiliary difference rules
-            // Add auxiliary rules
-            for (auto& diff: bit_space.difference) {
-                auto aux_priority = rule->priority();
-                auto aux_match = Match(in_port, std::move(diff));
+RulePtr InterceptorManager::new_interceptor(DomainPathPtr path) const
+{
+    auto priority = get_priority(path);
+    Cookie cookie = 0xa000 + path->id;
+    auto domain = path->source_domain;
+
+    auto rule = new Rule(
+        RuleType::SOURCE, path->source->rule->sw(), nullptr,
+        priority, cookie, std::move(domain), Actions::tableAction(1u));
+    return rule;
+}
+
+Priority InterceptorManager::get_priority(DomainPathPtr path) const
+{
+    Priority priority = 1;
+
+    auto it = interceptor_map_.find(path->source->rule->sw()->id());
+    if (it != interceptor_map_.end()) {
+        for (const auto &interceptor : it->second) {
+            auto header = interceptor->match().header();
+            for (auto &bit_space: header.getBitSpace()) {
+                for (auto &diff: bit_space.difference) {
+                    if (domain_above_mask(path->source_domain, diff)) {
+                        priority = std::max(
+                            (unsigned) priority,
+                            interceptor->priority() + 1u);
+                    }
+                }
             }
-            //rules.emplace_back()*/
         }
     }
+    return priority;
+}
 
-    return rules;
+bool InterceptorManager::domain_above_mask(const NetworkSpace& domain,
+                                           const BitMask& mask) const
+{
+    bool res = false;
+    for (auto& bit_space: domain.header().getBitSpace()) {
+        res |= (mask <= bit_space.mask);
+        if (res) return true;
+    }
+    return res;
 }

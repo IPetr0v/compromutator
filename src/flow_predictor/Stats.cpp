@@ -22,15 +22,16 @@ RequestList StatsBucket::getRequests()
         {
             auto id = xid_generator_->getId();
             requests.addRuleRequest(id, RequestType::RULE, time,
-                                    rule_stats->rule);
+                                    rule_stats->rule->info());
             expected_requests_.emplace(id, rule_stats);
         }
         else if (auto path_stats = std::dynamic_pointer_cast<PathStats>(stats))
         {
             auto src_id = xid_generator_->getId();
             //auto dst_id = xid_generator_->getId();
+            // TODO: refactor and create an interceptor request
             requests.addRuleRequest(src_id, RequestType::SOURCE_RULE, time,
-                                    path_stats->source_interceptor);
+                                    path_stats->path->interceptor);
             //requests.addRuleRequest(dst_id, RequestType::SINK_RULE, time,
             //                        path_stats->sink_interceptor);
             expected_requests_.emplace(src_id, path_stats);
@@ -146,22 +147,18 @@ void StatsManager::requestRule(RulePtr rule)
     bucket->addStats(stats);
 }
 
-void StatsManager::requestPath(PathId id, DomainPathPtr path,
-                               RulePtr source_interceptor,
-                               RulePtr sink_interceptor)
+void StatsManager::requestPath(DomainPathPtr path)
 {
     auto time = frontTime();
     auto bucket = get_bucket(Position::FRONT);
-    auto stats = std::make_shared<PathStats>(time, path,
-                                             source_interceptor,
-                                             sink_interceptor);
+    auto stats = std::make_shared<PathStats>(time, path);
     auto stats_desc = bucket->addStats(stats);
-    current_path_stats_.emplace(id, stats_desc);
+    current_path_stats_.emplace(path->id, stats_desc);
 }
 
-void StatsManager::discardPathRequest(PathId id)
+void StatsManager::discardPathRequest(DomainPathPtr path)
 {
-    auto it = current_path_stats_.find(id);
+    auto it = current_path_stats_.find(path->id);
     if (current_path_stats_.end() != it) {
         auto stats_desc = it->second;
         auto bucket = get_bucket(Position::FRONT);

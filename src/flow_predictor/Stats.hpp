@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PathScan.hpp"
+#include "InterceptorManager.hpp"
 #include "Timestamp.hpp"
 #include "../network/Rule.hpp"
 
@@ -31,15 +32,10 @@ using RuleStatsPtr = std::shared_ptr<RuleStats>;
 
 struct PathStats : public Stats
 {
-    PathStats(Timestamp time, DomainPathPtr path,
-              RulePtr source_interceptor, RulePtr sink_interceptor):
-        Stats(time), path(path),
-        source_interceptor(source_interceptor),
-        sink_interceptor(sink_interceptor) {}
+    PathStats(Timestamp time, DomainPathPtr path):
+        Stats(time), path(path) {}
 
     DomainPathPtr path;
-    RulePtr source_interceptor;
-    RulePtr sink_interceptor;
 
     RuleStatsFields source_stats_fields;
     RuleStatsFields sink_stats_fields;
@@ -80,7 +76,8 @@ struct RuleRequest;
 using RuleRequestPtr = std::shared_ptr<RuleRequest>;
 struct RuleRequest : public Request
 {
-    RuleRequest(RequestId id, RequestType type, Timestamp time, RulePtr rule):
+    RuleRequest(RequestId id, RequestType type, Timestamp time,
+                RuleInfoPtr rule):
         Request(id, time, type), rule(rule)
     {
         assert(type == RequestType::RULE ||
@@ -88,7 +85,7 @@ struct RuleRequest : public Request
                type == RequestType::SINK_RULE);
     };
 
-    RulePtr rule;
+    RuleInfoPtr rule;
     RuleStatsFields stats;
 
     static RuleRequestPtr pointerCast(RequestPtr request) {
@@ -117,7 +114,7 @@ struct PortRequest : public Request
 struct RequestList
 {
     void addRuleRequest(RequestId id, RequestType type,
-                        Timestamp time, RulePtr rule)
+                        Timestamp time, RuleInfoPtr rule)
     {
         auto rule_request = std::make_shared<RuleRequest>(
             id, type, time, rule
@@ -175,11 +172,9 @@ public:
     Timestamp backTime() const;
 
     void requestRule(RulePtr rule);
-    void requestPath(PathId id, DomainPathPtr path,
-                     RulePtr source_interceptor,
-                     RulePtr sink_interceptor);
+    void requestPath(DomainPathPtr path);
     void requestLink(PortPtr src_port, PortPtr dst_port);
-    void discardPathRequest(PathId id);
+    void discardPathRequest(DomainPathPtr path);
 
     RequestList getNewRequests();
     void passRequest(RequestPtr request);

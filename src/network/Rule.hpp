@@ -7,6 +7,7 @@
 #include "../NetworkSpace.hpp"
 
 #include <iostream>
+#include <functional>
 #include <list>
 #include <map>
 #include <memory>
@@ -28,9 +29,10 @@ struct PortAction : public PortActionBase
 
 struct TableAction : public TableActionBase
 {
-    explicit TableAction(TableActionBase&& base, TablePtr table):
+    explicit TableAction(TableActionBase&& base,
+                         TablePtr table = TablePtr(nullptr)):
         TableActionBase(std::move(base)), table(table) {
-        assert(table != nullptr);
+        //assert(table != nullptr);
     }
     TableAction(const TableAction& other) = default;
     TableAction(TableAction&& other) noexcept = default;
@@ -86,7 +88,8 @@ struct Actions
         return std::move(actions);
     }
 
-    static Actions tableAction(TableId table_id, TablePtr table) {
+    static Actions tableAction(TableId table_id,
+                               TablePtr table = TablePtr(nullptr)) {
         Actions actions;
         actions.table_actions.emplace_back(
             TableAction(TableActionBase(table_id), table));
@@ -109,6 +112,7 @@ enum class RuleType
 
 struct Descriptor;
 struct RuleInfo;
+using RuleInfoPtr = std::shared_ptr<RuleInfo>;
 
 class Rule
 {
@@ -118,6 +122,8 @@ public:
     Rule(const RulePtr other, Cookie cookie, const NetworkSpace& domain);
     ~Rule();
 
+    RuleInfoPtr info() const;
+
     RuleType type() const {return type_;}
     RuleId id() const {return id_;}
     SwitchPtr sw() const {return sw_;}
@@ -126,12 +132,15 @@ public:
     Priority priority() const {return priority_;}
     Cookie cookie() const {return cookie_;}
     NetworkSpace match() const {return match_;}
+    Match baseMatch() const;
     PortId inPort() const {return match_.inPort();}
     const Actions& actions() const {return actions_;}
     ActionsBase actionsBase() const;
     uint64_t multiplier() const {return actions_.size();}
 
     bool isTableMiss() const;
+
+    size_t hash() const;
 
     std::string toString() const;
     friend std::ostream& operator<<(std::ostream& os, const Rule& rule);
@@ -140,6 +149,16 @@ public:
     struct PtrComparator {
         bool operator()(RulePtr first, RulePtr second) const {
             return first->id_ < second->id_;
+        }
+    };
+    struct PtrEqualityComparator {
+        bool operator()(RulePtr first, RulePtr second) const {
+            return first->id_ == second->id_;
+        }
+    };
+    struct PtrHash {
+        size_t operator()(RulePtr rule) const {
+            return rule->hash();
         }
     };
 
@@ -160,15 +179,13 @@ private:
     friend class PathScan;
     VertexPtr vertex_;
     RuleMappingDescriptor rule_mapping_;
-
 };
 
 struct RuleInfo
 {
     RuleInfo(SwitchId switch_id, TableId table_id, Priority priority,
-             Cookie cookie, Match match, ActionsBase actions):
-        switch_id(switch_id), table_id(table_id), priority(priority),
-        cookie(cookie), match(std::move(match)), actions(std::move(actions)) {}
+             Cookie cookie, Match match, ActionsBase actions,
+             RuleId rule_id = {0, 0, 0, 0});
 
     SwitchId switch_id;
     TableId table_id;
@@ -176,4 +193,9 @@ struct RuleInfo
     Cookie cookie;
     Match match;
     ActionsBase actions;
+
+    bool operator==(const RuleInfo& other) const;
+    friend std::ostream& operator<<(std::ostream& os, const RuleInfo& rule);
+private:
+    RuleId rule_id_;
 };

@@ -75,9 +75,9 @@ public:
         xid_manager_(xid_manager), switch_manager_(switch_manager),
         sender_(sender) {}
 
-    void installRule(const RuleInfo& info);
-    void deleteRule(const RuleInfo& info);
-    void deleteRulesByCookie(const RuleInfo& info);
+    void installRule(RuleInfoPtr info);
+    void deleteRule(RuleInfoPtr info);
+    void deleteRulesByCookie(RuleInfoPtr info);
     void initSwitch(SwitchId id);
 
 private:
@@ -97,7 +97,7 @@ public:
         sender_(sender) {}
 
     //void getPortDesc(ConnectionId id);
-    void getRuleStats(RequestId request_id, const RuleInfo& info);
+    void getRuleStats(RequestId request_id, RuleInfoPtr info);
     void getPortStats(RequestId request_id, SwitchId switch_id, PortId port_id);
 
     // TODO: consider using std::optional

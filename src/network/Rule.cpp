@@ -49,6 +49,24 @@ Rule::~Rule()
     id_generator_.releaseId(rule_num);
 }
 
+RuleInfoPtr Rule::info() const
+{
+    auto switch_id = sw()->id();
+    auto table_id = table() ? table()->id() : (TableId) 0;
+    auto match = baseMatch();
+    auto actions = actionsBase();
+    return std::make_shared<RuleInfo>(
+        switch_id, table_id, priority_, cookie_,
+        std::move(match), std::move(actions));
+}
+
+Match Rule::baseMatch() const
+{
+    auto headers = match_.header().getBitSpace();
+    assert(headers.size() == 1u);
+    return Match(match_.inPort(), std::move(headers[0].mask));
+}
+
 ActionsBase Rule::actionsBase() const
 {
     ActionsBase base;
@@ -70,6 +88,11 @@ ActionsBase Rule::actionsBase() const
 bool Rule::isTableMiss() const
 {
     return RuleType::FLOW == type_ && table_->tableMissRule()->id() == id_;
+}
+
+size_t Rule::hash() const
+{
+    return std::hash<uint64_t>{}(std::get<3>(id_));
 }
 
 std::string Rule::toString() const
@@ -105,5 +128,39 @@ std::ostream& operator<<(std::ostream& os, const Rule& rule)
 std::ostream& operator<<(std::ostream& os, const RulePtr rule)
 {
     os << rule->toString();
+    return os;
+}
+
+RuleInfo::RuleInfo(SwitchId switch_id, TableId table_id, Priority priority,
+                   Cookie cookie, Match match, ActionsBase actions,
+                   RuleId rule_id):
+    switch_id(switch_id), table_id(table_id), priority(priority),
+    cookie(cookie), match(std::move(match)), actions(std::move(actions)),
+    rule_id_(rule_id)
+{
+
+}
+
+bool RuleInfo::operator==(const RuleInfo& other) const
+{
+    if (not std::get<3>(rule_id_)) {
+        return false;
+    }
+    else {
+        return rule_id_ == other.rule_id_;
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, const RuleInfo& rule)
+{
+    auto table = rule.table_id ? std::to_string(rule.table_id) : "NULL";
+    auto domain = rule.match;
+    os << "[" << "INFO"
+       << ": sw=" << rule.switch_id
+       << ", table=" << table
+       << ", prio=" << std::to_string(rule.priority)
+       << ", cookie=" << std::hex << rule.cookie << std::dec
+       << ", domain=" << NetworkSpace(std::move(domain))
+       << "]";
     return os;
 }

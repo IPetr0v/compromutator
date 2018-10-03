@@ -120,27 +120,27 @@ PortId LinkDiscovery::get_port_id(const proto::LLDP& lldp) const
     }
 }
 
-void RuleManager::installRule(const RuleInfo& info)
+void RuleManager::installRule(RuleInfoPtr info)
 {
     auto flow_mod = Parser::getFlowMod(info);
     flow_mod.command(of13::OFPFC_ADD);
-    send_flow_mod(info.switch_id, flow_mod);
+    send_flow_mod(info->switch_id, flow_mod);
 }
 
-void RuleManager::deleteRule(const RuleInfo& info)
+void RuleManager::deleteRule(RuleInfoPtr info)
 {
     auto flow_mod = Parser::getFlowMod(info);
     flow_mod.command(of13::OFPFC_DELETE);
-    send_flow_mod(info.switch_id, flow_mod);
+    send_flow_mod(info->switch_id, flow_mod);
 }
 
-void RuleManager::deleteRulesByCookie(const RuleInfo& info)
+void RuleManager::deleteRulesByCookie(RuleInfoPtr info)
 {
     of13::FlowMod flow_mod;
-    flow_mod.cookie(info.cookie);
+    flow_mod.cookie(info->cookie);
     flow_mod.cookie_mask((uint64_t)-1);
     flow_mod.command(of13::OFPFC_DELETE);
-    send_flow_mod(info.switch_id, flow_mod);
+    send_flow_mod(info->switch_id, flow_mod);
 }
 
 void RuleManager::initSwitch(SwitchId id)
@@ -186,9 +186,9 @@ void RuleManager::send_flow_mod(SwitchId switch_id,
     }
 }
 
-void StatsQuerier::getRuleStats(RequestId request_id, const RuleInfo& info)
+void StatsQuerier::getRuleStats(RequestId request_id, RuleInfoPtr info)
 {
-    auto result = switch_manager_.getConnectionId(info.switch_id);
+    auto result = switch_manager_.getConnectionId(info->switch_id);
     if (result.second) {
         // Save request id
         auto xid = xid_manager_.getXid();
@@ -197,6 +197,7 @@ void StatsQuerier::getRuleStats(RequestId request_id, const RuleInfo& info)
         // Send rule stats request
         auto connection_id = result.first;
         auto request_flow = Parser::getMultipartRequestFlow(info);
+        request_flow.xid(xid);
         sender_.send(connection_id, Destination::TO_SWITCH, request_flow);
     }
     else {

@@ -4,13 +4,6 @@
 #include <memory>
 #include <queue>
 
-std::ostream& operator<<(std::ostream& os, const InterceptorDiff& diff)
-{
-    os<<"+"<<diff.rules_to_add.size()
-      <<" -"<<diff.rules_to_delete.size();
-    return os;
-}
-
 FlowPredictor::FlowPredictor(std::shared_ptr<DependencyGraph> dependency_graph,
                              std::shared_ptr<RequestIdGenerator> xid_generator):
     dependency_graph_(dependency_graph),
@@ -258,10 +251,7 @@ void FlowPredictor::query_domain_path(NodePtr source,
                                       NodePtr sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
-    auto path_id = path_scan_->domainPath(path).id;
-    auto source_rule = path_scan_->node(source).rule;
-    auto sink_rule = path_scan_->node(sink).rule;
-    stats_manager_->requestPath(path_id, path, source_rule, sink_rule);
+    stats_manager_->requestPath(path);
 }
 
 void FlowPredictor::add_domain_path(NodePtr source,
@@ -269,36 +259,21 @@ void FlowPredictor::add_domain_path(NodePtr source,
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
     interceptor_manager_->createInterceptor(path);
-    //auto source_rule = path_scan_->domainPath(path).source_interceptor;
-    //auto sink_rule = path_scan_->domainPath(path).sink_interceptor;
-
-    // Add interceptors
-    //InterceptorDiff new_diff;
-    //new_diff.rules_to_add.push_back(source_rule);
-    //latest_interceptor_diff_ += new_diff;
 }
 
 void FlowPredictor::delete_domain_path(NodePtr source,
                                        NodePtr sink)
 {
     auto path = path_scan_->outDomainPath(source);
-    auto path_id = path_scan_->domainPath(path).id;
     auto path_time = path_scan_->domainPath(path).starting_time;
     if (path_time != current_time()) {
         path_scan_->setDomainPathFinalTime(path, current_time());
-        auto source_rule = path_scan_->domainPath(path).source_interceptor;
-        auto sink_rule = path_scan_->domainPath(path).sink_interceptor;
-        stats_manager_->requestPath(path_id, path, source_rule, sink_rule);
+        stats_manager_->requestPath(path);
         interceptor_manager_->deleteInterceptor(path);
-
-        // Delete interceptors
-        //InterceptorDiff new_diff;
-        //new_diff.rules_to_delete.push_back(source_rule);
-        //latest_interceptor_diff_ += new_diff;
     }
     else {
         // Delete domain path because it hasn't produced any interceptor
-        stats_manager_->discardPathRequest(path_id);
+        stats_manager_->discardPathRequest(path);
         path_scan_->deleteDomainPath(path);
 
         // TODO: delete domain path from latest_interceptor_diff_

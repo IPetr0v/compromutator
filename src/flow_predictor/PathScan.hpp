@@ -53,14 +53,18 @@ struct DomainPath
 
     NetworkSpace source_domain;
     NetworkSpace sink_domain;
-    RulePtr source_interceptor;
-    //InterceptorPtr source_interceptor;
-    RulePtr sink_interceptor;
+    RuleInfoPtr interceptor;
 
     uint64_t last_counter;
 
     Timestamp starting_time;
     Timestamp final_time;
+
+    friend class InterceptorManager;
+
+private:
+    RulePtr interceptor_rule_;
+    void set_interceptor(RulePtr rule);
 };
 
 class PathScan

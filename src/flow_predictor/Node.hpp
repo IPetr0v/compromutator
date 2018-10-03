@@ -15,6 +15,9 @@ using NodeRemovalIterator = std::list<NodePtr>::iterator;
 struct DomainPath;
 using DomainPathPtr = std::list<DomainPath>::iterator;
 
+struct Interceptor;
+using InterceptorPtr = std::list<Interceptor>::iterator;
+
 struct RuleMapping
 {
     RuleMapping(): counter(0), final_time(Timestamp::max()) {}

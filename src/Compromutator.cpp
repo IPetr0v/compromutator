@@ -47,30 +47,34 @@ void Compromutator::handle_detector_instruction()
     while (controller_.detector.instructionsExist()) {
         auto instruction = controller_.detector.getInstruction();
 
-
-        /*for (const auto& request : instruction.requests.data) {
+        for (const auto& request : instruction.requests.data) {
             auto request_id = request->id;
             if (auto rule_request = RuleRequest::pointerCast(request)) {
-                auto rule = rule_request->rule;
                 //pending_requests_.emplace(request_id, rule_request);
-                controller_.stats_manager.getRuleStats(request_id, rule);
+                controller_.stats_manager.getRuleStats(
+                    request_id, rule_request->rule);
             }
-            else if (auto port_request = PortRequest::pointerCast(request)) {
-                auto port = port_request->port;
-                //pending_requests_.emplace(request_id, port_request);
-                controller_.stats_manager.getPortStats(request_id, port);
-            }
+            //if (auto rule_request = RuleRequest::pointerCast(request)) {
+            //    auto rule = rule_request->rule;
+            //    //pending_requests_.emplace(request_id, rule_request);
+            //    controller_.stats_manager.getRuleStats(request_id, rule);
+            //}
+            //else if (auto port_request = PortRequest::pointerCast(request)) {
+            //    auto port = port_request->port;
+            //    //pending_requests_.emplace(request_id, port_request);
+            //    controller_.stats_manager.getPortStats(request_id, port);
+            //}
             else {
                 assert(0);
             }
-        }*/
+        }
 
-        auto rules_to_delete = instruction.interceptor_diff.getRulesToDelete();
+        auto& rules_to_delete = instruction.interceptor_diff.rules_to_delete;//getRulesToDelete();
         for (const auto& rule_to_delete : rules_to_delete) {
             controller_.rule_manager.deleteRulesByCookie(rule_to_delete);
         }
 
-        auto rules_to_add = instruction.interceptor_diff.getRulesToAdd();
+        auto& rules_to_add = instruction.interceptor_diff.rules_to_add;//getRulesToAdd();
         for (const auto& rule_to_add : rules_to_add) {
             controller_.rule_manager.installRule(rule_to_add);
         }
@@ -83,10 +87,10 @@ void Compromutator::handle_detector_instruction()
                      <<std::endl;
         }
         for (const auto& rule_to_delete : instruction.interceptor_diff.rules_to_delete) {
-            std::cout<<"------ Delete: "<<rule_to_delete<<std::endl;
+            std::cout<<"------ Delete: "<<*rule_to_delete<<std::endl;
         }
         for (const auto& rule_to_add : instruction.interceptor_diff.rules_to_add) {
-            std::cout<<"------ Add: "<<rule_to_add<<std::endl;
+            std::cout<<"------ Add: "<<*rule_to_add<<std::endl;
         }
         std::cout<<std::endl;
     }

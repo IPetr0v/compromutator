@@ -20,6 +20,14 @@ DomainPath::DomainPath(PathId id, NodePtr source, NodePtr sink,
 
 }
 
+void DomainPath::set_interceptor(RulePtr rule)
+{
+    interceptor_rule_ = rule;
+    if (rule) {
+        interceptor = rule->info();
+    }
+}
+
 void PathScan::forEachSubtreeNode(NodePtr root, NodeVisitor visitor)
 {
     std::queue<NodePtr> node_queue;

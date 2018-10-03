@@ -32,8 +32,8 @@ public:
                 std::move(match), std::move(actions)};
     }
 
-    static of13::FlowMod getFlowMod(RuleInfo rule);
-    static of13::MultipartRequestFlow getMultipartRequestFlow(RuleInfo rule);
+    static of13::FlowMod getFlowMod(RuleInfoPtr rule);
+    static of13::MultipartRequestFlow getMultipartRequestFlow(RuleInfoPtr rule);
 
 protected:
     // TODO: rewrite fluid_msg so we do not need to copy match (add const)

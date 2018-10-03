@@ -73,7 +73,12 @@ struct RawMessage
     RawMessage(uint8_t type, void* raw_data, size_t len):
         type(type), len(len), data_(reinterpret_cast<uint8_t*>(raw_data)) {}
     RawMessage(fluid_msg::OFMsg& message):
-        RawMessage(message.type(), message.pack(), message.length()) {}
+        RawMessage(message.type(), message.pack(), message.length())
+    {
+        // Workaround for the libfluid multipart.pack - it changes message len!
+        auto fixed_len = message.length();
+        len = (fixed_len > len) ? fixed_len : len;
+    }
 
     uint8_t type;
     size_t len;

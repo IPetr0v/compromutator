@@ -59,26 +59,31 @@ private:
     Transfer latest_transfer_;
 };
 
-of13::FlowMod Parser::getFlowMod(RuleInfo rule)
+of13::FlowMod Parser::getFlowMod(RuleInfoPtr rule)
 {
     of13::FlowMod flow_mod;
 
-    flow_mod.table_id(rule.table_id);
-    flow_mod.cookie(rule.cookie);
-    flow_mod.priority(rule.priority);
-    flow_mod.match(get_of_match(rule.match));
-    auto of_instr = get_of_instructions(rule.actions);
+    flow_mod.table_id(rule->table_id);
+    flow_mod.cookie(rule->cookie);
+    flow_mod.priority(rule->priority);
+    flow_mod.match(get_of_match(rule->match));
+    auto of_instr = get_of_instructions(rule->actions);
     flow_mod.instructions(of_instr);
 
     return flow_mod;
 }
 
-of13::MultipartRequestFlow Parser::getMultipartRequestFlow(RuleInfo rule)
+of13::MultipartRequestFlow Parser::getMultipartRequestFlow(RuleInfoPtr rule)
 {
     of13::MultipartRequestFlow request_flow;
 
-    request_flow.table_id(rule.table_id);
-    request_flow.match(get_of_match(rule.match));
+    request_flow.flags(0);
+    request_flow.table_id(rule->table_id);//of13::OFPTT_ALL
+    request_flow.out_port(of13::OFPP_ANY);
+    request_flow.out_group(of13::OFPG_ANY);
+    request_flow.cookie(rule->cookie);
+    request_flow.cookie_mask((uint64_t)-1);
+    request_flow.match(get_of_match(rule->match));
 
     return request_flow;
 }
