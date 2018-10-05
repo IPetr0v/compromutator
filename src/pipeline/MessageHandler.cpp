@@ -47,7 +47,7 @@ Action MessageHandler::visit(of13::PacketOut& packet_out)
 Action
 MessageHandler::visit(fluid_msg::of13::MultipartRequestFlow& request_flow)
 {
-    std::cout<<"~~~~~CONTROLLER STAT REQUEST ("<<request_flow.xid()<<")~~~~~"<<std::endl;
+    //std::cout<<"~~~~~CONTROLLER STAT REQUEST ("<<request_flow.xid()<<")~~~~~"<<std::endl;
     auto switch_id = ctrl_.switch_manager.getSwitch(connection_id_)->id;
     auto rule_info = Parser::getRuleInfo(switch_id, request_flow);
     ctrl_.detector.getRuleStats(request_flow.xid(), std::move(rule_info));
@@ -73,7 +73,7 @@ Action MessageHandler::visit(of13::PacketIn& packet_in)
 
 Action MessageHandler::visit(of13::MultipartReplyFlow& reply_flow)
 {
-    std::cout<<"~~~~~STATS REPLIED ("<<reply_flow.xid()<<")~~~~~"<<std::endl;
+    //std::cout<<"~~~~~STATS REPLIED ("<<reply_flow.xid()<<")~~~~~"<<std::endl;
     auto result = ctrl_.stats_manager.popRequestId(reply_flow.xid());
     if (result.second) {
         auto request_id = result.first;

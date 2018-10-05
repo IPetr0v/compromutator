@@ -55,8 +55,8 @@ void Compromutator::handle_detector_instruction()
             auto request_id = request->id;
             if (auto rule_request = RuleRequest::pointerCast(request)) {
                 //pending_requests_.emplace(request_id, rule_request);
-                std::cout<<"getRequest["<<request->time.id<<
-                "] "<<*(rule_request->rule.get())<<std::endl;
+                //std::cout<<"getRequest["<<request->time.id<<
+                //"] "<<*(rule_request->rule.get())<<std::endl;
                 controller_.stats_manager.getRuleStats(
                     request_id, rule_request->rule);
             }

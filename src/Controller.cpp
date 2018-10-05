@@ -147,11 +147,17 @@ void RuleManager::initSwitch(SwitchId id)
 {
     // TODO: remove this (should be done by the controller)
     // Clear rules
-    for (auto table_id : {0, 1}) {
-        of13::FlowMod flow_mod_clear;
-        flow_mod_clear.table_id(table_id);
-        flow_mod_clear.command(of13::OFPFC_DELETE);
-        send_flow_mod(id, flow_mod_clear);
+    of13::FlowMod flow_mod_clear;
+    flow_mod_clear.table_id(of13::OFPTT_ALL);
+    flow_mod_clear.command(of13::OFPFC_DELETE);
+    send_flow_mod(id, flow_mod_clear);
+
+    // TODO: Refactor this
+    auto result = switch_manager_.getConnectionId(id);
+    if (result.second) {
+        of13::BarrierRequest barrier;
+        auto connection_id = result.first;
+        sender_.send(connection_id, Destination::TO_SWITCH, barrier);
     }
 
     // Install traverse rule
@@ -190,8 +196,8 @@ void StatsQuerier::sendRuleStats(RuleReplyPtr reply)
 {
     auto result = switch_manager_.getConnectionId(reply->switch_id);
     if (result.second) {
-        std::cout<<"~~~~~CONTROLLER STAT REPLY ("
-                 <<reply->request_id<<")~~~~~"<<std::endl;
+        //std::cout<<"~~~~~CONTROLLER STAT REPLY ("
+        //         <<reply->request_id<<")~~~~~"<<std::endl;
 
         // Send rule stats request
         auto connection_id = result.first;
@@ -213,7 +219,7 @@ void StatsQuerier::getRuleStats(RequestId request_id, RuleInfoPtr info)
         // Save request id
         auto xid = xid_manager_.getXid();
         request_id_map_.emplace(xid, request_id);
-        std::cout<<"~~~~~STATS REQUESTED ("<<xid<<")~~~~~"<<std::endl;
+        //std::cout<<"~~~~~STATS REQUESTED ("<<xid<<")~~~~~"<<std::endl;
 
         // Send rule stats request
         auto connection_id = result.first;

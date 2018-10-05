@@ -34,8 +34,8 @@ Instruction FlowPredictor::getInstruction()
 void FlowPredictor::passRequest(RequestPtr request)
 {
     auto rule_request = RuleRequest::pointerCast(request);
-    std::cout<<"passRequest["<<request->time.id<<
-             "] "<<*(rule_request->rule.get())<<std::endl;
+    //std::cout<<"passRequest["<<request->time.id<<
+    //         "] "<<*(rule_request->rule.get())<<std::endl;
     stats_manager_->passRequest(request);
     auto stats_list = stats_manager_->popStatsList();
     if (not stats_list.stats.empty()) {
@@ -46,15 +46,18 @@ void FlowPredictor::passRequest(RequestPtr request)
 
 void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
 {
+    //std::cout<<"[Graph] Remove"<<std::endl;
     for (auto& removed_edge : edge_diff.removed_edges) {
         delete_subtrees(removed_edge);
     }
 
+    //std::cout<<"[Graph] Change"<<std::endl;
     for (auto& changed_edge : edge_diff.changed_edges) {
         delete_subtrees({changed_edge->src->rule, changed_edge->dst->rule});
         add_subtrees(changed_edge);
     }
 
+    //std::cout<<"[Graph] Add"<<std::endl;
     for (auto& new_edge : edge_diff.new_edges) {
         add_subtrees(new_edge);
     }
@@ -105,7 +108,7 @@ void FlowPredictor::update_predictions(TimestampId timestamp)
     }
     else {
         //throw std::logic_error("Non-existing prediction");
-        std::cout<<"Non-existing prediction: "<<timestamp<<std::endl;
+        //std::cout<<"Non-existing prediction: "<<timestamp<<std::endl;
     }
 }
 
@@ -226,11 +229,18 @@ void FlowPredictor::add_subtrees(EdgePtr edge)
 
 void FlowPredictor::delete_subtrees(std::pair<RulePtr, RulePtr> edge)
 {
+    //std::cout<<"[Path] delete_subtrees "<<edge.first<<std::endl;
     auto src_rule = edge.first;
     if (path_scan_->ruleExists(src_rule)) {
         auto nodes = path_scan_->getNodes(src_rule);
         for (auto node_it = nodes.begin(); node_it != nodes.end();) {
-            delete_subtree(*(node_it++));
+            // Check correct edge
+            auto node = *node_it;
+            //std::cout << "[Path] --- node " << **node_it << std::endl;
+            if (node->parent->rule->id() == edge.second->id()) {
+                delete_subtree(*node_it);
+            }
+            node_it++;
         }
     }
 }
@@ -275,12 +285,12 @@ FlowPredictor::add_child_node(NodePtr parent, EdgePtr edge)
 
 void FlowPredictor::add_subtree(NodePtr subtree_root)
 {
-    //std::cout<<"add_subtree: "<<*subtree_root<<std::endl;
+    std::cout<<"add_subtree: "<<*subtree_root<<std::endl;
     std::queue<NodePtr> node_queue;
     node_queue.push(subtree_root);
     while (not node_queue.empty()) {
         auto& node = node_queue.front();
-        //std::cout<<"-> "<<*node<<std::endl;
+        std::cout<<"-> "<<*node<<std::endl;
         auto rule = path_scan_->node(node).rule;
 
         // TODO: save path to getPort
@@ -306,10 +316,10 @@ void FlowPredictor::add_subtree(NodePtr subtree_root)
 
 void FlowPredictor::delete_subtree(NodePtr subtree_root)
 {
-    //std::cout<<"delete_subtree: "<<*subtree_root<<std::endl;
+    std::cout<<"delete_subtree: "<<*subtree_root<<std::endl;
     path_scan_->forEachSubtreeNode(subtree_root,
         [this, subtree_root](NodePtr node) {
-            //std::cout<<"-> "<<*node<<std::endl;
+            std::cout<<"-> "<<*node<<std::endl;
             // TODO: delete path from getPort
 
             // Set node to be an old version
@@ -335,7 +345,7 @@ void FlowPredictor::add_domain_path(NodePtr source, NodePtr sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
     interceptor_manager_->createInterceptor(path);
-    //std::cout<<"[Path] Create: "<<*path->interceptor<<std::endl;
+    std::cout<<"[Path] Create: "<<*path->interceptor<<std::endl;
 }
 
 void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
@@ -343,7 +353,7 @@ void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
     auto path = path_scan_->outDomainPath(source);
     auto path_time = path_scan_->domainPath(path).starting_time;
     if (path_time != current_time()) {
-        //std::cout<<"[Path] Suspend: "<<*path->interceptor<<std::endl;
+        std::cout<<"[Path] Suspend: "<<*path->interceptor<<std::endl;
         path_scan_->setDomainPathFinalTime(path, current_time());
         stats_manager_->requestPath(path);
         interceptor_manager_->deleteInterceptor(path);
@@ -351,11 +361,11 @@ void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
     else {
         // Delete domain path because it hasn't produced any interceptor
         if (path->interceptor) {
-            //std::cout<<"[Path] Delete: "<<*path->interceptor<<std::endl;
+            std::cout<<"[Path] Delete: "<<*path->interceptor<<std::endl;
             interceptor_manager_->deleteInterceptor(path);
         }
         else {
-            //std::cout<<"[Path] Delete: "<<"[SOURCE: SUSPENDED]"<<std::endl;
+            std::cout<<"[Path] Delete: "<<"[SOURCE: SUSPENDED]"<<std::endl;
         }
         stats_manager_->discardPathRequest(path);
         path_scan_->deleteDomainPath(path);

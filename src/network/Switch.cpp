@@ -62,7 +62,7 @@ void Table::deleteRule(RuleId id)
     }
 }
 
-std::list<RulePtr> Table::matchingRules(const Match& match)
+std::list<RulePtr> Table::matchingRules(const Match& match) const
 {
     std::list<RulePtr> rules;
     for (const auto& rule_it : rule_map_) {

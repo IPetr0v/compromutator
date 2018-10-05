@@ -21,7 +21,7 @@ public:
                     Match&& match, Actions&& actions);
     void deleteRule(RuleId id);
 
-    std::list<RulePtr> matchingRules(const Match& match);
+    std::list<RulePtr> matchingRules(const Match& match) const;
     RulePtr tableMissRule() const {return table_miss_rule_;}
     RuleRange rules() {return RuleRange(rule_map_);}
     RuleRange upperRules(RulePtr rule);
@@ -89,6 +89,7 @@ public:
     ~Switch();
 
     SwitchId id() const {return id_;}
+    uint8_t tableNumber() const {return table_number_;}
     TablePtr addTable(TableId id);
 
     PortPtr port(PortId id) const;

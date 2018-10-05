@@ -136,13 +136,16 @@ void Detector::Impl::changeRule(RuleInfo&& info)
 void Detector::Impl::deleteRule(RuleInfo&& info)
 {
     std::cout<<"[Detector] FlowMod::DELETE "<<info<<std::endl;
-    auto rule = get_rule(info);
-    if (rule) {
+    auto rules = get_matching_rules(info);
+    for (const auto& rule : rules) {
         delete_rule(rule);
     }
-    else {
-        throw std::logic_error("Delete non-existing rule");
-    }
+    //auto rule = get_rule(info);
+    //if (rule) {
+    //    delete_rule(rule);
+    //} else {
+    //    throw std::logic_error("Delete non-existing rule");
+    //}
 }
 
 void Detector::Impl::addLink(TopoId src_topo_id, TopoId dst_topo_id)
@@ -281,14 +284,14 @@ void Detector::Impl::delete_rule(RulePtr rule)
 
 void Detector::Impl::add_rule_to_predictor(RulePtr rule)
 {
-    //std::cout<<"[Graph] ADD "<<rule<<std::endl;
+    std::cout<<"[Graph] ADD "<<rule<<std::endl;
     auto diff = dependency_graph_->addRule(rule);
     flow_predictor_->updateEdges(diff);
 }
 
 void Detector::Impl::delete_rule_from_predictor(RulePtr rule)
 {
-    //std::cout<<"[Graph] DELETE "<<rule<<std::endl;
+    std::cout<<"[Graph] DELETE "<<rule<<std::endl;
     auto diff = dependency_graph_->deleteRule(rule);
     flow_predictor_->updateEdges(diff);
 }

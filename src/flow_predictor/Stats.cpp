@@ -207,7 +207,6 @@ StatsList StatsManager::popStatsList()
     auto timestamp = backTime().id;
     auto bucket = get_bucket(Position::BACK);
     if (bucket->isFull()) {
-        std::cout<<"Bucket is full: "<<timestamp<<std::endl;
         auto queries = bucket->popStatsList();
         //delete_back_bucket();
         delete_bucket(Position::BACK);

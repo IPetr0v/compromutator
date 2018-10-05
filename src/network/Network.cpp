@@ -1,5 +1,9 @@
 #include "Network.hpp"
 
+// TODO: Delete fluid include
+#include <fluid/of10/openflow-10.h>
+#include <fluid/of13/openflow-13.h>
+
 Network::Network()
 {
     // Create special rules
@@ -176,14 +180,41 @@ void Network::deleteRule(RuleId id)
 std::list<RulePtr>
 Network::matchingRules(SwitchId switch_id, TableId table_id, const Match& match)
 {
+    //SwitchPtr sw = getSwitch(switch_id);
+    //TablePtr table = sw ? sw->table(table_id) : nullptr;
+    //if (table) {
+    //    return table->matchingRules(match);
+    //}
+    //else {
+    //    return std::list<RulePtr>();
+    //}
+
+    std::list<RulePtr> rules;
     SwitchPtr sw = getSwitch(switch_id);
-    TablePtr table = sw ? sw->table(table_id) : nullptr;
-    if (table) {
-        return table->matchingRules(match);
+    if (sw) {
+        // Get tables
+        std::list<TablePtr> tables;
+        if (table_id == fluid_msg::of13::OFPTT_ALL) {
+            for (TableId table_num = 0;
+                 table_num < sw->tableNumber();
+                 table_num++) {
+                auto table = sw->table(table_num);
+                if (table) {
+                    tables.push_back(table);
+                }
+            }
+        }
+        else {
+            tables.push_back(sw->table(table_id));
+        }
+
+        // Get matching rules
+        for (const auto& table : tables) {
+            auto table_rules = table->matchingRules(match);
+            rules.insert(rules.begin(), table_rules.begin(), table_rules.end());
+        }
     }
-    else {
-        return std::list<RulePtr>();
-    }
+    return rules;
 }
 
 PortPtr Network::adjacentPort(PortPtr port) const
