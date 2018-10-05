@@ -47,10 +47,16 @@ void Compromutator::handle_detector_instruction()
     while (controller_.detector.instructionsExist()) {
         auto instruction = controller_.detector.getInstruction();
 
+        for (const auto& reply : instruction.replies) {
+            controller_.stats_manager.sendRuleStats(reply);
+        }
+
         for (const auto& request : instruction.requests.data) {
             auto request_id = request->id;
             if (auto rule_request = RuleRequest::pointerCast(request)) {
                 //pending_requests_.emplace(request_id, rule_request);
+                std::cout<<"getRequest["<<request->time.id<<
+                "] "<<*(rule_request->rule.get())<<std::endl;
                 controller_.stats_manager.getRuleStats(
                     request_id, rule_request->rule);
             }
@@ -80,8 +86,10 @@ void Compromutator::handle_detector_instruction()
         }
 
         // DEBUG
-        if (not rules_to_add.empty() or not rules_to_delete.empty()) {
-            std::cout<<"--- REQUEST: "<<instruction.requests.data.size()
+        if (not instruction.replies.empty() or not rules_to_add.empty() or
+            not rules_to_delete.empty()) {
+            std::cout<<"--- REPLY: "<<instruction.replies.size()
+                     <<" | REQUEST: "<<instruction.requests.data.size()
                      <<" | ADD_FLOW: "<<rules_to_add.size()
                      <<" | REMOVE_FLOW: "<<rules_to_delete.size()
                      <<std::endl;

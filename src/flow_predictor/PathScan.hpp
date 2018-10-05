@@ -30,11 +30,20 @@ struct Node
     Transfer root_transfer;
     uint64_t multiplier;
 
-    uint64_t addCounter(uint64_t new_counter) {
-        rule_mapping->counter += new_counter;
-        return counter += new_counter;
-    }
-    uint64_t counter;
+    //RuleStatsFields addCounter(RuleStatsFields new_counter) {
+    //    //rule_mapping->counter += new_counter;
+    //    //return counter += new_counter;
+    //    std::cout<<"[Path] addCounter: "<<id<<std::endl;
+    //    //if (rule_mapping != RuleMappingDescriptor(nullptr)) {
+    //    // TODO: Use rule->rule_mapping_
+    //    assert(rule_mapping != RuleMappingDescriptor(nullptr));
+    //    rule_mapping->counter.packet_count += new_counter.packet_count;
+    //    rule_mapping->counter.byte_count += new_counter.byte_count;
+    //    counter.packet_count += new_counter.packet_count;
+    //    counter.byte_count += new_counter.byte_count;
+    //    return counter;
+    //}
+    RuleStatsFields counter;
 
     RuleMappingDescriptor rule_mapping;
     NodeRemovalIterator parent_backward_iterator_;
@@ -56,7 +65,7 @@ struct DomainPath
     NetworkSpace sink_domain;
     RuleInfoPtr interceptor;
 
-    uint64_t last_counter;
+    RuleStatsFields last_counter;
 
     Timestamp starting_time;
     Timestamp final_time;
@@ -86,12 +95,10 @@ public:
     const std::list<NodePtr>& getChildNodes(NodePtr node) const {
         return node->children_;
     }
-    uint64_t getRuleCounter(RulePtr rule) const {
+    RuleStatsFields getRuleCounter(RulePtr rule) const {
         return rule->rule_mapping_->counter;
     }
-    uint64_t addNodeCounter(NodePtr node, uint64_t new_counter) {
-        return node->addCounter(new_counter);
-    }
+    RuleStatsFields addNodeCounter(NodePtr node, RuleStatsFields new_counter);
 
     void forEachSubtreeNode(NodePtr root, NodeVisitor visitor);
     void forEachPathNode(NodePtr source, NodePtr sink,
@@ -103,6 +110,7 @@ public:
                                 uint64_t multiplier);
     void setNodeFinalTime(NodePtr node, Timestamp final_time);
     void deleteNode(NodePtr node);
+    void clearDeletedNodes();
 
     const DomainPath& domainPath(DomainPathPtr desc) const;
     DomainPathPtr outDomainPath(NodePtr source) const;
@@ -117,6 +125,7 @@ private:
     std::list<RuleMapping> rule_mapping_list_;
     std::list<Node> node_list_;
     std::list<DomainPath> domain_path_list_;
+    std::list<NodePtr> deleted_nodes_;
     NodeId last_node_id_;
     PathId last_path_id_;
 

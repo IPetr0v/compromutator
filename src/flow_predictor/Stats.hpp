@@ -133,6 +133,32 @@ struct RequestList
     std::vector<RequestPtr> data;
 };
 
+struct Reply
+{
+    Reply(RequestId request_id, SwitchId switch_id):
+        request_id(request_id), switch_id(switch_id) {}
+    RequestId request_id;
+    SwitchId switch_id;
+};
+
+struct RuleReply : public Reply
+{
+    RuleReply(RequestId request_id, SwitchId switch_id):
+        Reply(request_id, switch_id) {}
+
+    struct Flow {
+        RuleInfoPtr rule;
+        RuleStatsFields stats;
+    };
+    std::list<Flow> flows;
+
+    void addFlow(RuleInfoPtr rule, RuleStatsFields stats) {
+        flows.push_back(Flow{std::move(rule), stats});
+    }
+};
+using RuleReplyPtr = std::shared_ptr<RuleReply>;
+using RuleReplyList = std::list<RuleReplyPtr>;
+
 using StatsDescriptor = std::list<StatsPtr>::iterator;
 class StatsBucket
 {
@@ -162,6 +188,12 @@ private:
 };
 using StatsBucketPtr = std::shared_ptr<StatsBucket>;
 
+struct StatsList
+{
+    TimestampId timestamp;
+    std::list<StatsPtr> stats;
+};
+
 class StatsManager
 {
     enum class Position {FRONT, BACK};
@@ -179,7 +211,7 @@ public:
     RequestList getNewRequests();
     void passRequest(RequestPtr request);
 
-    std::list<StatsPtr> popStatsList();
+    StatsList popStatsList();
 
 private:
     std::unordered_map<TimestampId, StatsBucketPtr> stats_timeline_;
@@ -194,7 +226,7 @@ private:
     StatsBucketPtr get_bucket(Timestamp time);
     StatsBucketPtr get_bucket(Position pos);
     void add_front_bucket();
-    void delete_back_bucket();
+    void delete_bucket(Position pos);
 
 };
 

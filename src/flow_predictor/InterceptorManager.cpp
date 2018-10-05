@@ -1,14 +1,21 @@
 #include "InterceptorManager.hpp"
 
-InterceptorDiff& InterceptorDiff::operator+=(const InterceptorDiff& other)
+InterceptorDiff& InterceptorDiff::operator+=(InterceptorDiff&& other)
 {
     // Delete nonexistent rules
     auto it = std::remove_if(rules_to_add.begin(), rules_to_add.end(),
-        [other](RuleInfoPtr rule) {
-         for (const auto& other_rule : other.rules_to_delete) {
-             //std::cout<<"------ this"<<*rule<<" | other"<<*other_rule<<std::endl;
+        [&other](RuleInfoPtr rule) {
+         //for (const auto& other_rule : other.rules_to_delete) {
+         //    if (*other_rule == *rule) {
+         //        return true;
+         //    }
+         //}
+         for (auto other_it = other.rules_to_delete.begin();
+              other_it != other.rules_to_delete.end();
+              other_it++) {
+             auto other_rule = *other_it;
              if (*other_rule == *rule) {
-                 //std::cout<<"INLINE DELETE: "<<rule<<std::endl;
+                 other.rules_to_delete.erase(other_it);
                  return true;
              }
          }
@@ -44,14 +51,14 @@ void InterceptorManager::createInterceptor(DomainPathPtr path)
     // Add interceptors
     InterceptorDiff new_diff;
     new_diff.rules_to_add.push_back(path->interceptor);
-    diff_ += new_diff;
+    diff_ += std::move(new_diff);
 }
 void InterceptorManager::deleteInterceptor(DomainPathPtr path)
 {
     // Delete interceptors
     InterceptorDiff new_diff;
     new_diff.rules_to_delete.push_back(path->interceptor);
-    diff_ += new_diff;
+    diff_ += std::move(new_diff);
 
     //std::cout<<"[Interceptor] Delete "<<path->interceptor_rule_<<std::endl;
 

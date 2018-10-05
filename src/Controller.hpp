@@ -96,6 +96,8 @@ public:
         xid_manager_(xid_manager), switch_manager_(switch_manager),
         sender_(sender) {}
 
+    void sendRuleStats(RuleReplyPtr reply);
+
     //void getPortDesc(ConnectionId id);
     void getRuleStats(RequestId request_id, RuleInfoPtr info);
     void getPortStats(RequestId request_id, SwitchId switch_id, PortId port_id);
@@ -109,6 +111,13 @@ private:
     Sender sender_;
 
     std::map<uint32_t, RequestId> request_id_map_;
+};
+
+class StatsForger
+{
+public:
+
+private:
 
 };
 

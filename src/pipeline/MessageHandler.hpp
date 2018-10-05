@@ -11,6 +11,7 @@ class MessageHandler : public Visitor<fluid_msg::of13::FlowMod>,
                        public Visitor<fluid_msg::of13::PacketOut>,
                        public Visitor<fluid_msg::of13::PacketIn>,
                        public Visitor<fluid_msg::of13::MultipartReplyFlow>,
+                       public Visitor<fluid_msg::of13::MultipartRequestFlow>,
                        public Visitor<fluid_msg::OFMsg>,
                        public HandlerBase
 {
@@ -21,6 +22,7 @@ public:
     // Controller messages
     Action visit(fluid_msg::of13::FlowMod&) override;
     Action visit(fluid_msg::of13::PacketOut&) override;
+    Action visit(fluid_msg::of13::MultipartRequestFlow&) override;
 
     // Switch messages
     Action visit(fluid_msg::of13::PacketIn&) override;

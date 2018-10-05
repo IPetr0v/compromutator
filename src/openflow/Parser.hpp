@@ -32,7 +32,19 @@ public:
                 std::move(match), std::move(actions)};
     }
 
+    static RuleInfo getRuleInfo(SwitchId switch_id,
+                                of13::MultipartRequestFlow& message) {
+        auto table_id = message.table_id();
+        auto cookie = message.cookie();
+        auto match = get_match(message.match());
+
+        return {switch_id, table_id, 0, cookie,
+                std::move(match), ActionsBase()};
+    }
+
     static of13::FlowMod getFlowMod(RuleInfoPtr rule);
+    static of13::FlowStats getFlowStats(RuleInfoPtr rule, RuleStatsFields stats);
+    static of13::MultipartReplyFlow getMultipartReplyFlow(RuleReplyPtr reply);
     static of13::MultipartRequestFlow getMultipartRequestFlow(RuleInfoPtr rule);
 
 protected:

@@ -188,7 +188,8 @@ RequestList StatsManager::getNewRequests()
     }
     else {
         // Delete empty bucket and increase front time
-        delete_back_bucket();
+        //delete_back_bucket();
+        delete_bucket(Position::FRONT);
         add_front_bucket();
         return RequestList();
     }
@@ -200,17 +201,20 @@ void StatsManager::passRequest(RequestPtr request)
     bucket->passRequest(request);
 }
 
-std::list<StatsPtr> StatsManager::popStatsList()
+StatsList StatsManager::popStatsList()
 {
     // Get queries
+    auto timestamp = backTime().id;
     auto bucket = get_bucket(Position::BACK);
     if (bucket->isFull()) {
+        std::cout<<"Bucket is full: "<<timestamp<<std::endl;
         auto queries = bucket->popStatsList();
-        delete_back_bucket();
-        return std::move(queries);
+        //delete_back_bucket();
+        delete_bucket(Position::BACK);
+        return {timestamp, std::move(queries)};
     }
     else {
-        return std::list<StatsPtr>();
+        return {timestamp, std::list<StatsPtr>()};
     }
 }
 
@@ -235,13 +239,30 @@ void StatsManager::add_front_bucket()
     stats_timeline_.emplace(time.id,
         std::make_shared<StatsBucket>(xid_generator_)
     );
+    //std::cout<<"add_front_bucket "<<time.id<<std::endl;
 }
 
-void StatsManager::delete_back_bucket()
+/*void StatsManager::delete_back_bucket()
 {
     auto time = backTime();
+    std::cout<<"delete_back_bucket "<<time.id<<std::endl;
     auto bucket_it = stats_timeline_.find(time.id);
     assert(bucket_it != stats_timeline_.end());
     stats_timeline_.erase(bucket_it);
     timestamp_deque_.pop_back();
+}*/
+
+void StatsManager::delete_bucket(Position pos)
+{
+    auto time = (pos == Position::FRONT) ? frontTime() : backTime();
+    //std::cout<<"delete_bucket "<<time.id<<std::endl;
+    auto bucket_it = stats_timeline_.find(time.id);
+    assert(bucket_it != stats_timeline_.end());
+    stats_timeline_.erase(bucket_it);
+    if (pos == Position::FRONT) {
+        timestamp_deque_.pop_front();
+    }
+    else {
+        timestamp_deque_.pop_back();
+    }
 }

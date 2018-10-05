@@ -62,6 +62,18 @@ void Table::deleteRule(RuleId id)
     }
 }
 
+std::list<RulePtr> Table::matchingRules(const Match& match)
+{
+    std::list<RulePtr> rules;
+    for (const auto& rule_it : rule_map_) {
+        auto rule = rule_it.second;
+        if (rule->match() >= match) {
+            rules.push_back(rule);
+        }
+    }
+    return rules;
+}
+
 RuleRange Table::upperRules(RulePtr rule)
 {
     auto it = rule_map_.upper_bound(rule->id());

@@ -186,6 +186,26 @@ void RuleManager::send_flow_mod(SwitchId switch_id,
     }
 }
 
+void StatsQuerier::sendRuleStats(RuleReplyPtr reply)
+{
+    auto result = switch_manager_.getConnectionId(reply->switch_id);
+    if (result.second) {
+        std::cout<<"~~~~~CONTROLLER STAT REPLY ("
+                 <<reply->request_id<<")~~~~~"<<std::endl;
+
+        // Send rule stats request
+        auto connection_id = result.first;
+        auto reply_flow = Parser::getMultipartReplyFlow(reply);
+        reply_flow.xid(reply->request_id);
+        sender_.send(connection_id, Destination::TO_CONTROLLER, reply_flow);
+    }
+    else {
+        std::cerr << "Controller error: "
+                  << "Sending rule stats reply from an offline switch"
+                  << std::endl;
+    }
+}
+
 void StatsQuerier::getRuleStats(RequestId request_id, RuleInfoPtr info)
 {
     auto result = switch_manager_.getConnectionId(info->switch_id);
@@ -193,6 +213,7 @@ void StatsQuerier::getRuleStats(RequestId request_id, RuleInfoPtr info)
         // Save request id
         auto xid = xid_manager_.getXid();
         request_id_map_.emplace(xid, request_id);
+        std::cout<<"~~~~~STATS REQUESTED ("<<xid<<")~~~~~"<<std::endl;
 
         // Send rule stats request
         auto connection_id = result.first;
@@ -208,7 +229,7 @@ void StatsQuerier::getRuleStats(RequestId request_id, RuleInfoPtr info)
 }
 
 void StatsQuerier::getPortStats(RequestId request_id,
-                              SwitchId switch_id, PortId port_id)
+                                SwitchId switch_id, PortId port_id)
 {
     auto result = switch_manager_.getConnectionId(switch_id);
     if (result.second) {

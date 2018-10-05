@@ -40,7 +40,7 @@ private:
 
 };
 
-using RequestId = uint64_t;
+using RequestId = uint32_t;
 using RequestIdGenerator = IdGenerator<RequestId>;
 
 struct RuleStatsFields

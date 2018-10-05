@@ -13,10 +13,10 @@
 
 struct InterceptorDiff
 {
-    std::vector<RuleInfoPtr> rules_to_add;
-    std::vector<RuleInfoPtr> rules_to_delete;
+    std::list<RuleInfoPtr> rules_to_add;
+    std::list<RuleInfoPtr> rules_to_delete;
 
-    InterceptorDiff& operator+=(const InterceptorDiff& other);
+    InterceptorDiff& operator+=(InterceptorDiff&& other);
     bool empty() const {return rules_to_add.empty() && rules_to_delete.empty();}
     void clear() {
         rules_to_add.clear();

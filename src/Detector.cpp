@@ -10,12 +10,15 @@ public:
     void addSwitch(SwitchInfo&& info);
     void deleteSwitch(SwitchId id);
 
-    void addRule(SwitchId switch_id, RuleInfo&& info);
-    void changeRule(SwitchId switch_id, RuleInfo&& info);
-    void deleteRule(SwitchId switch_id, RuleInfo&& info);
+    void addRule(RuleInfo&& info);
+    void changeRule(RuleInfo&& info);
+    void deleteRule(RuleInfo&& info);
 
     void addLink(TopoId src_topo_id, TopoId dst_topo_id);
     void deleteLink(TopoId src_topo_id, TopoId dst_topo_id);
+
+    void getRuleStats(RequestId request_id, RuleInfo&& info);
+    void getPortStats(RequestId request_id, PortInfo&& info);
 
     void addRuleStats(RequestId request_id, RuleInfo&& info,
                       RuleStatsFields stats);
@@ -36,8 +39,9 @@ private:
 
     std::map<RequestId, RequestPtr> pending_requests_;
 
-    RulePtr get_rule(SwitchId switch_id, const RuleInfo& info);
-    void add_rule(SwitchId switch_id, RuleInfo&& info);
+    RulePtr get_rule(const RuleInfo& info);
+    std::list<RulePtr> get_matching_rules(const RuleInfo& info);
+    void add_rule(RuleInfo&& info);
     void delete_rule(RulePtr rule);
 
     void add_rule_to_predictor(RulePtr rule);
@@ -103,9 +107,9 @@ void Detector::Impl::deleteSwitch(SwitchId id)
     network_->deleteSwitch(id);
 }
 
-void Detector::Impl::addRule(SwitchId switch_id, RuleInfo&& info)
+void Detector::Impl::addRule(RuleInfo&& info)
 {
-    auto rule = get_rule(switch_id, info);
+    auto rule = get_rule(info);
     if (rule) {
         std::cout<<"[Detector] FlowMod::CHANGE "<<info<<std::endl;
         delete_rule(rule);
@@ -113,26 +117,26 @@ void Detector::Impl::addRule(SwitchId switch_id, RuleInfo&& info)
     else {
         std::cout<<"[Detector] FlowMod::ADD "<<info<<std::endl;
     }
-    add_rule(switch_id, std::move(info));
+    add_rule(std::move(info));
 }
 
-void Detector::Impl::changeRule(SwitchId switch_id, RuleInfo&& info)
+void Detector::Impl::changeRule(RuleInfo&& info)
 {
     std::cout<<"[Detector] FlowMod::CHANGE "<<info<<std::endl;
-    auto rule = get_rule(switch_id, info);
+    auto rule = get_rule(info);
     if (rule) {
         delete_rule(rule);
-        add_rule(switch_id, std::move(info));
+        add_rule(std::move(info));
     }
     else {
         throw std::logic_error("Change non-existing rule");
     }
 }
 
-void Detector::Impl::deleteRule(SwitchId switch_id, RuleInfo&& info)
+void Detector::Impl::deleteRule(RuleInfo&& info)
 {
     std::cout<<"[Detector] FlowMod::DELETE "<<info<<std::endl;
-    auto rule = get_rule(switch_id, info);
+    auto rule = get_rule(info);
     if (rule) {
         delete_rule(rule);
     }
@@ -171,9 +175,26 @@ void Detector::Impl::deleteLink(TopoId src_topo_id, TopoId dst_topo_id)
     }
 }
 
+void Detector::Impl::getRuleStats(RequestId request_id, RuleInfo&& info)
+{
+    auto rules = get_matching_rules(info);
+    if (not rules.empty()) {
+        flow_predictor_->predictFlow(request_id, rules);
+    }
+    else {
+        std::cout << "[Detector] No matching rules" << std::endl;
+    }
+}
+
+void Detector::Impl::getPortStats(RequestId request_id, PortInfo&& info)
+{
+
+}
+
 void Detector::Impl::addRuleStats(RequestId request_id, RuleInfo&& info,
                                   RuleStatsFields stats)
 {
+    // TODO: Check this in StatsQuerier
     // TODO: check/find stats based on domain and port, not on xid
     auto it = pending_requests_.find(request_id);
     if (it != pending_requests_.end()) {
@@ -181,6 +202,8 @@ void Detector::Impl::addRuleStats(RequestId request_id, RuleInfo&& info,
         assert(rule_request != nullptr);
         rule_request->stats = stats;
         flow_predictor_->passRequest(rule_request);
+
+        pending_requests_.erase(it);
 
         // TODO: change this
         //return StatsStatus::APPLIED;
@@ -201,6 +224,8 @@ void Detector::Impl::addPortStats(RequestId request_id, PortInfo&& info,
         port_request->stats = stats;
         flow_predictor_->passRequest(port_request);
 
+        pending_requests_.erase(it);
+
         // TODO: change this
         //return StatsStatus::APPLIED;
     }
@@ -217,22 +242,32 @@ void Detector::Impl::prepareInstructions()
     // of path computations!
     // Collect changed edges in diff and then use it it path computation.
     auto instruction = flow_predictor_->getInstruction();
+    // TODO: Save pending requests in Stats
+    for (const auto& request : instruction.requests.data) {
+        pending_requests_.emplace(request->id, request);
+    }
     if (not instruction.empty()) {
         instruction_queue_.push(std::move(instruction));
     }
 }
 
-RulePtr Detector::Impl::get_rule(SwitchId switch_id, const RuleInfo& info)
+RulePtr Detector::Impl::get_rule(const RuleInfo& info)
 {
-    return network_->rule(switch_id, info.table_id, info.priority, info.match);
+    return network_->rule(
+        info.switch_id, info.table_id, info.priority, info.match);
 }
 
-void Detector::Impl::add_rule(SwitchId switch_id, RuleInfo&& info)
+std::list<RulePtr> Detector::Impl::get_matching_rules(const RuleInfo& info)
+{
+    return network_->matchingRules(info.switch_id, info.table_id, info.match);
+}
+
+void Detector::Impl::add_rule(RuleInfo&& info)
 {
     // TODO: add table miss only if there is a rule that sends packets
     // to this table, also return vector<rule> from addRule()
     auto rule = network_->addRule(
-        switch_id, info.table_id, info.priority, info.cookie,
+        info.switch_id, info.table_id, info.priority, info.cookie,
         std::move(info.match), std::move(info.actions)
     );
     add_rule_to_predictor(rule);
@@ -246,14 +281,14 @@ void Detector::Impl::delete_rule(RulePtr rule)
 
 void Detector::Impl::add_rule_to_predictor(RulePtr rule)
 {
-    std::cout<<"[Graph] ADD "<<rule<<std::endl;
+    //std::cout<<"[Graph] ADD "<<rule<<std::endl;
     auto diff = dependency_graph_->addRule(rule);
     flow_predictor_->updateEdges(diff);
 }
 
 void Detector::Impl::delete_rule_from_predictor(RulePtr rule)
 {
-    std::cout<<"[Graph] DELETE "<<rule<<std::endl;
+    //std::cout<<"[Graph] DELETE "<<rule<<std::endl;
     auto diff = dependency_graph_->deleteRule(rule);
     flow_predictor_->updateEdges(diff);
 }
@@ -295,24 +330,24 @@ void Detector::deleteSwitch(SwitchId id)
     });
 }
 
-void Detector::addRule(SwitchId switch_id, RuleInfo info)
+void Detector::addRule(RuleInfo info)
 {
-    executor_.addTask([this, switch_id, info = std::move(info)]() mutable {
-        impl_->addRule(switch_id, std::move(info));
+    executor_.addTask([this, info = std::move(info)]() mutable {
+        impl_->addRule(std::move(info));
     });
 }
 
-void Detector::changeRule(SwitchId switch_id, RuleInfo info)
+void Detector::changeRule(RuleInfo info)
 {
-    executor_.addTask([this, switch_id, info = std::move(info)]() mutable {
-        impl_->changeRule(switch_id, std::move(info));
+    executor_.addTask([this, info = std::move(info)]() mutable {
+        impl_->changeRule(std::move(info));
     });
 }
 
-void Detector::deleteRule(SwitchId switch_id, RuleInfo info)
+void Detector::deleteRule(RuleInfo info)
 {
-    executor_.addTask([this, switch_id, info = std::move(info)]() mutable {
-        impl_->deleteRule(switch_id, std::move(info));
+    executor_.addTask([this, info = std::move(info)]() mutable {
+        impl_->deleteRule(std::move(info));
     });
 }
 
@@ -328,6 +363,24 @@ void Detector::deleteLink(TopoId src_topo_id, TopoId dst_topo_id)
     executor_.addTask([this, src_topo_id, dst_topo_id]() {
         impl_->deleteLink(src_topo_id, dst_topo_id);
     });
+}
+
+void Detector::getRuleStats(RequestId request_id, RuleInfo info)
+{
+    executor_.addTask(
+        [this, request_id, info = std::move(info)]() mutable {
+            impl_->getRuleStats(request_id, std::move(info));
+        }
+    );
+}
+
+void Detector::getPortStats(RequestId request_id, PortInfo info)
+{
+    executor_.addTask(
+        [this, request_id, info = std::move(info)]() mutable {
+            impl_->getPortStats(request_id, std::move(info));
+        }
+    );
 }
 
 void Detector::addRuleStats(RequestId request_id, RuleInfo info,

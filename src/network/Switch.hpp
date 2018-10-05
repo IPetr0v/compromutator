@@ -21,6 +21,7 @@ public:
                     Match&& match, Actions&& actions);
     void deleteRule(RuleId id);
 
+    std::list<RulePtr> matchingRules(const Match& match);
     RulePtr tableMissRule() const {return table_miss_rule_;}
     RuleRange rules() {return RuleRange(rule_map_);}
     RuleRange upperRules(RulePtr rule);

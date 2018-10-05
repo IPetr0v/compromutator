@@ -40,6 +40,8 @@ public:
                     Match&& match, ActionsBase&& actions_base);
     void deleteRule(RuleId id);
 
+    std::list<RulePtr> matchingRules(SwitchId switch_id, TableId table_id,
+                                     const Match& match);
     PortPtr adjacentPort(PortPtr port) const;
     std::pair<Link, bool> link(TopoId src_topo_id, TopoId dst_topo_id);
     std::pair<Link, bool> addLink(TopoId src_topo_id, TopoId dst_topo_id);

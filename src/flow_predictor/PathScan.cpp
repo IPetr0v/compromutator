@@ -6,7 +6,7 @@ Node::Node(NodeId id, RulePtr rule, NetworkSpace&& domain,
            Transfer root_transfer, uint64_t multiplier):
     id(id), rule(rule), domain(std::move(domain)),
     root_transfer(std::move(root_transfer)), multiplier(multiplier),
-    counter(0), final_time_(Timestamp::max())
+    counter({0, 0}), final_time_(Timestamp::max())
 {
 
 }
@@ -37,7 +37,8 @@ DomainPath::DomainPath(PathId id, NodePtr source, NodePtr sink,
                        Timestamp starting_time):
     id(id), source(source), sink(sink), source_domain(source->domain),
     sink_domain(source->root_transfer.apply(source_domain)),
-    starting_time(starting_time), final_time(Timestamp::max())
+    last_counter({0, 0}), starting_time(starting_time),
+    final_time(Timestamp::max())
 {
 
 }
@@ -48,6 +49,18 @@ void DomainPath::set_interceptor(RulePtr rule)
     if (rule) {
         interceptor = rule->info();
     }
+}
+
+RuleStatsFields PathScan::addNodeCounter(NodePtr node,
+                                         RuleStatsFields new_counter)
+{
+    //return node->addCounter(new_counter);
+    auto rule = node->rule;
+    rule->rule_mapping_->counter.packet_count += new_counter.packet_count;
+    rule->rule_mapping_->counter.byte_count += new_counter.byte_count;
+    node->counter.packet_count += new_counter.packet_count;
+    node->counter.byte_count += new_counter.byte_count;
+    return node->counter;
 }
 
 void PathScan::forEachSubtreeNode(NodePtr root, NodeVisitor visitor)
@@ -88,7 +101,8 @@ void PathScan::forEachPathNode(NodePtr source, NodePtr sink,
 
         // Visit node
         if (deleting_visitor(node)) {
-            deleteNode(node);
+            //deleteNode(node);
+            deleted_nodes_.push_back(node);
         }
 
         node_queue.pop();
@@ -128,6 +142,7 @@ NodePtr PathScan::addChildNode(NodePtr parent, RulePtr rule,
 
 void PathScan::setNodeFinalTime(NodePtr node, Timestamp final_time)
 {
+    //std::cout<<"[Path] setNodeFinalTime: "<<node->id<<std::endl;
     // Node version becomes old
     assert(Timestamp::max() != final_time);
     node->final_time_ = final_time;
@@ -137,9 +152,6 @@ void PathScan::setNodeFinalTime(NodePtr node, Timestamp final_time)
     auto mapping_it = node->vertex_backward_iterator_;
     assert(NodeRemovalIterator(nullptr) != mapping_it);
     mapping->node_list.erase(mapping_it);
-    if (node->rule->rule_mapping_->empty()) {
-        delete_rule_mapping(node->rule);
-    }
 
     // Remove node from the parent if it's not a root
     if (RuleType::SINK != node->rule->type()) {
@@ -152,15 +164,28 @@ void PathScan::setNodeFinalTime(NodePtr node, Timestamp final_time)
 
 void PathScan::deleteNode(NodePtr node)
 {
+    //std::cout<<"[Path] deleteNode: "<<node->id<<std::endl;
     // We must delete only old versions
     assert(Timestamp::max() != node->final_time_);
+    if (node->rule->rule_mapping_->empty()) {
+        delete_rule_mapping(node->rule);
+    }
     node_list_.erase(node);
+}
+
+void PathScan::clearDeletedNodes()
+{
+    for (auto& node : deleted_nodes_) {
+        deleteNode(node);
+    }
+    deleted_nodes_.clear();
 }
 
 const DomainPath& PathScan::domainPath(DomainPathPtr desc) const
 {
     return *desc;
 }
+
 DomainPathPtr PathScan::outDomainPath(NodePtr source) const
 {
     assert(source->rule->type() == RuleType::SOURCE);
@@ -205,6 +230,7 @@ RuleMappingDescriptor PathScan::add_rule_mapping(RulePtr rule)
 
 void PathScan::delete_rule_mapping(RulePtr rule)
 {
+    std::cout<<"delete_rule_mapping "<<rule<<std::endl;
     assert(rule->rule_mapping_->empty());
     rule_mapping_list_.erase(rule->rule_mapping_);
     rule->rule_mapping_ = RuleMappingDescriptor(nullptr);
@@ -219,6 +245,7 @@ NodePtr PathScan::add_node(RulePtr rule, NetworkSpace&& domain,
         last_node_id_++, rule, std::move(domain),
         root_transfer, multiplier
     );
+    //std::cout<<"[Path] add_node: "<<node->id<<std::endl;
 
     // Create vertex
     if (RuleMappingDescriptor(nullptr) == rule->rule_mapping_) {

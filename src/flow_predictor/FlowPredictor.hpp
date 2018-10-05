@@ -15,27 +15,31 @@
 #include <set>
 #include <unordered_map>
 
+struct Prediction
+{
+    Prediction(RequestId request_id, RulePtr rule):
+        request_id(request_id), rule(rule), real_counter({0, 0}),
+        predicted_counter({0, 0}) {}
+    void update(RuleStatsFields real, RuleStatsFields predicted);
+
+    RequestId request_id;
+    RulePtr rule;
+    RuleStatsFields real_counter;
+    RuleStatsFields predicted_counter;
+};
+using PredictionList = std::list<Prediction>;
+
 struct Instruction
 {
     RequestList requests;
+    RuleReplyList replies;
     InterceptorDiff interceptor_diff;
 
     bool empty() const {
-        return requests.data.empty() && interceptor_diff.empty();
+        return requests.data.empty() &&
+               replies.empty() &&
+               interceptor_diff.empty();
     }
-};
-
-struct Prediction
-{
-    Prediction(RulePtr rule, Timestamp time,
-               uint64_t real_counter, uint64_t predicted_counter):
-        rule(rule), time(time), real_counter(real_counter),
-        predicted_counter(predicted_counter) {}
-
-    RulePtr rule;
-    Timestamp time;
-    uint64_t real_counter;
-    uint64_t predicted_counter;
 };
 
 class FlowPredictor
@@ -47,9 +51,7 @@ public:
     Instruction getInstruction();
     void passRequest(RequestPtr request);
     void updateEdges(const EdgeDiff& edge_diff);
-    void predictCounter(RulePtr rule);
-
-    std::list<Prediction> getPredictions() {return std::move(predictions_);}
+    void predictFlow(RequestId request_id, std::list<RulePtr> rules);
 
 private:
     std::shared_ptr<DependencyGraph> dependency_graph_;
@@ -58,11 +60,14 @@ private:
     std::unique_ptr<StatsManager> stats_manager_;
 
     InterceptorDiff latest_interceptor_diff_;
-    std::list<Prediction> predictions_;
+    PredictionList predictions_;
+    std::unordered_map<TimestampId, PredictionList> pending_predictions_;
 
     Timestamp current_time() const {return stats_manager_->frontTime();}
 
     void predict_subtree(NodePtr root);
+    void update_predictions(TimestampId timestamp);
+    RuleReplyList create_replies();
 
     void process_stats_list(std::list<StatsPtr>&& stats_list);
     void process_rule_query(const RuleStatsPtr& query);
@@ -80,5 +85,4 @@ private:
     void query_domain_path(NodePtr source, NodePtr sink);
     void add_domain_path(NodePtr source, NodePtr sink);
     void delete_domain_path(NodePtr source, NodePtr sink);
-
 };

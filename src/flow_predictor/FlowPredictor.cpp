@@ -4,6 +4,12 @@
 #include <memory>
 #include <queue>
 
+void Prediction::update(RuleStatsFields real, RuleStatsFields predicted)
+{
+    real_counter = real;
+    predicted_counter = predicted;
+}
+
 FlowPredictor::FlowPredictor(std::shared_ptr<DependencyGraph> dependency_graph,
                              std::shared_ptr<RequestIdGenerator> xid_generator):
     dependency_graph_(dependency_graph),
@@ -16,9 +22,10 @@ FlowPredictor::FlowPredictor(std::shared_ptr<DependencyGraph> dependency_graph,
 
 Instruction FlowPredictor::getInstruction()
 {
+    path_scan_->clearDeletedNodes();
     auto instruction = Instruction{
         stats_manager_->getNewRequests(),
-        //std::move(latest_interceptor_diff_)
+        create_replies(),
         interceptor_manager_->popInterceptorDiff()
     };
     return instruction;
@@ -26,9 +33,15 @@ Instruction FlowPredictor::getInstruction()
 
 void FlowPredictor::passRequest(RequestPtr request)
 {
+    auto rule_request = RuleRequest::pointerCast(request);
+    std::cout<<"passRequest["<<request->time.id<<
+             "] "<<*(rule_request->rule.get())<<std::endl;
     stats_manager_->passRequest(request);
     auto stats_list = stats_manager_->popStatsList();
-    process_stats_list(std::move(stats_list));
+    if (not stats_list.stats.empty()) {
+        process_stats_list(std::move(stats_list.stats));
+        update_predictions(request->time.id);
+    }
 }
 
 void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
@@ -50,12 +63,21 @@ void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
              <<" | "<<interceptor_manager_->diffToString()<<std::endl;
 }
 
-void FlowPredictor::predictCounter(RulePtr rule)
+void FlowPredictor::predictFlow(RequestId request_id, std::list<RulePtr> rules)
 {
-    stats_manager_->requestRule(rule);
-    auto nodes = path_scan_->getNodes(rule);
-    for (auto node : nodes) {
-        predict_subtree(node);
+    for (const auto& rule : rules) {
+        // Create pending predictions
+        std::cout<<"Add pred: "<<current_time().id<<std::endl;
+        pending_predictions_[current_time().id].emplace_back(request_id, rule);
+
+        // TODO: Get rule stats for detection
+        //stats_manager_->requestRule(rule);
+
+        // Create requests
+        auto nodes = path_scan_->getNodes(rule);
+        for (auto node : nodes) {
+            predict_subtree(node);
+        }
     }
 }
 
@@ -69,34 +91,80 @@ void FlowPredictor::predict_subtree(NodePtr root)
     });
 }
 
+void FlowPredictor::update_predictions(TimestampId timestamp)
+{
+    auto it = pending_predictions_.find(timestamp);
+    if (it != pending_predictions_.end()) {
+        for (auto& prediction : it->second) {
+            // TODO: Get real counter values
+            auto rule = prediction.rule;
+            prediction.update({0, 0}, path_scan_->getRuleCounter(rule));
+            predictions_.push_back(std::move(prediction));
+        }
+        pending_predictions_.erase(it);
+    }
+    else {
+        //throw std::logic_error("Non-existing prediction");
+        std::cout<<"Non-existing prediction: "<<timestamp<<std::endl;
+    }
+}
+
+RuleReplyList FlowPredictor::create_replies()
+{
+    RuleReplyList replies;
+    std::unordered_map<RequestId, RuleReplyPtr> reply_map;
+    for (const auto& prediction : predictions_) {
+        auto it = reply_map.find(prediction.request_id);
+        if (it != reply_map.end()) {
+            it->second->addFlow(prediction.rule->info(),
+                                prediction.predicted_counter);
+        }
+        else {
+            auto reply = std::make_shared<RuleReply>(
+                prediction.request_id, prediction.rule->sw()->id()
+            );
+            reply->addFlow(prediction.rule->info(),
+                           prediction.predicted_counter);
+            reply_map.emplace(prediction.request_id, reply);
+        }
+    }
+    predictions_.clear();
+    for (const auto& reply : reply_map) {
+        replies.push_back(reply.second);
+    }
+    return replies;
+}
+
 void FlowPredictor::process_stats_list(std::list<StatsPtr>&& stats_list)
 {
     // TODO: use byte counters
 
     // Process statistics
-    std::list<Prediction> new_predictions;
+    //std::list<Prediction> new_predictions;
     for (const auto& stats : stats_list) {
         if (auto rule_stats = std::dynamic_pointer_cast<RuleStats>(stats)) {
-            auto rule = rule_stats->rule;
-            auto time = rule_stats->time;
-            auto real_counter = rule_stats->stats_fields.packet_count;
-            //process_rule_query(rule_stats);
-            new_predictions.emplace_back(rule, time, real_counter, 0);
+            assert(false);
+            //auto rule = rule_stats->rule;
+            //auto time = rule_stats->time;
+            //auto real_counter = rule_stats->stats_fields;
+            ////process_rule_query(rule_stats);
+            //new_predictions.emplace_back(rule, time, real_counter,
+            //                             RuleStatsFields{0, 0});
         }
         else if (auto path_stats = std::dynamic_pointer_cast<PathStats>(stats))
             process_path_query(path_stats);
         else if (auto link_stats = std::dynamic_pointer_cast<LinkStats>(stats))
             process_link_query(link_stats);
         else
-            assert(0);
+            assert(false);
     }
 
     // Check rule counters
-    for (auto& prediction : new_predictions) {
-        auto rule = prediction.rule;
-        prediction.predicted_counter = path_scan_->getRuleCounter(rule);
-    }
-    predictions_.splice(predictions_.end(), std::move(new_predictions));
+    //for (auto& prediction : new_predictions) {
+    //    auto rule = prediction.rule;
+    //    prediction.predicted_counter = path_scan_->getRuleCounter(rule);
+    //}
+    //predictions_.splice(predictions_.end(), std::move(new_predictions));
 }
 
 void FlowPredictor::process_rule_query(const RuleStatsPtr& query)
@@ -108,10 +176,12 @@ void FlowPredictor::process_path_query(const PathStatsPtr& query)
 {
     auto path = query->path;
 
-    auto source_counter = query->source_stats_fields.packet_count;
+    auto source_counter = query->source_stats_fields;
     //auto sink_counter = query->sink_stats_fields.packet_count;
-    auto last_counter = path_scan_->domainPath(path).last_counter;
-    auto traversing_counter = source_counter - last_counter;
+    auto last_counter = path->last_counter;
+    auto packet_count = source_counter.packet_count - last_counter.packet_count;
+    auto byte_count = source_counter.byte_count - last_counter.byte_count;
+    RuleStatsFields traversing_counter{packet_count, byte_count};
 
     auto source = path_scan_->domainPath(path).source;
     auto sink = path_scan_->domainPath(path).sink;
@@ -122,6 +192,9 @@ void FlowPredictor::process_path_query(const PathStatsPtr& query)
             return node_final_time < current_time();
         }
     );
+
+    // Update last counter
+    path->last_counter = source_counter;
 }
 
 void FlowPredictor::process_link_query(const LinkStatsPtr& query)
@@ -202,12 +275,12 @@ FlowPredictor::add_child_node(NodePtr parent, EdgePtr edge)
 
 void FlowPredictor::add_subtree(NodePtr subtree_root)
 {
-    std::cout<<"add_subtree: "<<*subtree_root<<std::endl;
+    //std::cout<<"add_subtree: "<<*subtree_root<<std::endl;
     std::queue<NodePtr> node_queue;
     node_queue.push(subtree_root);
     while (not node_queue.empty()) {
         auto& node = node_queue.front();
-        std::cout<<"-> "<<*node<<std::endl;
+        //std::cout<<"-> "<<*node<<std::endl;
         auto rule = path_scan_->node(node).rule;
 
         // TODO: save path to getPort
@@ -233,10 +306,10 @@ void FlowPredictor::add_subtree(NodePtr subtree_root)
 
 void FlowPredictor::delete_subtree(NodePtr subtree_root)
 {
-    std::cout<<"delete_subtree: "<<*subtree_root<<std::endl;
+    //std::cout<<"delete_subtree: "<<*subtree_root<<std::endl;
     path_scan_->forEachSubtreeNode(subtree_root,
         [this, subtree_root](NodePtr node) {
-            std::cout<<"-> "<<*node<<std::endl;
+            //std::cout<<"-> "<<*node<<std::endl;
             // TODO: delete path from getPort
 
             // Set node to be an old version
@@ -251,28 +324,26 @@ void FlowPredictor::delete_subtree(NodePtr subtree_root)
     );
 }
 
-void FlowPredictor::query_domain_path(NodePtr source,
-                                      NodePtr sink)
+void FlowPredictor::query_domain_path(NodePtr source, NodePtr sink)
 {
-    auto path = path_scan_->addDomainPath(source, sink, current_time());
+    auto path = path_scan_->outDomainPath(source);
     stats_manager_->requestPath(path);
+    std::cout<<"[Path] Query: "<<*path->interceptor<<std::endl;
 }
 
-void FlowPredictor::add_domain_path(NodePtr source,
-                                    NodePtr sink)
+void FlowPredictor::add_domain_path(NodePtr source, NodePtr sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
     interceptor_manager_->createInterceptor(path);
-    std::cout<<"[Path] Create: "<<*path->interceptor<<std::endl;
+    //std::cout<<"[Path] Create: "<<*path->interceptor<<std::endl;
 }
 
-void FlowPredictor::delete_domain_path(NodePtr source,
-                                       NodePtr sink)
+void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
 {
     auto path = path_scan_->outDomainPath(source);
     auto path_time = path_scan_->domainPath(path).starting_time;
     if (path_time != current_time()) {
-        std::cout<<"[Path] Suspend: "<<*path->interceptor<<std::endl;
+        //std::cout<<"[Path] Suspend: "<<*path->interceptor<<std::endl;
         path_scan_->setDomainPathFinalTime(path, current_time());
         stats_manager_->requestPath(path);
         interceptor_manager_->deleteInterceptor(path);
@@ -280,11 +351,11 @@ void FlowPredictor::delete_domain_path(NodePtr source,
     else {
         // Delete domain path because it hasn't produced any interceptor
         if (path->interceptor) {
-            std::cout<<"[Path] Delete: "<<*path->interceptor<<std::endl;
+            //std::cout<<"[Path] Delete: "<<*path->interceptor<<std::endl;
             interceptor_manager_->deleteInterceptor(path);
         }
         else {
-            std::cout<<"[Path] Delete: "<<"[SOURCE: SUSPENDED]"<<std::endl;
+            //std::cout<<"[Path] Delete: "<<"[SOURCE: SUSPENDED]"<<std::endl;
         }
         stats_manager_->discardPathRequest(path);
         path_scan_->deleteDomainPath(path);

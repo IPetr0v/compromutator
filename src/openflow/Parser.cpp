@@ -64,13 +64,42 @@ of13::FlowMod Parser::getFlowMod(RuleInfoPtr rule)
     of13::FlowMod flow_mod;
 
     flow_mod.table_id(rule->table_id);
-    flow_mod.cookie(rule->cookie);
     flow_mod.priority(rule->priority);
+    flow_mod.cookie(rule->cookie);
     flow_mod.match(get_of_match(rule->match));
     auto of_instr = get_of_instructions(rule->actions);
     flow_mod.instructions(of_instr);
 
     return flow_mod;
+}
+
+of13::FlowStats Parser::getFlowStats(RuleInfoPtr rule, RuleStatsFields stats)
+{
+    of13::FlowStats flow_stats;
+
+    flow_stats.table_id(rule->table_id);
+    // TODO: Implement duration
+    flow_stats.duration_sec();
+    flow_stats.duration_nsec();
+    flow_stats.priority(rule->priority);
+    flow_stats.cookie(rule->cookie);
+    flow_stats.match(get_of_match(rule->match));
+    flow_stats.packet_count(stats.packet_count);
+    flow_stats.byte_count(stats.byte_count);
+
+    return flow_stats;
+}
+
+of13::MultipartReplyFlow Parser::getMultipartReplyFlow(RuleReplyPtr reply)
+{
+    of13::MultipartReplyFlow reply_flow;
+
+    reply_flow.flags(0);
+    for (const auto& flow : reply->flows) {
+        reply_flow.add_flow_stats(getFlowStats(flow.rule, flow.stats));
+    }
+
+    return reply_flow;
 }
 
 of13::MultipartRequestFlow Parser::getMultipartRequestFlow(RuleInfoPtr rule)

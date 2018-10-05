@@ -32,12 +32,15 @@ public:
     void addSwitch(SwitchInfo info);
     void deleteSwitch(SwitchId id);
 
-    void addRule(SwitchId switch_id, RuleInfo info);
-    void changeRule(SwitchId switch_id, RuleInfo info);
-    void deleteRule(SwitchId switch_id, RuleInfo info);
+    void addRule(RuleInfo info);
+    void changeRule(RuleInfo info);
+    void deleteRule(RuleInfo info);
 
     void addLink(TopoId src_topo_id, TopoId dst_topo_id);
     void deleteLink(TopoId src_topo_id, TopoId dst_topo_id);
+
+    void getRuleStats(RequestId request_id, RuleInfo info);
+    void getPortStats(RequestId request_id, PortInfo info);
 
     // TODO: do we need to check match, or we can only check xid ?
     void addRuleStats(RequestId request_id, RuleInfo info,

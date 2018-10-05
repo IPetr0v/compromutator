@@ -173,6 +173,19 @@ void Network::deleteRule(RuleId id)
     }
 }
 
+std::list<RulePtr>
+Network::matchingRules(SwitchId switch_id, TableId table_id, const Match& match)
+{
+    SwitchPtr sw = getSwitch(switch_id);
+    TablePtr table = sw ? sw->table(table_id) : nullptr;
+    if (table) {
+        return table->matchingRules(match);
+    }
+    else {
+        return std::list<RulePtr>();
+    }
+}
+
 PortPtr Network::adjacentPort(PortPtr port) const
 {
     auto it = topology_.find(port->topoId());
