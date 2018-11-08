@@ -46,6 +46,11 @@ void FlowPredictor::passRequest(RequestPtr request)
 
 void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
 {
+    if (not edge_diff.empty()) {
+        std::cout << "[Graph] " << edge_diff
+                  << " | " << interceptor_manager_->diffToString() << std::endl;
+    }
+
     //std::cout<<"[Graph] Remove"<<std::endl;
     for (auto& removed_edge : edge_diff.removed_edges) {
         delete_subtrees(removed_edge);
@@ -53,7 +58,7 @@ void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
 
     //std::cout<<"[Graph] Change"<<std::endl;
     for (auto& changed_edge : edge_diff.changed_edges) {
-        delete_subtrees({changed_edge->src->rule, changed_edge->dst->rule});
+        delete_subtrees(changed_edge);
         add_subtrees(changed_edge);
     }
 
@@ -62,8 +67,11 @@ void FlowPredictor::updateEdges(const EdgeDiff& edge_diff)
         add_subtrees(new_edge);
     }
 
-    std::cout<<"[Graph] "<<edge_diff
-             <<" | "<<interceptor_manager_->diffToString()<<std::endl;
+    // TODO: uncomment this
+    //if (not edge_diff.empty()) {
+    //    std::cout << "[Graph] " << edge_diff
+    //              << " | " << interceptor_manager_->diffToString() << std::endl;
+    //}
 }
 
 void FlowPredictor::predictFlow(RequestId request_id, std::list<RulePtr> rules)
@@ -205,9 +213,9 @@ void FlowPredictor::process_link_query(const LinkStatsPtr& query)
 
 }
 
-void FlowPredictor::add_subtrees(EdgePtr edge)
+void FlowPredictor::add_subtrees(const Dependency& edge)
 {
-    auto dst_rule = edge->dst->rule;
+    auto dst_rule = edge.dst;
 
     bool is_new_rule = not path_scan_->ruleExists(dst_rule);
     if (RuleType::SINK == dst_rule->type() && is_new_rule) {
@@ -227,17 +235,17 @@ void FlowPredictor::add_subtrees(EdgePtr edge)
     }
 }
 
-void FlowPredictor::delete_subtrees(std::pair<RulePtr, RulePtr> edge)
+void FlowPredictor::delete_subtrees(const Dependency& edge)
 {
     //std::cout<<"[Path] delete_subtrees "<<edge.first<<std::endl;
-    auto src_rule = edge.first;
+    auto src_rule = edge.src;
     if (path_scan_->ruleExists(src_rule)) {
         auto nodes = path_scan_->getNodes(src_rule);
         for (auto node_it = nodes.begin(); node_it != nodes.end();) {
             // Check correct edge
             auto node = *node_it;
             //std::cout << "[Path] --- node " << **node_it << std::endl;
-            if (node->parent->rule->id() == edge.second->id()) {
+            if (node->parent->rule->id() == edge.dst->id()) {
                 delete_subtree(*node_it);
             }
             node_it++;
@@ -246,9 +254,9 @@ void FlowPredictor::delete_subtrees(std::pair<RulePtr, RulePtr> edge)
 }
 
 bool FlowPredictor::is_existing_child(NodePtr parent,
-                                      EdgePtr edge) const
+                                      const Dependency& edge) const
 {
-    auto src_rule = edge->src->rule;
+    auto src_rule = edge.src;
     for (auto child : path_scan_->getChildNodes(parent)) {
         auto child_rule = path_scan_->node(child).rule;
         if (src_rule->id() == child_rule->id()) {
@@ -259,14 +267,16 @@ bool FlowPredictor::is_existing_child(NodePtr parent,
 }
 
 std::pair<NodePtr, bool>
-FlowPredictor::add_child_node(NodePtr parent, EdgePtr edge)
+FlowPredictor::add_child_node(NodePtr parent, const Dependency& edge)
 {
     auto parent_domain = path_scan_->node(parent).domain;
     auto parent_multiplier = path_scan_->node(parent).multiplier;
-    auto edge_domain = dependency_graph_->edge(edge).domain;
+    //auto edge_domain = dependency_graph_->edge(edge).domain;
+    auto edge_domain = edge.domain;
 
-    auto rule = edge->src->rule;
-    auto& transfer = dependency_graph_->edge(edge).transfer;
+    //auto rule = edge->src->rule;
+    auto rule = edge.src;
+    auto& transfer = edge.transfer;
     auto domain =
         transfer.inverse(edge_domain & parent_domain) & rule->domain();
     auto multiplier = rule->multiplier() * parent_multiplier;
@@ -298,7 +308,8 @@ void FlowPredictor::add_subtree(NodePtr subtree_root)
         if (rule->type() != RuleType::SOURCE) {
             for (auto& edge : dependency_graph_->inEdges(rule)) {
                 // Save child nodes to the path scan
-                auto result = add_child_node(node, edge);
+                auto dependency = Dependency(edge);
+                auto result = add_child_node(node, dependency);
                 auto success = result.second;
                 if (success) {
                     auto child_node = result.first;

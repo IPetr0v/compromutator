@@ -40,11 +40,13 @@ class DependencyGraph
 public:
     explicit DependencyGraph(std::shared_ptr<Network> network);
 
-    EdgeDiff addRule(RulePtr rule);
-    EdgeDiff deleteRule(RulePtr rule);
+    void addRule(RulePtr rule);
+    void deleteRule(RulePtr rule);
 
-    EdgeDiff addLink(Link link);
-    EdgeDiff deleteLink(Link link);
+    void addLink(Link link);
+    void deleteLink(Link link);
+
+    EdgeDiff popEdgeDiff();
 
     EdgeRange outEdges(RulePtr rule) {return rule_graph_.outEdges(rule->vertex_);}
     EdgeRange inEdges(RulePtr rule) {return rule_graph_.inEdges(rule->vertex_);}
@@ -58,6 +60,7 @@ private:
     InfluenceGraph influence_graph_;
 
     EdgeInstaller edge_installer_;
+    EdgeDiff latest_diff_;
 
     VertexPtr add_vertex(RulePtr rule);
     void delete_vertex(RulePtr rule);

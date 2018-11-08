@@ -145,6 +145,7 @@ public:
     size_t hash() const;
 
     std::string toString() const;
+    bool operator==(const Rule& other) const;
     friend std::ostream& operator<<(std::ostream& os, const Rule& rule);
     friend std::ostream& operator<<(std::ostream& os, const RulePtr rule);
 
@@ -201,4 +202,22 @@ struct RuleInfo
     friend std::ostream& operator<<(std::ostream& os, const RuleInfo& rule);
 private:
     RuleId rule_id_;
+};
+
+struct Dependency {
+    explicit Dependency(const EdgePtr edge):
+        src(edge->src->rule), dst(edge->dst->rule),
+        transfer(edge->transfer), domain(edge->domain) {}
+    Dependency(const VertexPtr src, const VertexPtr dst):
+        src(src->rule), dst(dst->rule),
+        transfer(Transfer::identityTransfer()),
+        domain(NetworkSpace::emptySpace()) {}
+
+    RulePtr src;
+    RulePtr dst;
+    Transfer transfer;
+    NetworkSpace domain;
+
+    bool operator==(const Dependency& other) const;
+    bool incident(const Dependency& other) const;
 };

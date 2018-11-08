@@ -74,11 +74,11 @@ private:
     void process_path_query(const PathStatsPtr& query);
     void process_link_query(const LinkStatsPtr& query);
 
-    bool is_existing_child(NodePtr parent, EdgePtr edge) const;
+    bool is_existing_child(NodePtr parent, const Dependency& edge) const;
     std::pair<NodePtr, bool> add_child_node(NodePtr parent,
-                                                   EdgePtr edge);
-    void add_subtrees(EdgePtr edge);
-    void delete_subtrees(std::pair<RulePtr, RulePtr> edge);
+                                            const Dependency& edge);
+    void add_subtrees(const Dependency& edge);
+    void delete_subtrees(const Dependency& edge);
     void add_subtree(NodePtr subtree_root);
     void delete_subtree(NodePtr subtree_root);
 

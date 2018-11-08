@@ -244,6 +244,8 @@ void Detector::Impl::prepareInstructions()
     // instructions because sequential rule installation leads to large amount
     // of path computations!
     // Collect changed edges in diff and then use it it path computation.
+    auto diff = dependency_graph_->popEdgeDiff();
+    flow_predictor_->updateEdges(diff);
     auto instruction = flow_predictor_->getInstruction();
     // TODO: Save pending requests in Stats
     for (const auto& request : instruction.requests.data) {
@@ -285,27 +287,27 @@ void Detector::Impl::delete_rule(RulePtr rule)
 void Detector::Impl::add_rule_to_predictor(RulePtr rule)
 {
     std::cout<<"[Graph] ADD "<<rule<<std::endl;
-    auto diff = dependency_graph_->addRule(rule);
-    flow_predictor_->updateEdges(diff);
+    dependency_graph_->addRule(rule);
+    //flow_predictor_->updateEdges(diff);
 }
 
 void Detector::Impl::delete_rule_from_predictor(RulePtr rule)
 {
     std::cout<<"[Graph] DELETE "<<rule<<std::endl;
-    auto diff = dependency_graph_->deleteRule(rule);
-    flow_predictor_->updateEdges(diff);
+    dependency_graph_->deleteRule(rule);
+    //flow_predictor_->updateEdges(diff);
 }
 
 void Detector::Impl::add_link_to_predictor(Link link)
 {
-    auto diff = dependency_graph_->addLink(link);
-    flow_predictor_->updateEdges(diff);
+    dependency_graph_->addLink(link);
+    //flow_predictor_->updateEdges(diff);
 }
 
 void Detector::Impl::delete_link_from_predictor(Link link)
 {
-    auto diff = dependency_graph_->deleteLink(link);
-    flow_predictor_->updateEdges(diff);
+    dependency_graph_->deleteLink(link);
+    //flow_predictor_->updateEdges(diff);
 }
 
 Detector::Detector(std::shared_ptr<Alarm> alarm):

@@ -3,16 +3,6 @@
 #include <map>
 #include <memory>
 
-std::ostream& operator<<(std::ostream& os, const EdgeDiff& diff)
-{
-    os<<"+"<<diff.new_edges.size()+diff.new_dependent_edges.size()
-      <<"("<<diff.new_edges.size()<<")"
-      <<" ~"<<diff.changed_edges.size()
-      <<" -"<<diff.removed_edges.size()+diff.removed_dependent_edges.size()
-      <<"("<<diff.removed_edges.size()<<")";
-    return os;
-}
-
 EdgeInstaller::EdgeInstaller(RuleGraph& graph):
     rule_graph_(graph)
 {
@@ -63,9 +53,9 @@ void EdgeInstaller::updateEdge(EdgePtr edge)
 void EdgeInstaller::deleteEdge(VertexPtr src, VertexPtr dst, bool is_dependent)
 {
     if (not is_dependent)
-        diff_.removed_edges.emplace_back(src->rule, dst->rule);
+        diff_.removed_edges.emplace_back(src, dst);
     else
-        diff_.removed_dependent_edges.emplace_back(src->rule, dst->rule);
+        diff_.removed_dependent_edges.emplace_back(src, dst);
     rule_graph_.deleteEdge(src, dst);
 }
 
@@ -75,9 +65,9 @@ void EdgeInstaller::deleteOutEdges(VertexPtr src, bool is_dependent)
     // function so we traverse edges only once
     for (auto dst : rule_graph_.outVertices(src)) {
         if (not is_dependent)
-            diff_.removed_edges.emplace_back(src->rule, dst->rule);
+            diff_.removed_edges.emplace_back(src, dst);
         else
-            diff_.removed_dependent_edges.emplace_back(src->rule, dst->rule);
+            diff_.removed_dependent_edges.emplace_back(src, dst);
     }
     rule_graph_.deleteOutEdges(src);
 }
@@ -86,9 +76,9 @@ void EdgeInstaller::deleteInEdges(VertexPtr dst, bool is_dependent)
 {
     for (auto src : rule_graph_.inVertices(dst)) {
         if (not is_dependent)
-            diff_.removed_edges.emplace_back(src->rule, dst->rule);
+            diff_.removed_edges.emplace_back(src, dst);
         else
-            diff_.removed_dependent_edges.emplace_back(src->rule, dst->rule);
+            diff_.removed_dependent_edges.emplace_back(src, dst);
     }
     rule_graph_.deleteInEdges(dst);
 }
@@ -96,9 +86,7 @@ void EdgeInstaller::deleteInEdges(VertexPtr dst, bool is_dependent)
 void EdgeInstaller::clearEmptyEdges()
 {
     for (auto empty_edge : empty_edges_) {
-        diff_.removed_edges.emplace_back(std::make_pair(
-            empty_edge->src->rule, empty_edge->dst->rule
-        ));
+        diff_.removed_edges.emplace_back(empty_edge->src, empty_edge->dst);
         rule_graph_.deleteEdge(empty_edge);
     }
     empty_edges_.clear();
@@ -110,24 +98,24 @@ DependencyGraph::DependencyGraph(std::shared_ptr<Network> network):
     
 }
 
-EdgeDiff DependencyGraph::addRule(RulePtr rule)
+void DependencyGraph::addRule(RulePtr rule)
 {
     add_vertex(rule);
     add_out_edges(rule);
     add_in_edges(rule);
-    return edge_installer_.popEdgeDiff();
+    latest_diff_ += edge_installer_.popEdgeDiff();
 }
 
-EdgeDiff DependencyGraph::deleteRule(RulePtr rule)
+void DependencyGraph::deleteRule(RulePtr rule)
 {
     assert(VertexPtr(nullptr) != rule->vertex_);
     delete_out_edges(rule);
     delete_in_edges(rule);
     delete_vertex(rule);
-    return edge_installer_.popEdgeDiff();
+    latest_diff_ += edge_installer_.popEdgeDiff();
 }
 
-EdgeDiff DependencyGraph::addLink(Link link)
+void DependencyGraph::addLink(Link link)
 {
     // Add edges from both ends of the link
     for (auto directed_link : {link, Link::inverse(link)}) {
@@ -151,10 +139,10 @@ EdgeDiff DependencyGraph::addLink(Link link)
         }
     }
 
-    return edge_installer_.popEdgeDiff();
+    latest_diff_ += edge_installer_.popEdgeDiff();
 }
 
-EdgeDiff DependencyGraph::deleteLink(Link link)
+void DependencyGraph::deleteLink(Link link)
 {
     for (auto directed_link : {link, Link::inverse(link)}) {
         auto& src_port = directed_link.src_port;
@@ -181,7 +169,14 @@ EdgeDiff DependencyGraph::deleteLink(Link link)
         add_edges(dst_port->sourceRule(), dst_port->dstRules());
     }
 
-    return edge_installer_.popEdgeDiff();
+    latest_diff_ += edge_installer_.popEdgeDiff();
+}
+
+EdgeDiff DependencyGraph::popEdgeDiff()
+{
+    auto diff = std::move(latest_diff_);
+    latest_diff_.clear();
+    return diff;
 }
 
 const Vertex& DependencyGraph::vertex(RulePtr rule) const

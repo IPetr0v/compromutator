@@ -7,14 +7,16 @@
 Network::Network()
 {
     // Create special rules
-    drop_rule_ = new Rule(RuleType::SINK, nullptr, nullptr,
-                          LOW_PRIORITY, ZERO_COOKIE,
-                          NetworkSpace::wholeSpace(),
-                          Actions::noActions());
-    controller_rule_ = new Rule(RuleType::SINK, nullptr, nullptr,
-                                LOW_PRIORITY, ZERO_COOKIE,
-                                NetworkSpace::wholeSpace(),
-                                Actions::noActions());
+    drop_rule_ = std::make_shared<Rule>(
+        RuleType::SINK, nullptr, nullptr,
+        LOW_PRIORITY, ZERO_COOKIE,
+        NetworkSpace::wholeSpace(),
+        Actions::noActions());
+    controller_rule_ = std::make_shared<Rule>(
+        RuleType::SINK, nullptr, nullptr,
+        LOW_PRIORITY, ZERO_COOKIE,
+        NetworkSpace::wholeSpace(),
+        Actions::noActions());
 }
 
 Network::~Network()
@@ -25,8 +27,8 @@ Network::~Network()
     }
     switch_map_.clear();
 
-    delete drop_rule_;
-    delete controller_rule_;
+    //delete drop_rule_;
+    //delete controller_rule_;
 }
 
 SwitchPtr Network::getSwitch(SwitchId id) const

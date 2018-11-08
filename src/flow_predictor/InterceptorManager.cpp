@@ -82,7 +82,7 @@ RulePtr InterceptorManager::new_interceptor(DomainPathPtr path) const
     Cookie cookie = 0xa000 + path->id;
     auto domain = path->source_domain;
 
-    auto rule = new Rule(
+    auto rule = std::make_shared<Rule>(
         RuleType::SOURCE, path->source->rule->sw(), nullptr,
         priority, cookie, std::move(domain), Actions::tableAction(1u));
     return rule;

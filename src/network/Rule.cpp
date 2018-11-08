@@ -124,6 +124,16 @@ std::string Rule::toString() const
     return os.str();
 }
 
+bool Rule::operator==(const Rule& other) const
+{
+    if (not std::get<3>(id_)) {
+        return false;
+    }
+    else {
+        return id_ == other.id_;
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const Rule& rule)
 {
     os << rule.toString();
@@ -167,4 +177,14 @@ std::ostream& operator<<(std::ostream& os, const RuleInfo& rule)
        << ", domain=" << NetworkSpace(std::move(domain))
        << "]";
     return os;
+}
+
+bool Dependency::operator==(const Dependency& other) const
+{
+    return *src == *other.src && *dst == *other.dst;
+}
+
+bool Dependency::incident(const Dependency& other) const
+{
+    return *dst == *other.src;
 }

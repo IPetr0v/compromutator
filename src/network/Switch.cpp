@@ -14,9 +14,9 @@ Table::Table(SwitchPtr sw, TableId id):
 Table::~Table()
 {
     // Delete rules
-    for (auto it : rule_map_) {
-        delete it.second;
-    }
+    //for (auto it : rule_map_) {
+    //    delete it.second;
+    //}
     rule_map_.clear();
 }
 
@@ -48,8 +48,9 @@ RulePtr Table::addRule(Priority priority, Cookie cookie,
                        Match&& match, Actions&& actions)
 {
     // TODO: Check rule rewrite (and table-miss rewrite)
-    auto rule = new Rule(RuleType::FLOW, sw_, this, priority, cookie,
-                         std::move(match), std::move(actions));
+    auto rule = std::make_shared<Rule>(
+        RuleType::FLOW, sw_, this, priority, cookie,
+        std::move(match), std::move(actions));
     return rule_map_[rule->id()] = rule;
 }
 
@@ -57,7 +58,7 @@ void Table::deleteRule(RuleId id)
 {
     auto it = rule_map_.find(id);
     if (it != rule_map_.end()) {
-        delete it->second;
+        //delete it->second;
         rule_map_.erase(it);
     }
 }
@@ -108,21 +109,23 @@ bool Table::isFrontTable() const
 Port::Port(SwitchPtr sw, PortInfo info):
     id_(info.id), speed_(info.speed), sw_(sw), switch_id_(sw->id())
 {
-    source_rule_ = new Rule(RuleType::SOURCE, sw_, nullptr,
-                            LOW_PRIORITY, ZERO_COOKIE,
-                            NetworkSpace(id_),
-                            Actions::noActions());
-                            //Actions::forwardAction(
-                            //    sw_->frontTable()->id(), sw_->frontTable()));
-    sink_rule_ = new Rule(RuleType::SINK, sw_, nullptr,
-                          LOW_PRIORITY, ZERO_COOKIE,
-                          NetworkSpace(id_), Actions::noActions());
+    source_rule_ = std::make_shared<Rule>(
+        RuleType::SOURCE, sw_, nullptr,
+        LOW_PRIORITY, ZERO_COOKIE,
+        NetworkSpace(id_),
+        Actions::noActions());
+        //Actions::forwardAction(
+        //    sw_->frontTable()->id(), sw_->frontTable()));
+    sink_rule_ = std::make_shared<Rule>(
+        RuleType::SINK, sw_, nullptr,
+        LOW_PRIORITY, ZERO_COOKIE,
+        NetworkSpace(id_), Actions::noActions());
 }
 
 Port::~Port()
 {
-    delete source_rule_;
-    delete sink_rule_;
+    //delete source_rule_;
+    //delete sink_rule_;
 }
 
 RulePtr Port::add_rule(RulePtr rule, RuleMap& rule_map)

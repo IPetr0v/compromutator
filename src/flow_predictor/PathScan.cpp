@@ -201,10 +201,6 @@ DomainPathPtr PathScan::addDomainPath(NodePtr source, NodePtr sink,
     auto path = domain_path_list_.emplace(domain_path_list_.end(),
         last_path_id_++, source, sink, starting_time
     );
-
-    // TODO: delete these rules or make them shared
-    //path->sink_interceptor = new Rule(
-    //    sink->rule, cookie, path->sink_domain);
     source->out_path_ = path;
     return path;
 }

@@ -145,6 +145,7 @@ HeaderSpace::HeaderSpace(BitMask&& bit_vector):
 HeaderSpace::HeaderSpace(const HeaderSpace& other):
     length_(other.length_)
 {
+    assert(other.hs_);
     hs_ = hs_create(other.length_);
     hs_copy(hs_, other.hs_);
 }
@@ -152,6 +153,7 @@ HeaderSpace::HeaderSpace(const HeaderSpace& other):
 HeaderSpace::HeaderSpace(HeaderSpace&& other) noexcept:
     length_(other.length_), hs_(other.hs_)
 {
+    assert(other.hs_);
     other.hs_ = nullptr;
 }
 
@@ -196,6 +198,7 @@ void HeaderSpace::clear()
 
 HeaderSpace& HeaderSpace::operator=(const HeaderSpace& other)
 {
+    assert(other.hs_);
     clear();
     length_ = other.length_;
     hs_ = hs_create(other.length_);
@@ -205,6 +208,7 @@ HeaderSpace& HeaderSpace::operator=(const HeaderSpace& other)
 
 HeaderSpace& HeaderSpace::operator=(HeaderSpace&& other) noexcept
 {
+    assert(other.hs_);
     clear();
     length_ = other.length_;
     hs_ = other.hs_;

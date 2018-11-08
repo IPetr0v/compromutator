@@ -3,9 +3,7 @@
 #include "../Types.hpp"
 
 #include <map>
-
-// TODO: delete iostream
-#include <iostream>
+#include <memory>
 
 class Switch;
 class Port;
@@ -16,7 +14,8 @@ using SwitchPtr = Switch*;
 using PortPtr = Port*;
 using TablePtr = Table*;
 using GroupPtr = Group*;
-using RulePtr = Rule*;
+//using RulePtr = Rule*;
+using RulePtr = std::shared_ptr<Rule>;
 
 struct PortInfo
 {
