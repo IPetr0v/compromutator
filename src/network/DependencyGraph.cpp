@@ -226,6 +226,7 @@ void DependencyGraph::add_in_edges(RulePtr dst_rule)
                                     Transfer::identityTransfer(), true);
         }
     }
+    // TODO: Check table-miss that is not in the front table
     else {
         // Create influence from upper rules
         for (auto upper_rule : table->upperRules(dst_rule)) {

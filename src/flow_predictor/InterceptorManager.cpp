@@ -5,21 +5,16 @@ InterceptorDiff& InterceptorDiff::operator+=(InterceptorDiff&& other)
     // Delete nonexistent rules
     auto it = std::remove_if(rules_to_add.begin(), rules_to_add.end(),
         [&other](RuleInfoPtr rule) {
-         //for (const auto& other_rule : other.rules_to_delete) {
-         //    if (*other_rule == *rule) {
-         //        return true;
-         //    }
-         //}
-         for (auto other_it = other.rules_to_delete.begin();
-              other_it != other.rules_to_delete.end();
-              other_it++) {
-             auto other_rule = *other_it;
-             if (*other_rule == *rule) {
-                 other.rules_to_delete.erase(other_it);
-                 return true;
-             }
-         }
-         return false;
+        for (auto other_it = other.rules_to_delete.begin();
+             other_it != other.rules_to_delete.end();
+             other_it++) {
+            auto other_rule = *other_it;
+            if (*other_rule == *rule) {
+                other.rules_to_delete.erase(other_it);
+                return true;
+            }
+        }
+        return false;
     });
     rules_to_add.erase(it, rules_to_add.end());
 

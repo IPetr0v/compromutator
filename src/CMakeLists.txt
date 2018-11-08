@@ -33,6 +33,7 @@ add_library(detector STATIC
     network/Rule.hpp
     network/Types.hpp
     network/Vertex.hpp
+    network/EdgeDiff.hpp
     openflow/Action.hpp
     openflow/Parser.cpp
     openflow/Parser.hpp
