@@ -53,6 +53,8 @@ public:
     void updateEdges(const EdgeDiff& edge_diff);
     void predictFlow(RequestId request_id, std::list<RulePtr> rules);
 
+    size_t pathScanSize() const {return path_scan_->size();}
+
 private:
     std::shared_ptr<DependencyGraph> dependency_graph_;
     std::unique_ptr<PathScan> path_scan_;

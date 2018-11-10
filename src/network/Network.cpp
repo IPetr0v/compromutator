@@ -70,6 +70,8 @@ void Network::deleteSwitch(SwitchId id)
         delete it->second;
         switch_map_.erase(it);
     }
+
+    // TODO: Cleanup FlowPredictor
 }
 
 TablePtr Network::getTable(SwitchId switch_id, TableId table_id) const

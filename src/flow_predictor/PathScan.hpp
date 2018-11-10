@@ -121,6 +121,8 @@ public:
                                 Timestamp final_time);
     void deleteDomainPath(DomainPathPtr path);
 
+    size_t size() const {return node_list_.size();}
+
 private:
     std::list<RuleMapping> rule_mapping_list_;
     std::list<Node> node_list_;

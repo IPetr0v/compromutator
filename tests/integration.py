@@ -2,11 +2,10 @@
 
 from time import sleep
 import unittest
-
 from mininet.cli import CLI
 from mininet.topo import LinearTopo
 
-from stand import TestStand
+from tests.stand import TestStand
 
 
 class TestBase(unittest.TestCase):

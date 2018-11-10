@@ -18,6 +18,7 @@ class MessageHandler : public Visitor<fluid_msg::of13::FlowMod>,
 public:
     MessageHandler(ConnectionId id, Controller& controller):
         connection_id_(id), ctrl_(controller) {}
+    ~MessageHandler();
 
     // Controller messages
     Action visit(fluid_msg::of13::FlowMod&) override;

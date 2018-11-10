@@ -78,7 +78,7 @@ void FlowPredictor::predictFlow(RequestId request_id, std::list<RulePtr> rules)
 {
     for (const auto& rule : rules) {
         // Create pending predictions
-        std::cout<<"Add pred: "<<current_time().id<<std::endl;
+        //DEBUG//std::cout<<"Add pred: "<<current_time().id<<std::endl;
         pending_predictions_[current_time().id].emplace_back(request_id, rule);
 
         // TODO: Get rule stats for detection
@@ -295,12 +295,12 @@ FlowPredictor::add_child_node(NodePtr parent, const Dependency& edge)
 
 void FlowPredictor::add_subtree(NodePtr subtree_root)
 {
-    std::cout<<"add_subtree: "<<*subtree_root<<std::endl;
+    //DEBUG//std::cout<<"add_subtree: "<<*subtree_root<<std::endl;
     std::queue<NodePtr> node_queue;
     node_queue.push(subtree_root);
     while (not node_queue.empty()) {
         auto& node = node_queue.front();
-        std::cout<<"-> "<<*node<<std::endl;
+        //DEBUG//std::cout<<"-> "<<*node<<std::endl;
         auto rule = path_scan_->node(node).rule;
 
         // TODO: save path to getPort
@@ -327,10 +327,10 @@ void FlowPredictor::add_subtree(NodePtr subtree_root)
 
 void FlowPredictor::delete_subtree(NodePtr subtree_root)
 {
-    std::cout<<"delete_subtree: "<<*subtree_root<<std::endl;
+    //DEBUG//std::cout<<"delete_subtree: "<<*subtree_root<<std::endl;
     path_scan_->forEachSubtreeNode(subtree_root,
         [this, subtree_root](NodePtr node) {
-            std::cout<<"-> "<<*node<<std::endl;
+            //DEBUG//std::cout<<"-> "<<*node<<std::endl;
             // TODO: delete path from getPort
 
             // Set node to be an old version
@@ -349,14 +349,14 @@ void FlowPredictor::query_domain_path(NodePtr source, NodePtr sink)
 {
     auto path = path_scan_->outDomainPath(source);
     stats_manager_->requestPath(path);
-    std::cout<<"[Path] Query: "<<*path->interceptor<<std::endl;
+    //DEBUG//std::cout<<"[Path] Query: "<<*path->interceptor<<std::endl;
 }
 
 void FlowPredictor::add_domain_path(NodePtr source, NodePtr sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
     interceptor_manager_->createInterceptor(path);
-    std::cout<<"[Path] Create: "<<*path->interceptor<<std::endl;
+    //DEBUG//std::cout<<"[Path] Create: "<<*path->interceptor<<std::endl;
 }
 
 void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
@@ -364,7 +364,7 @@ void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
     auto path = path_scan_->outDomainPath(source);
     auto path_time = path_scan_->domainPath(path).starting_time;
     if (path_time != current_time()) {
-        std::cout<<"[Path] Suspend: "<<*path->interceptor<<std::endl;
+        //DEBUG//std::cout<<"[Path] Suspend: "<<*path->interceptor<<std::endl;
         path_scan_->setDomainPathFinalTime(path, current_time());
         stats_manager_->requestPath(path);
         interceptor_manager_->deleteInterceptor(path);
@@ -372,11 +372,11 @@ void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
     else {
         // Delete domain path because it hasn't produced any interceptor
         if (path->interceptor) {
-            std::cout<<"[Path] Delete: "<<*path->interceptor<<std::endl;
+            //DEBUG//std::cout<<"[Path] Delete: "<<*path->interceptor<<std::endl;
             interceptor_manager_->deleteInterceptor(path);
         }
         else {
-            std::cout<<"[Path] Delete: "<<"[SOURCE: SUSPENDED]"<<std::endl;
+            //DEBUG//std::cout<<"[Path] Delete: "<<"[SOURCE: SUSPENDED]"<<std::endl;
         }
         stats_manager_->discardPathRequest(path);
         path_scan_->deleteDomainPath(path);

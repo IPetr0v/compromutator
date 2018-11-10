@@ -4,6 +4,11 @@ namespace pipeline {
 
 using namespace fluid_msg;
 
+MessageHandler::~MessageHandler()
+{
+    ctrl_.switch_manager.deleteSwitch(connection_id_);
+}
+
 Action MessageHandler::visit(of13::FlowMod& flow_mod)
 {
     auto switch_id = ctrl_.switch_manager.getSwitch(connection_id_)->id;

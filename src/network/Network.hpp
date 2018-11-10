@@ -50,6 +50,8 @@ public:
     RulePtr dropRule() const {return drop_rule_;}
     RulePtr controllerRule() const {return controller_rule_;}
 
+    bool empty() const { return switch_map_.empty();}
+    size_t size() const {return switch_map_.size();}
     // TODO: use RuleRange
     std::vector<RulePtr> rules();
 

@@ -136,16 +136,16 @@ void ConnectionManager::onControllerConnection(OFConnection* connection,
                   << ": failed version negotiation" << std::endl;
         break;
     case OFConnection::EVENT_CLOSED:
-        delete_proxy_connection(connection);
         //std::cout << "Controller connection id=" << get_id(connection) << " from "
         //          << connection->get_peer_address()
         //          << " closed by the user" << std::endl;
+        delete_proxy_connection(connection);
         break;
     case OFConnection::EVENT_DEAD:
-        delete_proxy_connection(connection);
         std::cout << "Controller connection id=" << get_id(connection) << " from "
                   << connection->get_peer_address()
                   << " closed due to inactivity" << std::endl;
+        delete_proxy_connection(connection);
         break;
     }
 }

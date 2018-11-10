@@ -64,7 +64,9 @@ add_library(detector STATIC
     Compromutator.cpp
     Compromutator.hpp
     Types.hpp
-    Proto.hpp)
+    Proto.hpp
+    PerformanceMonitor.cpp
+    PerformanceMonitor.hpp)
 
 target_link_libraries(detector
     header_space

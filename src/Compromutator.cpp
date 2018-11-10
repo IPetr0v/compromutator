@@ -21,7 +21,7 @@ void Compromutator::run()
 {
     is_running_ = true;
     while (is_running_) {
-        auto status = alarm_->wait(std::chrono::milliseconds(50));
+        auto status = alarm_->wait(std::chrono::milliseconds(10));
         if (status == Alarm::Status::TIMEOUT) {
             controller_.detector.prepareInstructions();
             pipeline_.addBarrier();
@@ -94,12 +94,12 @@ void Compromutator::handle_detector_instruction()
                      <<" | REMOVE_FLOW: "<<rules_to_delete.size()
                      <<std::endl;
         }
-        for (const auto& rule_to_delete : instruction.interceptor_diff.rules_to_delete) {
-            std::cout<<"------ Delete: "<<*rule_to_delete<<std::endl;
-        }
-        for (const auto& rule_to_add : instruction.interceptor_diff.rules_to_add) {
-            std::cout<<"------ Add: "<<*rule_to_add<<std::endl;
-        }
+        //DEBUG//for (const auto& rule_to_delete : instruction.interceptor_diff.rules_to_delete) {
+        //DEBUG//    std::cout<<"------ Delete: "<<*rule_to_delete<<std::endl;
+        //DEBUG//}
+        //DEBUG//for (const auto& rule_to_add : instruction.interceptor_diff.rules_to_add) {
+        //DEBUG//    std::cout<<"------ Add: "<<*rule_to_add<<std::endl;
+        //DEBUG//}
         std::cout<<std::endl;
     }
 }

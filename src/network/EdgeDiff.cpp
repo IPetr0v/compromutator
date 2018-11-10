@@ -16,9 +16,6 @@ EdgeDiff& EdgeDiff::operator+=(EdgeDiff&& other)
 
     // Find implicitly dependent edges
     auto implicitly_dependent = pop_dependent(other.new_edges);
-    if (not implicitly_dependent.empty()) {
-        std::cout<<"NON-EMPTY implicitly_dependent\n";
-    }
     new_edges.insert(
         new_edges.end(),
         other.new_edges.begin(),

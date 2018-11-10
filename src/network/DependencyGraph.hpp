@@ -54,6 +54,8 @@ public:
     const Vertex& vertex(RulePtr rule) const;
     const Edge& edge(EdgePtr edge) const;
 
+    size_t size() const {return rule_graph_.vertices().size();}
+
 private:
     std::shared_ptr<Network> network_;
     RuleGraph rule_graph_;

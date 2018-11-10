@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fluid/ofcommon/msg.hh>
+#include <glog/logging.h>
 
 #include <cstdint>
 #include <iostream>

@@ -204,7 +204,7 @@ public:
     }
 
     // TODO: return descriptors
-    const std::list<Vertex>& vertices() {return vertex_list_;}
+    const std::list<Vertex>& vertices() const {return vertex_list_;}
 
     VertexRange outVertices(VertexPtr vertex) {
         return VertexRange(vertex->out_adjacency_list);

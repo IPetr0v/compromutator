@@ -29,7 +29,7 @@ void Pipeline::addConnection(ConnectionId id)
 
 void Pipeline::deleteConnection(ConnectionId id)
 {
-    // TODO: implement connection deletion
+    message_handlers_.erase(id);
 }
 
 void Pipeline::processMessage(Message message)
