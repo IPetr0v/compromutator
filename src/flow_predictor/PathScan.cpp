@@ -102,7 +102,7 @@ void PathScan::forEachPathNode(NodePtr source, NodePtr sink,
         // Visit node
         if (deleting_visitor(node)) {
             //deleteNode(node);
-            deleted_nodes_.push_back(node);
+            deleted_nodes_.insert(node);
         }
 
         node_queue.pop();

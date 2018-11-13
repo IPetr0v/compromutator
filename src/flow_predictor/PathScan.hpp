@@ -50,6 +50,12 @@ struct Node
     NodeRemovalIterator vertex_backward_iterator_;
     Timestamp final_time_;
     DomainPathPtr out_path_;
+
+    struct PtrComparator {
+        bool operator()(NodePtr first, NodePtr second) const {
+            return first->id < second->id;
+        }
+    };
 };
 
 struct DomainPath
@@ -127,7 +133,7 @@ private:
     std::list<RuleMapping> rule_mapping_list_;
     std::list<Node> node_list_;
     std::list<DomainPath> domain_path_list_;
-    std::list<NodePtr> deleted_nodes_;
+    std::set<NodePtr, Node::PtrComparator> deleted_nodes_;
     NodeId last_node_id_;
     PathId last_path_id_;
 

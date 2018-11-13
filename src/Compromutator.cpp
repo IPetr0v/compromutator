@@ -54,33 +54,25 @@ void Compromutator::handle_detector_instruction()
         for (const auto& request : instruction.requests.data) {
             auto request_id = request->id;
             if (auto rule_request = RuleRequest::pointerCast(request)) {
-                //pending_requests_.emplace(request_id, rule_request);
-                //std::cout<<"getRequest["<<request->time.id<<
-                //"] "<<*(rule_request->rule.get())<<std::endl;
                 controller_.stats_manager.getRuleStats(
                     request_id, rule_request->rule);
             }
-            //if (auto rule_request = RuleRequest::pointerCast(request)) {
-            //    auto rule = rule_request->rule;
-            //    //pending_requests_.emplace(request_id, rule_request);
-            //    controller_.stats_manager.getRuleStats(request_id, rule);
-            //}
-            //else if (auto port_request = PortRequest::pointerCast(request)) {
-            //    auto port = port_request->port;
-            //    //pending_requests_.emplace(request_id, port_request);
-            //    controller_.stats_manager.getPortStats(request_id, port);
-            //}
             else {
                 assert(0);
             }
         }
 
-        auto& rules_to_delete = instruction.interceptor_diff.rules_to_delete;//getRulesToDelete();
+        std::set<SwitchId> affected_switches;
+        auto& rules_to_delete = instruction.interceptor_diff.rules_to_delete;
         for (const auto& rule_to_delete : rules_to_delete) {
+            affected_switches.insert(rule_to_delete->switch_id);
             controller_.rule_manager.deleteRulesByCookie(rule_to_delete);
         }
+        for (const auto& switch_id: affected_switches) {
+            controller_.rule_manager.sendBarrier(switch_id);
+        }
 
-        auto& rules_to_add = instruction.interceptor_diff.rules_to_add;//getRulesToAdd();
+        auto& rules_to_add = instruction.interceptor_diff.rules_to_add;
         for (const auto& rule_to_add : rules_to_add) {
             controller_.rule_manager.installRule(rule_to_add);
         }

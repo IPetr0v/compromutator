@@ -46,13 +46,14 @@ private:
         // TODO: header space size should be Size / 8
         using BitSet = std::bitset<Size>;
         struct MaskedBitSet {
-            explicit MaskedBitSet(BitSet value):
-                value(value), mask(BitSet().set()) {}
+            MaskedBitSet(BitSet value):
+                value(value), mask(BitSet().set()), has_mask(false) {}
             MaskedBitSet(BitSet value, BitSet mask):
-                value(value), mask(mask) {}
+                value(value), mask(mask), has_mask(true) {}
 
             BitSet value;
             BitSet mask;
+            bool has_mask;
         };
 
         using FieldType = Container;
@@ -92,8 +93,13 @@ private:
         >
         static Type* from_bitset(MaskedBitSet&& bitset) {
             auto value = get_fluid_value(bitset.value.to_ullong());
-            auto mask = get_fluid_value(bitset.mask.to_ullong());
-            return new Type(value, mask);
+            if (bitset.has_mask) {
+                auto mask = get_fluid_value(bitset.mask.to_ullong());
+                return new Type(value, mask);
+            }
+            else {
+                return new Type(value);
+            }
         }
 
         // Unmasked
@@ -201,7 +207,12 @@ private:
                 throw std::invalid_argument("Parsing error: Bad bit vector");
             }
         }
-        return {std::move(value), std::move(mask)};
+        if (mask.all()) {
+            return {std::move(value)};
+        }
+        else {
+            return {std::move(value), std::move(mask)};
+        }
     }
 
     template<class Map>

@@ -349,14 +349,14 @@ void FlowPredictor::query_domain_path(NodePtr source, NodePtr sink)
 {
     auto path = path_scan_->outDomainPath(source);
     stats_manager_->requestPath(path);
-    //DEBUG//std::cout<<"[Path] Query: "<<*path->interceptor<<std::endl;
+    std::cout<<"[Path] Query: "<<*path->interceptor<<std::endl;
 }
 
 void FlowPredictor::add_domain_path(NodePtr source, NodePtr sink)
 {
     auto path = path_scan_->addDomainPath(source, sink, current_time());
     interceptor_manager_->createInterceptor(path);
-    //DEBUG//std::cout<<"[Path] Create: "<<*path->interceptor<<std::endl;
+    std::cout<<"[Path] Create: "<<*path->interceptor<<std::endl;
 }
 
 void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
@@ -364,7 +364,7 @@ void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
     auto path = path_scan_->outDomainPath(source);
     auto path_time = path_scan_->domainPath(path).starting_time;
     if (path_time != current_time()) {
-        //DEBUG//std::cout<<"[Path] Suspend: "<<*path->interceptor<<std::endl;
+        std::cout<<"[Path] Suspend: "<<*path->interceptor<<std::endl;
         path_scan_->setDomainPathFinalTime(path, current_time());
         stats_manager_->requestPath(path);
         interceptor_manager_->deleteInterceptor(path);
@@ -372,11 +372,11 @@ void FlowPredictor::delete_domain_path(NodePtr source, NodePtr sink)
     else {
         // Delete domain path because it hasn't produced any interceptor
         if (path->interceptor) {
-            //DEBUG//std::cout<<"[Path] Delete: "<<*path->interceptor<<std::endl;
+            std::cout<<"[Path] Delete: "<<*path->interceptor<<std::endl;
             interceptor_manager_->deleteInterceptor(path);
         }
         else {
-            //DEBUG//std::cout<<"[Path] Delete: "<<"[SOURCE: SUSPENDED]"<<std::endl;
+            std::cout<<"[Path] Delete: "<<"[SOURCE: SUSPENDED]"<<std::endl;
         }
         stats_manager_->discardPathRequest(path);
         path_scan_->deleteDomainPath(path);

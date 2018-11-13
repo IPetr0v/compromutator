@@ -78,7 +78,9 @@ public:
     void installRule(RuleInfoPtr info);
     void deleteRule(RuleInfoPtr info);
     void deleteRulesByCookie(RuleInfoPtr info);
+
     void initSwitch(SwitchId id);
+    void sendBarrier(SwitchId id);
 
 private:
     XidManager& xid_manager_;

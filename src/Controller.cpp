@@ -120,6 +120,27 @@ PortId LinkDiscovery::get_port_id(const proto::LLDP& lldp) const
     }
 }
 
+void RuleManager::sendBarrier(SwitchId id)
+{
+    auto result = switch_manager_.getConnectionId(id);
+    if (result.second) {
+        auto barrier = of13::BarrierRequest();
+
+        // Save request id
+        auto xid = xid_manager_.getXid();
+        barrier.xid(xid);
+
+        // Send rule stats request
+        auto connection_id = result.first;
+        sender_.send(connection_id, Destination::TO_SWITCH, barrier);
+    }
+    else {
+        std::cerr << "Controller error: "
+                  << "Sending flow mod to an offline switch"
+                  << std::endl;
+    }
+}
+
 void RuleManager::installRule(RuleInfoPtr info)
 {
     auto flow_mod = Parser::getFlowMod(info);

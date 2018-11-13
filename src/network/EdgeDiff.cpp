@@ -32,6 +32,14 @@ EdgeDiff& EdgeDiff::operator+=(EdgeDiff&& other)
         changed_edges.end(),
         other.changed_edges.begin(),
         other.changed_edges.end());
+    removed_edges.insert(
+        removed_edges.end(),
+        other.removed_edges.begin(),
+        other.removed_edges.end());
+    removed_dependent_edges.insert(
+        removed_dependent_edges.end(),
+        other.removed_dependent_edges.begin(),
+        other.removed_dependent_edges.end());
 
     // Delete changed edges that are still new
     move_intersection(changed_edges, new_edges);
