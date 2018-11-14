@@ -5,14 +5,14 @@ import unittest
 from mininet.cli import CLI
 from mininet.topo import LinearTopo
 
-from tests.stand import TestStand
+from tests.testbed import Testbed
 
 
 class TestBase(unittest.TestCase):
     TOPO = None
 
     def setUp(self):
-        self.stand = TestStand(topo=self.TOPO)
+        self.stand = Testbed(topo=self.TOPO)
         self.stand.start()
         sleep(1)
 
@@ -21,11 +21,11 @@ class TestBase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        TestStand.clear()
+        Testbed.clear()
 
     @classmethod
     def tearDownClass(cls):
-        TestStand.clear()
+        Testbed.clear()
 
 
 class BasicTest(TestBase):

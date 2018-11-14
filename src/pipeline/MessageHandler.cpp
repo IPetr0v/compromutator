@@ -78,15 +78,15 @@ Action MessageHandler::visit(of13::PacketIn& packet_in)
 
 Action MessageHandler::visit(of13::MultipartReplyFlow& reply_flow)
 {
-    std::cout<<"~~~~~STATS REPLIED ("<<reply_flow.xid()<<")~~~~~"<<std::endl;
+    //std::cout<<"~~~~~STATS REPLIED ("<<reply_flow.xid()<<")~~~~~"<<std::endl;
     auto result = ctrl_.stats_manager.popRequestId(reply_flow.xid());
     if (result.second) {
         auto request_id = result.first;
         auto switch_id = ctrl_.switch_manager.getSwitch(connection_id_)->id;
         for (auto& flow_stats : reply_flow.flow_stats()) {
             auto rule_info = Parser::getRuleInfo(switch_id, flow_stats);
-            std::cout<<"--- "<<rule_info<<std::endl;
-            std::cout<<"------- "<<get_rule_stats(flow_stats).packet_count<<std::endl;
+            //std::cout<<"--- "<<rule_info<<std::endl;
+            //std::cout<<"------- "<<get_rule_stats(flow_stats).packet_count<<std::endl;
             ctrl_.detector.addRuleStats(request_id, std::move(rule_info),
                                         get_rule_stats(flow_stats));
         }

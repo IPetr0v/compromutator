@@ -3,11 +3,16 @@ import os
 import subprocess
 import requests
 import json
-import sys
+import random
+from collections import OrderedDict
+from time import sleep
 
 from mininet.node import RemoteController, Ryu
 from mininet.net import Mininet
+from mininet.cli import CLI
+from mininet.log import setLogLevel
 from mininet.topo import LinearTopo
+from mininet.topolib import Topo, TreeTopo, TorusTopo
 
 
 class Compromutator:
@@ -28,6 +33,7 @@ class Compromutator:
             stdout=self.log_file if self.log_file else subprocess.PIPE,
             stderr=self.log_file if self.log_file else subprocess.STDOUT,
             shell=True)
+            #preexec_fn=lambda: os.nice(-2))
 
     def stop(self):
         self._process.kill()
@@ -40,56 +46,191 @@ class Rule:
     """OpenFlow forwarding rule"""
 
     def __init__(self, dpid, info):
-        self.dpid = dpid
+        if type(dpid) == str:
+            self.dpid = int(dpid, 16)
+        else:
+            self.dpid = dpid
+
         if type(info) is str:
-            self._parse_str(info)
-        elif type(info) is json:
-            self._parse_dict(info)
+            self._from_str(info)
+        elif type(info) is dict:
+            self._from_dict(info)
         else:
             raise ValueError('Wrong input type', type(info))
 
-    def _parse_str(self, info):
-        self.cookie = re.findall(r'(cookie)=(\w+)', info)[0][1]
-        self.table_id = int(re.findall(r'(table)=(\d+)', info)[0][1])
-        self.packet_count = int(re.findall(r'(n_packets)=(\d+)', info)[0][1])
-        self.byte_count = int(re.findall(r'(n_bytes)=(\d+)', info)[0][1])
-        #self.match =
-        #self.actions =
+    def _from_str(self, info):
+        # Parse dpctl output
+        self.cookie = re.findall(r'cookie=(\w+)', info)[0]
+        self.table_id = int(re.findall(r'table=(\d+)', info)[0])
+        self.packet_count = int(re.findall(r'n_packets=(\d+)', info)[0])
+        self.byte_count = int(re.findall(r'n_bytes=(\d+)', info)[0])
+        self.priority = int(re.findall(r'priority=(\d+)', info)[0])
+        self.actions = re.findall(r'actions=(\S+)', info)[0]
 
-    def _parse_dict(self, info):
-        self.cookie = info['cookie']
-        self.table = info['table_id']
-        self.priority = info['priority']
-        self.packet_count = info['packet_count']
-        self.byte_count = info['byte_count']
+        # Parse match
+        match_str = re.findall(r'priority=\d+,(\S+)', info)
+        if match_str:
+            self.match = dict(re.findall(
+                r'(\w+)=(\"\S+\"|\S[^,]+)',
+                match_str[0]))
+            if 'in_port' in self.match:
+                port = re.findall(r'\w+-eth(\d+)', self.match['in_port'])[0]
+                self.match['in_port'] = int(port)
+        else:
+            self.match = dict()
+
+    def _from_dict(self, info):
+        self.cookie = str(hex(info['cookie']))
+        self.table_id = int(info['table_id'])
+        self.priority = int(info['priority'])
+        self.packet_count = int(info['packet_count'])
+        self.byte_count = int(info['byte_count'])
         self.match = info['match']
         self.actions = info['actions']
 
     def to_str(self):
-        pass
+        match = self._match_str()
+        info = 'cookie=%s/-1, table=%d, %s'
+        info = info % (self.cookie, self.table_id, match)
+        return info
 
     def to_dict(self):
         # Create rule dict for REST API (without actions)
         info = dict()
-        info['flags'] = 0
+        info['dpid'] = self.dpid
         info['cookie'] = self.cookie
-        # TODO: check cookie mask correctness
-        #info['cookie_mask'] =
+        # TODO: Use cookie_mask
+        #info['cookie_mask'] = -1
         info['table_id'] = self.table_id
         info['priority'] = self.priority
         info['match'] = self.match
+        info['flags'] = 0
         return info
 
+    def _match_str(self):
+        match_list = [
+            '='.join([key, str(val)]) for key, val in self.match.items()]
+        return ','.join(match_list)
 
-class Dpctl:
-    def __init__(self, switch):
-        self.switch = switch
+    def __str__(self):
+        match = self._match_str()
+        info = 'dpid=%s, cookie=%s, table=%d, ' \
+               'n_packets=%d, n_bytes=%d, ' \
+               'priority=%d,%s'
+        info = info % (self.dpid, self.cookie, self.table_id,
+                       self.packet_count, self.byte_count,
+                       self.priority, match)
+        return info
+
+    def __eq__(self, other):
+        # TODO: Check actions
+        return self.dpid == other.dpid and \
+               self.cookie == other.cookie and \
+               self.table_id == other.table_id and \
+               self.priority == other.priority and \
+               self.match == other.match
+
+
+class DPCTL:
+    def __init__(self, switches):
+        self.switches = OrderedDict([(int(s.dpid, 16), s) for s in switches])
 
     def dump_flows(self):
-        # TODO: use OpenFlow 1.3
-        output = self.switch.dpctl('dump-flows', '-O OpenFlow13').splitlines()
-        rules = [Rule(self.switch.dpid, o) for o in output if '0x88cc' not in o]
+        rules = []
+        for switch in self.switches.values():
+            output = switch.dpctl('dump-flows', '-O OpenFlow13').splitlines()
+            rules += [Rule(switch.dpid, o) for o in output if '0x88cc' not in o]
         return rules
+
+    def get_rule(self, rule):
+        switch = self.switches.get(rule.dpid)
+        if not switch:
+            raise RuntimeError('Non-existing switch ', rule.dpid)
+
+        # Request rule
+        output = switch.dpctl(
+            'dump-flows', '\"'+rule.to_str()+'\"', '-O OpenFlow13')
+        rules = [Rule(switch.dpid, o) for o in output.splitlines()]
+
+        # Get rule
+        # dpctl doesn't allow to specify priority
+        rules = [r for r in rules if r.priority == rule.priority]
+        assert len(rules) == 1
+        new_rule = rules[0]
+        assert new_rule == rule
+        return new_rule
+
+
+class TrafficManager:
+    def __init__(self, network):
+        self.network = network
+        self.flows = dict()
+        self._last_id = 0
+        self._last_port = 10000
+
+    def network_load(self):
+        flow_size_list = [f['bandwidth'] for f in self.flows.values()]
+        return sum(flow_size_list)
+
+    def add_random_flow(self, bandwidth):
+        src, dst = random.sample(self.network.hosts, 2)
+        if type(bandwidth) is int:
+            flow = self.add_flow(src, dst, bandwidth)
+        elif type(bandwidth) is tuple:
+            bandwidth = random.randint(bandwidth[0], bandwidth[1])
+            flow = self.add_flow(src, dst, bandwidth)
+        else:
+            raise ValueError('Wrong bandwidth type', type(bandwidth))
+        return flow
+
+    def delete_random_flow(self):
+        flow_id = random.sample(self.flows, 1)[0]
+        self.delete_flow(flow_id)
+
+    def add_flow(self, src, dst, bandwidth):
+        # Init iperf parameters
+        ip = dst.intfs[0].ip
+        port = self._last_port
+        self._last_port += 1
+        server = 'iperf3 -s -B %s -p %d >/dev/null &' % (ip, port)#2>&1
+        client = 'iperf3 -c %s -p %d -b %s -t 3600 &' % (#>/dev/null 2>&1
+            ip, port, bandwidth)
+
+        # Run iperf
+        #print 'Add flow', ip
+        #dst_pid = self._pid(dst.cmd(server, verbose=True))
+        #src_pid = self._pid(src.cmd(client, verbose=True))
+
+        dst.cmd(server)
+        src.cmd(client)
+
+        dst_pid = 1
+        src_pid = 1
+
+
+        # Create flow entry
+        flow = dict()
+        flow['src'] = src
+        flow['dst'] = dst
+        flow['src_pid'] = src_pid
+        flow['dst_pid'] = dst_pid
+        flow['bandwidth'] = bandwidth
+        self.flows[self._last_id] = flow
+        self._last_id += 1
+        return flow
+
+    def delete_flow(self, flow_id):
+        flow = self.flows[flow_id]
+        flow['src'].cmd('sudo kill -9 %d' % flow['src_pid'])
+        flow['dst'].cmd('sudo kill -9 %d' % flow['dst_pid'])
+        del self.flows[flow_id]
+
+    def _pid(self, bash_output):
+        parsed = re.findall(r'\[\d+\]\s(\d+)', bash_output.strip())
+        print bash_output
+        if len(parsed) != 1:
+            raise RuntimeError('iperf3 error', bash_output)
+        return int(parsed[0])
 
 
 class Controller(Ryu):
@@ -98,88 +239,193 @@ class Controller(Ryu):
         apps = 'ryu.app.simple_switch_13 ryu.app.gui_topology.gui_topology'
         ryu_args = args + ' ' + apps
         Ryu.__init__(self, 'ryu', ryu_args, port=port)
-        self.rest_port = rest_port
+        self.url = 'http://localhost:%d' % rest_port
 
-    def get_rule_info(self, rule):
-        url = 'http://localhost:%d/stats/flow/%d' % (self.rest_port, rule.dpid)
+    def get_rule(self, rule):
+        # Create REST request
+        url = self.url + '/stats/flow/%d' % rule.dpid
         data = json.dumps(rule.to_dict())
-        headers = {'Content-Type':'application/json'}
+        headers = {'Content-Type': 'application/json'}
+
+        # Get rule from controller REST
         response = requests.get(url, data=data, headers=headers)
         if response.status_code != 200:
-            raise ValueError('GET /stats/flow/ {}'.format(response.status_code))
-        print response
+            raise RuntimeError(
+                'GET /stats/flow/ {}'.format(response.status_code))
+        if not response.text:
+            raise RuntimeError('No rules found')
+
+        # Get rule from the REST response
+        response = json.loads(response.text)
+        assert len(response.items()) == 1
+        dpid, rule_info = response.items()[0]
+        dpid = int(dpid)
+        assert dpid == rule.dpid
+        #assert len(rule_info) < 2, rule_info
+        #assert len(rule_info) == 1, rule_info
+
+        if not rule_info:
+            raise RuntimeError('Stat request failed')
+        if len(rule_info) > 1:
+            raise RuntimeError(
+                'Stat request returned too many rules', rule_info)
+
+        new_rule = Rule(dpid, rule_info[0])
+        assert new_rule == rule
+        return new_rule
 
 
-
-#class NetworkBuilder:
-#    def __init__(self, topo, controller):
-#        self.network = Mininet(
-#            topo=topo,
-#            controller=RemoteController(self.controller.name, port=port))
-#
-#    def __call__(self):
-#        return self.network
-
-
-class TestStand:
-    def __init__(self, topo, port=6653, controller_port=6633,
-                 run_compromutator=True,
-                 path='~/lib/compromutator/compromutator',
-                 log_file=None):
+class OpenFlowTestbed:
+    def __init__(self, topo, port=6653, controller_port=6653):
+        self.clear()
         self.controller = Controller(controller_port)
         self.network = Mininet(
             topo=topo,
             controller=RemoteController(self.controller.name, port=port))
-        self.run_compromutator = run_compromutator
-        if self.run_compromutator:
-            self.compromutator = Compromutator(path=path, log_file=log_file)
-        else:
-            self.compromutator = None
+        self.dpctl = DPCTL(self.network.switches)
+        self.traffic_manager = TrafficManager(self.network)
 
-    # TODO: use __enter__ and __exit__
+    def __enter__(self):
+        self._start()
+        self._configure_network()
+        return self
 
-    def __del__(self):
-        self.stop()
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._stop()
 
-    def rules(self, count_zero=False):
-        rule_list = []
-        for switch in self.network.switches:
-            switch_rules = Dpctl(switch).dump_flows()
-            if not count_zero:
-                switch_rules = [r for r in switch_rules if r.table_id != 0]
-            rule_list += switch_rules
-        return rule_list
-
-    def get_counter(self, rule):
-        return real_counter, predicted_counter
+    def switches(self):
+        return [s.dpid for s in self.network.switches]
 
     def switch_num(self):
         return len(self.network.switches)
 
-    def rule_num(self, count_zero=False):
-        return len(self.rules(count_zero))
+    def rules(self):
+        return self.dpctl.dump_flows()
 
-    def start(self):
+    def rule_num(self):
+        return len(self.rules())
+
+    def hosts(self):
+        return self.network.hosts
+
+    def add_flow(self, bandwidth):
+        self.traffic_manager.add_random_flow(bandwidth=bandwidth)
+
+    def delete_flow(self):
+        self.traffic_manager.delete_random_flow()
+
+    def flow_num(self):
+        return len(self.traffic_manager.flows)
+
+    def network_load(self):
+        return self.traffic_manager.network_load()
+
+    def _start(self):
         self.controller.start()
         self.network.start()
-        if self.run_compromutator:
-            self.compromutator.start()
 
-    def stop(self):
-        if self.run_compromutator:
-            self.compromutator.stop()
+    def _stop(self):
         self.controller.stop()
         self.network.stop()
 
-    def configure_network(self):
+    def _configure_network(self):
         # Disable IPv6
         for node in self.network.hosts + self.network.switches:
-            node.cmd("sysctl -w net.ipv6.conf.all.disable_ipv6=1")
-            node.cmd("sysctl -w net.ipv6.conf.default.disable_ipv6=1")
-            node.cmd("sysctl -w net.ipv6.conf.lo.disable_ipv6=1")
+            for intf in ['all', 'default', 'lo']:
+                node.cmd('sysctl -w net.ipv6.conf.%s.disable_ipv6=1' % intf)
+
+    def cli(self):
+        CLI(self.network)
 
     @staticmethod
     def clear():
+        os.popen('sudo pkill iperf3')
         os.popen('sudo mn -c > /dev/null 2>&1')
-        os.popen('sudo pkill compromutator')
         os.popen('sudo pkill ryu')
+
+
+class Testbed(OpenFlowTestbed):
+    def __init__(self, topo, path='~/lib/compromutator/compromutator',
+                 log_file='log.txt', load_time=5):
+        OpenFlowTestbed.__init__(
+            self, topo=topo, port=6653, controller_port=6633)
+        self.compromutator = Compromutator(path=path, log_file=log_file)
+        self.load_time = load_time
+
+    def rules(self):
+        rule_list = OpenFlowTestbed.rules(self)
+        rule_list = [r for r in rule_list if r.table_id != 0]
+        return rule_list
+
+    def get_counter(self, rule):
+        # Get rules
+        real_rule = self.dpctl.get_rule(rule)
+        rule.table_id -= 1
+        predicted_rule = self.controller.get_rule(rule)
+        predicted_rule.table_id += 1
+        real_rule_after = self.dpctl.get_rule(real_rule)
+        assert real_rule == predicted_rule
+
+        # Get counters
+        # Real counter is a mean value before and after the prediction
+        real = dict()
+        real['packet_count'] = real_rule.packet_count
+        real['packet_count'] += real_rule_after.packet_count
+        real['packet_count'] //= 2
+        real['byte_count'] = real_rule.byte_count
+        real['byte_count'] += real_rule_after.byte_count
+        real['byte_count'] //= 2
+
+        predicted = dict()
+        predicted['packet_count'] = predicted_rule.packet_count
+        predicted['byte_count'] = predicted_rule.byte_count
+
+        return real, predicted
+
+    def _start(self):
+        OpenFlowTestbed._start(self)
+        self.compromutator.start()
+        sleep(self.load_time)
+
+    def _stop(self):
+        self.compromutator.stop()
+        OpenFlowTestbed._stop(self)
+
+    @staticmethod
+    def clear():
+        OpenFlowTestbed.clear()
+        os.popen('sudo pkill compromutator')
+
+
+class DebugTestbed(Testbed):
+    def __init__(self, topo):
+        OpenFlowTestbed.__init__(
+            self, topo=topo, port=6653, controller_port=6633)
+
+    def _start(self):
+        OpenFlowTestbed._start(self)
+
+    def _stop(self):
+        OpenFlowTestbed._stop(self)
+
+    @staticmethod
+    def clear():
+        OpenFlowTestbed.clear()
+
+
+class DebugTopo(Topo):
+    def __init__(self):
+        Topo.__init__(self)
+
+        h1 = self.addHost('h1', ip='10.0.0.1/24', mac='00:00:00:00:00:01')
+        h2 = self.addHost('h2', ip='10.0.0.2/24', mac='00:00:00:00:00:02')
+
+        s1 = self.addSwitch('s1', protocols='OpenFlow13', dpid='1')
+        s2 = self.addSwitch('s2', protocols='OpenFlow13', dpid='2')
+
+        self.addLink(h1, s1)
+        self.addLink(h2, s2)
+        self.addLink(s1, s2)
+
+
+setLogLevel('error')

@@ -226,7 +226,7 @@ RuleMappingDescriptor PathScan::add_rule_mapping(RulePtr rule)
 
 void PathScan::delete_rule_mapping(RulePtr rule)
 {
-    std::cout<<"delete_rule_mapping "<<rule<<std::endl;
+    //std::cout<<"delete_rule_mapping "<<rule<<std::endl;
     assert(rule->rule_mapping_->empty());
     rule_mapping_list_.erase(rule->rule_mapping_);
     rule->rule_mapping_ = RuleMappingDescriptor(nullptr);
