@@ -163,8 +163,8 @@ class PerformanceTest:
 if __name__ == '__main__':
     test = PerformanceTest(result_dir='./experiments', run_times=1)
 
-    #print '--- Delay Test --'
-    #delay = test.run_delay_tests()
+    print '--- Delay Test --'
+    delay = test.run_delay_tests()
 
     print '--- Prediction Test --'
     prediction = test.run_prediction_tests()
