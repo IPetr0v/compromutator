@@ -1,6 +1,6 @@
 #!/bin/sh
 
-git submodule init<
+git submodule init
 git submodule update
 
 sudo apt-get -y install build-essential libtool autoconf cmake

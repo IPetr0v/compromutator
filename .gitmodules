@@ -1,9 +1,9 @@
 [submodule "third_party/libfluid_msg"]
 	path = third_party/libfluid_msg
-	url = git@github.com/IPetr0v/libfluid_msg.git
+	url = https://github.com/IPetr0v/libfluid_msg.git
 [submodule "third_party/libfluid_base"]
 	path = third_party/libfluid_base
-	url = git@github.com:IPetr0v/libfluid_base.git
+	url = https://github.com/IPetr0v/libfluid_base.git
 [submodule "third_party/cxxopts"]
 	path = third_party/cxxopts
 	url = https://github.com/jarro2783/cxxopts.git
