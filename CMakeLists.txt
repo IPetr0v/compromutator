@@ -13,4 +13,4 @@ add_subdirectory(src)
 add_subdirectory(tests/unit)
 
 add_executable(compromutator src/Main.cpp)
-target_link_libraries(compromutator detector fluid_msg)
+target_link_libraries(compromutator detector fluid_msg cxxopts)

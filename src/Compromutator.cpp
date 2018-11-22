@@ -2,14 +2,17 @@
 
 #include <chrono>
 
-Compromutator::Compromutator(ProxySettings settings):
+Compromutator::Compromutator(ProxySettings settings,
+                             uint32_t timeout_duration,
+                             std::string measurement_filename):
     is_running_(false),
-    alarm_(std::make_shared<Alarm>()),
+    alarm_(std::make_shared<Alarm>(
+        std::chrono::milliseconds(timeout_duration))),
     proxy_(settings, alarm_),
-    controller_(alarm_, proxy_.getSender()),
+    controller_(alarm_, proxy_.getSender(), measurement_filename),
     pipeline_(proxy_.getSender(), controller_)
 {
-
+    std::cout<<"Timeout: "<<timeout_duration<<std::endl;
 }
 
 Compromutator::~Compromutator()
@@ -21,18 +24,16 @@ void Compromutator::run()
 {
     is_running_ = true;
     while (is_running_) {
-        auto status = alarm_->wait(std::chrono::milliseconds(10));
+        //auto status = alarm_->wait(std::chrono::milliseconds(10));
+        auto status = alarm_->wait();
         if (status == Alarm::Status::TIMEOUT) {
-            controller_.detector.prepareInstructions();
             pipeline_.addBarrier();
-
-            // TODO: delete this after implementing instruction handler
-            pipeline_.flushPipeline();
+            controller_.detector.prepareInstructions();
         }
         else {
             if (controller_.detector.instructionsExist()) {
-                handle_detector_instruction();
                 pipeline_.flushPipeline();
+                handle_detector_instruction();
             }
             if (proxy_.eventsExist()) {
                 handle_proxy_event();
@@ -85,6 +86,7 @@ void Compromutator::handle_detector_instruction()
                      <<" | ADD_FLOW: "<<rules_to_add.size()
                      <<" | REMOVE_FLOW: "<<rules_to_delete.size()
                      <<std::endl;
+            std::cout<<std::endl;
         }
         //DEBUG//for (const auto& rule_to_delete : instruction.interceptor_diff.rules_to_delete) {
         //DEBUG//    std::cout<<"------ Delete: "<<*rule_to_delete<<std::endl;
@@ -92,7 +94,6 @@ void Compromutator::handle_detector_instruction()
         //DEBUG//for (const auto& rule_to_add : instruction.interceptor_diff.rules_to_add) {
         //DEBUG//    std::cout<<"------ Add: "<<*rule_to_add<<std::endl;
         //DEBUG//}
-        std::cout<<std::endl;
     }
 }
 

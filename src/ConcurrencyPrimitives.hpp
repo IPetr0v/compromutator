@@ -16,21 +16,51 @@ public:
         TIMEOUT
     };
 
+    explicit Alarm(std::chrono::milliseconds timeout_duration):
+        timeout_duration_(timeout_duration),
+        remaining_time_(timeout_duration) {}
+
     void notify() {
         alarm_.notify_one();
     }
 
-    Status wait(std::chrono::milliseconds timeout_duration) {
+    //Status wait(std::chrono::milliseconds timeout_duration) {
+    //    std::unique_lock<std::mutex> wait_lock(mutex_);
+    //    auto status = alarm_.wait_for(wait_lock, timeout_duration);
+    //    return std::cv_status::no_timeout == status
+    //           ? Status::NO_TIMEOUT
+    //           : Status::TIMEOUT;
+    //}
+    Status wait() {
         std::unique_lock<std::mutex> wait_lock(mutex_);
-        auto status = alarm_.wait_for(wait_lock, timeout_duration);
-        return std::cv_status::no_timeout == status
-               ? Status::NO_TIMEOUT
-               : Status::TIMEOUT;
+
+        auto start_time = std::chrono::high_resolution_clock::now();
+        auto status = alarm_.wait_for(wait_lock, remaining_time_);
+        auto finish_time = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<
+            std::chrono::milliseconds
+        >(finish_time - start_time);
+
+        if (std::cv_status::timeout == status) {
+            remaining_time_ = timeout_duration_;
+            return Status::TIMEOUT;
+        }
+        else {
+            if (duration < remaining_time_) {
+                remaining_time_ -= duration;
+            }
+            else {
+                remaining_time_ = timeout_duration_;
+            }
+            return Status::NO_TIMEOUT;
+        }
     }
 
 private:
     std::mutex mutex_;
     std::condition_variable alarm_;
+    std::chrono::milliseconds timeout_duration_;
+    std::chrono::milliseconds remaining_time_;
 
 };
 

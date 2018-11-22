@@ -189,7 +189,7 @@ struct RuleInfo
 {
     RuleInfo(SwitchId switch_id, TableId table_id, Priority priority,
              Cookie cookie, Match match, ActionsBase actions,
-             RuleId rule_id = {0, 0, 0, 0});
+             RuleId rule_id = RuleId(0, 0, 0, 0));//{0, 0, 0, 0}
 
     SwitchId switch_id;
     TableId table_id;

@@ -53,6 +53,8 @@ add_library(detector STATIC
     pipeline/MessageHandler.hpp
     pipeline/MessageChanger.cpp
     pipeline/MessageChanger.hpp
+    pipeline/MessagePostprocessor.cpp
+    pipeline/MessagePostprocessor.hpp
     pipeline/Visitor.hpp
     Controller.hpp
     Controller.cpp

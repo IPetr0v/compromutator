@@ -11,6 +11,10 @@ MessageHandler::~MessageHandler()
 
 Action MessageHandler::visit(of13::FlowMod& flow_mod)
 {
+    auto measurement = ctrl_.performance_monitor.startMeasurement(
+        "flow_mod", connection_id_, flow_mod.xid());
+    ctrl_.detector.fillMeasurement(measurement);
+
     auto switch_id = ctrl_.switch_manager.getSwitch(connection_id_)->id;
     auto rule_info = Parser::getRuleInfo(switch_id, flow_mod);
     switch (flow_mod.command()) {

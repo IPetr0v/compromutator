@@ -19,13 +19,17 @@ struct Prediction
 {
     Prediction(RequestId request_id, RulePtr rule):
         request_id(request_id), rule(rule), real_counter({0, 0}),
-        predicted_counter({0, 0}) {}
+        predicted_counter({0, 0}) {
+        //creation_time = std::chrono::high_resolution_clock::now();
+    }
     void update(RuleStatsFields real, RuleStatsFields predicted);
+    //Timestamp::Duration duration() const;
 
     RequestId request_id;
     RulePtr rule;
     RuleStatsFields real_counter;
     RuleStatsFields predicted_counter;
+    //Timestamp::TimePoint creation_time;
 };
 using PredictionList = std::list<Prediction>;
 

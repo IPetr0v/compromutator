@@ -25,6 +25,15 @@ void Pipeline::addConnection(ConnectionId id)
     else {
         std::cerr << "Pipeline error: Already existing connection" << std::endl;
     }
+    auto postprocessor_it = message_postprocessors_.find(id);
+    if (message_postprocessors_.end() == postprocessor_it) {
+        message_postprocessors_.emplace(
+            id, MessagePostprocessor(id, controller_)
+        );
+    }
+    else {
+        std::cerr << "Pipeline error: Already existing connection" << std::endl;
+    }
 }
 
 void Pipeline::deleteConnection(ConnectionId id)
@@ -34,8 +43,9 @@ void Pipeline::deleteConnection(ConnectionId id)
 
 void Pipeline::processMessage(Message message)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     // Check if the connection hasn't been established yet
-    auto handshake_it = handshake_pipelines_.find(message.id);
+    auto handshake_it = handshake_pipelines_.find(message.connection_id);
     if (handshake_pipelines_.end() != handshake_it) {
         try {
             // Dispatch message
@@ -84,21 +94,34 @@ void Pipeline::processMessage(Message message)
 
 void Pipeline::addBarrier()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     queue_.addBarrier();
 }
 
 void Pipeline::flushPipeline()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (not queue_.empty()) {
-        for (auto message : queue_.pop()) {
+        auto messages = queue_.pop();
+        //std::cout<<"Flush ("<<queue_.size()<<") -> "<<messages.size()<<std::endl;
+        for (auto message : messages) {
+            auto postprocessor_it = message_postprocessors_.find(
+                message.connection_id
+            );
+            assert(message_postprocessors_.end() != postprocessor_it);
+            auto& message_postprocessor = postprocessor_it->second;
+
+            PostprocessorDispatcher()(message.raw_message,
+                                      message_postprocessor);
             forward_message(message);
         }
+        controller_.performance_monitor.flush();
     }
 }
 
 void Pipeline::handle_message(Message message)
 {
-    auto handler_it = message_handlers_.find(message.id);
+    auto handler_it = message_handlers_.find(message.connection_id);
     // TODO: delete connections correctly
     assert(message_handlers_.end() != handler_it);
     auto& message_handler = handler_it->second;
@@ -108,7 +131,7 @@ void Pipeline::handle_message(Message message)
 
         // Change message
         auto new_message = Message(
-            message.id, message.origin,
+            message.connection_id, message.origin,
             ChangerDispatcher()(message.raw_message, message_changer_)
         );
 

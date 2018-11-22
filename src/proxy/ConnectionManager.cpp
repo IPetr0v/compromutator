@@ -62,7 +62,7 @@ ConnectionManager::ConnectionManager(ProxySettings settings,
                                      EventQueue& event_queue):
     settings_(std::move(settings)), event_queue_(event_queue)
 {
-    auto thread_num = 1;
+    auto thread_num = 4;
     // TODO: if proxy will use handshake then we need to handle different controller and switch versions
     auto of_settings = fluid_base::OFServerSettings()
         .supported_version(fluid_msg::of10::OFP_VERSION)
@@ -83,7 +83,6 @@ ConnectionManager::ConnectionManager(ProxySettings settings,
         thread_num, server_settings
     );
 }
-
 
 void ConnectionManager::sendToController(ConnectionId id, RawMessage message)
 {
@@ -120,15 +119,15 @@ void ConnectionManager::onControllerConnection(OFConnection* connection,
 {
     switch (type) {
     case OFConnection::EVENT_STARTED:
-        //std::cout << "Controller connection id=" << get_id(connection) << " from "
-        //          << connection->get_peer_address()
-        //          << " started" << std::endl;
+        std::cout << "Controller connection id=" << get_id(connection) << " from "
+                  << connection->get_peer_address()
+                  << " started" << std::endl;
         accept_controller_connection(connection);
         break;
     case OFConnection::EVENT_ESTABLISHED:
-        //std::cout << "Controller connection id=" << get_id(connection) << " from "
-        //          << connection->get_peer_address()
-        //          << " established" << std::endl;
+        std::cout << "Controller connection id=" << get_id(connection) << " from "
+                  << connection->get_peer_address()
+                  << " established" << std::endl;
         break;
     case OFConnection::EVENT_FAILED_NEGOTIATION:
         std::cout << "Controller connection id=" << get_id(connection) << " from "
@@ -136,9 +135,9 @@ void ConnectionManager::onControllerConnection(OFConnection* connection,
                   << ": failed version negotiation" << std::endl;
         break;
     case OFConnection::EVENT_CLOSED:
-        //std::cout << "Controller connection id=" << get_id(connection) << " from "
-        //          << connection->get_peer_address()
-        //          << " closed by the user" << std::endl;
+        std::cout << "Controller connection id=" << get_id(connection) << " from "
+                  << connection->get_peer_address()
+                  << " closed by the user" << std::endl;
         delete_proxy_connection(connection);
         break;
     case OFConnection::EVENT_DEAD:
@@ -155,15 +154,15 @@ void ConnectionManager::onSwitchConnection(OFConnection* connection,
 {
     switch (type) {
     case OFConnection::EVENT_STARTED:
-        //std::cout << "Switch connection id=" << get_id(connection) << " from "
-        //          << connection->get_peer_address()
-        //          << " started" << std::endl;
+        std::cout << "Switch connection id=" << get_id(connection) << " from "
+                  << connection->get_peer_address()
+                  << " started" << std::endl;
         start_controller_connection(connection);
         break;
     case OFConnection::EVENT_ESTABLISHED:
-        //std::cout << "Switch connection id=" << get_id(connection) << " from "
-        //          << connection->get_peer_address()
-        //          << " established" << std::endl;
+        std::cout << "Switch connection id=" << get_id(connection) << " from "
+                  << connection->get_peer_address()
+                  << " established" << std::endl;
         break;
     case OFConnection::EVENT_FAILED_NEGOTIATION:
         std::cout << "Switch connection id=" << get_id(connection) << " from "
@@ -171,9 +170,9 @@ void ConnectionManager::onSwitchConnection(OFConnection* connection,
                   << ": failed version negotiation" << std::endl;
         break;
     case OFConnection::EVENT_CLOSED:
-        //std::cout << "Switch connection id=" << get_id(connection) << " from "
-        //          << connection->get_peer_address()
-        //          << " closed by the user" << std::endl;
+        std::cout << "Switch connection id=" << get_id(connection) << " from "
+                  << connection->get_peer_address()
+                  << " closed by the user" << std::endl;
         delete_proxy_connection(connection);
         break;
     case OFConnection::EVENT_DEAD:

@@ -149,10 +149,13 @@ struct RuleReply : public Reply
     struct Flow {
         RuleInfoPtr rule;
         RuleStatsFields stats;
+        //Timestamp::Duration duration;
     };
     std::list<Flow> flows;
 
     void addFlow(RuleInfoPtr rule, RuleStatsFields stats) {
+                 //Timestamp::Duration duration) {
+        //flows.push_back(Flow{std::move(rule), stats, duration});
         flows.push_back(Flow{std::move(rule), stats});
     }
 };

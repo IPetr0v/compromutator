@@ -7,6 +7,8 @@ class Detector::Impl
 public:
     explicit Impl(InstructionQueue& instruction_queue);
 
+    void fillMeasurement(PerformanceMeasurementPtr measurement);
+
     void addSwitch(SwitchInfo&& info);
     void deleteSwitch(SwitchId id);
 
@@ -63,6 +65,11 @@ Detector::Impl::Impl(InstructionQueue& instruction_queue):
 
     add_rule_to_predictor(network_->dropRule());
     add_rule_to_predictor(network_->controllerRule());
+}
+
+void Detector::Impl::fillMeasurement(PerformanceMeasurementPtr measurement)
+{
+    measurement->fill(dependency_graph_->size(), network_->size());
 }
 
 void Detector::Impl::addSwitch(SwitchInfo&& info)
@@ -251,10 +258,6 @@ void Detector::Impl::addPortStats(RequestId request_id, PortInfo&& info,
 
 void Detector::Impl::prepareInstructions()
 {
-    // TODO: CRITICAL PERFORMANCE ISSUE - process path graph while preparing
-    // instructions because sequential rule installation leads to large amount
-    // of path computations!
-    // Collect changed edges in diff and then use it it path computation.
     auto diff = dependency_graph_->popEdgeDiff();
     flow_predictor_->updateEdges(diff);
     auto instruction = flow_predictor_->getInstruction();
@@ -262,9 +265,10 @@ void Detector::Impl::prepareInstructions()
     for (const auto& request : instruction.requests.data) {
         pending_requests_.emplace(request->id, request);
     }
-    if (not instruction.empty()) {
-        instruction_queue_.push(std::move(instruction));
-    }
+    //if (not instruction.empty()) {
+    //    instruction_queue_.push(std::move(instruction));
+    //}
+    instruction_queue_.push(std::move(instruction));
 }
 
 RulePtr Detector::Impl::get_rule(const RuleInfo& info)
@@ -330,6 +334,13 @@ Detector::Detector(std::shared_ptr<Alarm> alarm):
 Detector::~Detector()
 {
 
+}
+
+void Detector::fillMeasurement(PerformanceMeasurementPtr measurement)
+{
+    executor_.addTask([this, measurement]() mutable {
+        impl_->fillMeasurement(measurement);
+    });
 }
 
 void Detector::addSwitch(SwitchInfo info)

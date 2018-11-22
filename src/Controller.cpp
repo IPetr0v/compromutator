@@ -287,13 +287,15 @@ std::pair<RequestId, bool> StatsQuerier::popRequestId(uint32_t xid)
     return std::make_pair((uint32_t)-1, false);
 }
 
-Controller::Controller(std::shared_ptr<Alarm> alarm, Sender sender):
+Controller::Controller(std::shared_ptr<Alarm> alarm, Sender sender,
+                       std::string measurement_filename):
     detector(alarm),
     xid_manager(),
     switch_manager(detector),
     link_discovery(switch_manager, detector),
     rule_manager(xid_manager, switch_manager, sender),
-    stats_manager(xid_manager, switch_manager, sender)
+    stats_manager(xid_manager, switch_manager, sender),
+    performance_monitor(measurement_filename)
 {
 
 }

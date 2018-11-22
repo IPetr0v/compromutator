@@ -10,6 +10,11 @@ void Prediction::update(RuleStatsFields real, RuleStatsFields predicted)
     predicted_counter = predicted;
 }
 
+//Timestamp::Duration Prediction::duration() const
+//{
+//    return std::chrono::high_resolution_clock::now() - creation_time;
+//}
+
 FlowPredictor::FlowPredictor(std::shared_ptr<DependencyGraph> dependency_graph,
                              std::shared_ptr<RequestIdGenerator> xid_generator):
     dependency_graph_(dependency_graph),
@@ -126,9 +131,11 @@ RuleReplyList FlowPredictor::create_replies()
     std::unordered_map<RequestId, RuleReplyPtr> reply_map;
     for (const auto& prediction : predictions_) {
         auto it = reply_map.find(prediction.request_id);
+        //auto duration = prediction.duration();
         if (it != reply_map.end()) {
             it->second->addFlow(prediction.rule->info(),
                                 prediction.predicted_counter);
+                                //duration);
         }
         else {
             auto reply = std::make_shared<RuleReply>(
@@ -136,6 +143,7 @@ RuleReplyList FlowPredictor::create_replies()
             );
             reply->addFlow(prediction.rule->info(),
                            prediction.predicted_counter);
+                           //duration);
             reply_map.emplace(prediction.request_id, reply);
         }
     }

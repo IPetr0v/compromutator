@@ -25,9 +25,11 @@ public:
     void send(ConnectionId id, Destination destination, RawMessage message) {
         if (auto manager = connection_manager_.lock()) {
             if (destination == Destination::TO_CONTROLLER) {
+                //std::cout<<"Send to controller"<<std::endl;
                 manager->sendToController(id, message);
             }
             else {
+                //std::cout<<"Send to switch"<<std::endl;
                 manager->sendToSwitch(id, message);
             }
         }
@@ -37,7 +39,7 @@ public:
     }
 
     void send(Message message) {
-        send(message.id, message.destination, message.raw_message);
+        send(message.connection_id, message.destination, message.raw_message);
     }
 
 private:

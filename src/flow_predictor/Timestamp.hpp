@@ -8,6 +8,7 @@ struct Timestamp
     using TimePoint = std::chrono::time_point<
         std::chrono::high_resolution_clock
     >;
+    using Duration = std::chrono::duration<float>;
 
     Timestamp(const Timestamp& other) = default;
     static Timestamp max() {

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <fluid/ofcommon/msg.hh>
-#include <glog/logging.h>
 
 #include <cstdint>
 #include <iostream>
@@ -102,17 +101,20 @@ enum class Destination
 };
 
 struct Message {
-    Message(ConnectionId id, Origin origin, RawMessage raw_message):
-        Message(id, origin, get_destination(origin), raw_message) {}
-    Message(ConnectionId id, Destination destination, RawMessage raw_message):
-        Message(id, get_origin(destination), destination, raw_message) {}
-
-    Message(ConnectionId id, Origin origin,
+    Message(ConnectionId connection_id, Origin origin,
             Destination destination, RawMessage raw_message):
-        id(id), origin(origin), destination(destination),
+        connection_id(connection_id), origin(origin), destination(destination),
         raw_message(raw_message) {}
 
-    ConnectionId id;
+    Message(ConnectionId connection_id, Origin origin,
+            RawMessage raw_message):
+        Message(connection_id, origin, get_destination(origin), raw_message) {}
+    Message(ConnectionId connection_id, Destination destination,
+            RawMessage raw_message):
+        Message(connection_id, get_origin(destination),
+                destination, raw_message) {}
+
+    ConnectionId connection_id;
     Origin origin;
     Destination destination;
     RawMessage raw_message;
@@ -152,7 +154,7 @@ public:
             queue_.push(std::vector<Element>{std::move(element)});
         }
         else {
-            queue_.front().push_back(std::move(element));
+            queue_.back().push_back(std::move(element));
         }
     }
 

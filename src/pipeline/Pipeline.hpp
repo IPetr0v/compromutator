@@ -3,6 +3,7 @@
 #include "HandshakeHandler.hpp"
 #include "MessageHandler.hpp"
 #include "MessageChanger.hpp"
+#include "MessagePostprocessor.hpp"
 #include "../Types.hpp"
 #include "../Controller.hpp"
 
@@ -40,7 +41,10 @@ private:
     std::unordered_map<ConnectionId, HandshakePipeline> handshake_pipelines_;
     std::unordered_map<ConnectionId, MessageHandler> message_handlers_;
     MessageChanger message_changer_;
+    std::unordered_map<ConnectionId,
+                       MessagePostprocessor> message_postprocessors_;
 
+    std::mutex mutex_;
     QueueWithBarriers<Message> queue_;
 
     void handle_message(Message message);

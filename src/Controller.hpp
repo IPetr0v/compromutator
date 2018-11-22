@@ -125,7 +125,8 @@ private:
 
 struct Controller
 {
-    Controller(std::shared_ptr<Alarm> alarm, Sender sender);
+    Controller(std::shared_ptr<Alarm> alarm, Sender sender,
+               std::string measurement_filename);
 
     Detector detector;
     XidManager xid_manager;
@@ -133,4 +134,5 @@ struct Controller
     LinkDiscovery link_discovery;
     RuleManager rule_manager;
     StatsQuerier stats_manager;
+    PerformanceMonitor performance_monitor;
 };

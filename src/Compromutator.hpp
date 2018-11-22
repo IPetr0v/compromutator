@@ -21,7 +21,9 @@
 class Compromutator
 {
 public:
-    explicit Compromutator(ProxySettings settings);
+    explicit Compromutator(ProxySettings settings,
+                           uint32_t timeout_duration,
+                           std::string measurement_filename);
     ~Compromutator();
 
     void run();

@@ -188,3 +188,5 @@ target_link_libraries(fluid_base
     ${EVENT_PTHREADS_LIBRARY}
     ${OPENSSL_LIBRARIES}
 )
+
+add_subdirectory(third_party/cxxopts)

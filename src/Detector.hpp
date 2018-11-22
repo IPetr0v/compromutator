@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ConcurrencyPrimitives.hpp"
+#include "PerformanceMonitor.hpp"
 #include "network/Network.hpp"
 #include "network/DependencyGraph.hpp"
 #include "flow_predictor/FlowPredictor.hpp"
@@ -28,6 +29,8 @@ public:
     Instruction getInstruction() {
         return instruction_queue_.pop();
     }
+
+    void fillMeasurement(PerformanceMeasurementPtr measurement);
 
     void addSwitch(SwitchInfo info);
     void deleteSwitch(SwitchId id);
