@@ -5,7 +5,8 @@ import requests
 import json
 import random
 from collections import OrderedDict
-from time import sleep
+from time import time, sleep
+from retry import retry
 
 from mininet.node import RemoteController, Ryu
 from mininet.net import Mininet
@@ -13,10 +14,11 @@ from mininet.cli import CLI
 from mininet.log import setLogLevel
 from mininet.topo import LinearTopo
 from mininet.topolib import Topo, TreeTopo, TorusTopo
+from mininet.examples.cluster import MininetCluster, SwitchBinPlacer
 
 
 class Compromutator:
-    def __init__(self, path, log_file):
+    def __init__(self, path, controller, log_file):
         self.path = os.path.expanduser(path)
         self.args = ''
         self.log_file = open(log_file, 'w') if log_file else None
@@ -37,6 +39,7 @@ class Compromutator:
 
     def stop(self):
         self._process.kill()
+        os.popen('sudo pkill compromutator')
 
     def _check_path(self):
         return os.path.isfile(self.path) and os.access(self.path, os.X_OK)
@@ -71,11 +74,10 @@ class Rule:
         match_str = re.findall(r'priority=\d+,(\S+)', info)
         if match_str:
             self.match = dict(re.findall(
-                r'(\w+)=(\"\S+\"|\S[^,]+)',
+                r'(\w+)=(\"\S+\"|\S[^,]*)',
                 match_str[0]))
             if 'in_port' in self.match:
-                port = re.findall(r'\w+-eth(\d+)', self.match['in_port'])[0]
-                self.match['in_port'] = int(port)
+                self.match['in_port'] = self._get_port(self.match['in_port'])
         else:
             self.match = dict()
 
@@ -107,6 +109,17 @@ class Rule:
         info['flags'] = 0
         return info
 
+    def _get_port(self, port_str):
+        try:
+            port = int(port_str)
+        except ValueError:
+            eth_port = re.findall(r'\w+-eth(\d+)', port_str)
+            if eth_port:
+                port = int(eth_port[0])
+            else:
+                raise ValueError('Wrong port format', port_str)
+        return port
+
     def _match_str(self):
         match_list = [
             '='.join([key, str(val)]) for key, val in self.match.items()]
@@ -135,13 +148,43 @@ class DPCTL:
     def __init__(self, switches):
         self.switches = OrderedDict([(int(s.dpid, 16), s) for s in switches])
 
+    def rule_num(self, count_zero=True):
+        #rule_num = 0
+        #for output in self._ofctl('dump-aggregate'):
+        #    rule_num += int(re.findall(r'flow_count=(\d+)', output)[0])
+
+        rule_num = 0
+        for switch in self.switches.values():
+            output = switch.dpctl('dump-aggregate', '-O OpenFlow13')
+            rule_num += int(re.findall(r'flow_count=(\d+)', output)[0])
+
+        #if not count_zero:
+        #    zero_rule_num = 0
+        #    for output in self._ofctl('dump-flows table=0'):
+        #        zero_rule_num += len(output.splitlines())
+        #    rule_num -= zero_rule_num
+
+        if not count_zero:
+            zero_rule_num = 0
+            for switch in self.switches.values():
+                output = switch.dpctl('dump-flows', 'table=0', '-O OpenFlow13')
+                zero_rule_num += len(output.splitlines())
+            rule_num -= zero_rule_num
+
+        return rule_num
+
     def dump_flows(self):
         rules = []
         for switch in self.switches.values():
-            output = switch.dpctl('dump-flows', '-O OpenFlow13').splitlines()
-            rules += [Rule(switch.dpid, o) for o in output if '0x88cc' not in o]
+            output = switch.dpctl('dump-flows', '-O OpenFlow13')
+            output = output.splitlines()
+            for line in output:
+                if '0x88cc' not in line and 'xid' not in line:
+                    rule = Rule(switch.dpid, line)
+                    rules.append(rule)
         return rules
 
+    #@retry(exceptions=RuntimeError, tries=5)
     def get_rule(self, rule):
         switch = self.switches.get(rule.dpid)
         if not switch:
@@ -150,15 +193,40 @@ class DPCTL:
         # Request rule
         output = switch.dpctl(
             'dump-flows', '\"'+rule.to_str()+'\"', '-O OpenFlow13')
-        rules = [Rule(switch.dpid, o) for o in output.splitlines()]
+        output = output.splitlines()
+        #rules = [Rule(switch.dpid, o) for o in output.splitlines()]
+        rules = []
+        for line in output:
+            if '0x88cc' not in line and 'xid' not in line:
+                rule = Rule(switch.dpid, line)
+                rules.append(rule)
 
         # Get rule
         # dpctl doesn't allow to specify priority
         rules = [r for r in rules if r.priority == rule.priority]
-        assert len(rules) == 1
+        if not rules:
+            raise RuntimeError('Stat request failed')
+        if len(rules) > 1:
+            raise RuntimeError(
+                'Stat request returned too many rules', rules)
         new_rule = rules[0]
         assert new_rule == rule
         return new_rule
+
+    def _ofctl(self, cmd):
+        #shell_str = 'for sw in s1 s2; do sudo ovs-ofctl dump-flows s1 -O OpenFlow13; echo; done'
+        processes = []
+        for switch in self.switches.values():
+            process = switch.popen(
+                'ovs-ofctl ' + cmd + ' ' + switch.name + ' -O OpenFlow13')
+            processes.append(process)
+
+        outputs = []
+        for process in processes:
+            output, _ = process.communicate()
+            outputs.append(output)
+
+        return outputs
 
 
 class TrafficManager:
@@ -241,6 +309,7 @@ class Controller(Ryu):
         Ryu.__init__(self, 'ryu', ryu_args, port=port)
         self.url = 'http://localhost:%d' % rest_port
 
+    #@retry(exceptions=RuntimeError, tries=5)
     def get_rule(self, rule):
         # Create REST request
         url = self.url + '/stats/flow/%d' % rule.dpid
@@ -276,12 +345,18 @@ class Controller(Ryu):
 
 
 class OpenFlowTestbed:
-    def __init__(self, topo, port=6653, controller_port=6653):
+    def __init__(self, topo, port=6653, controller_port=6653, servers=None):
         self.clear()
         self.controller = Controller(controller_port)
-        self.network = Mininet(
-            topo=topo,
-            controller=RemoteController(self.controller.name, port=port))
+        if not servers:
+            self.network = Mininet(
+                topo=topo,
+                controller=RemoteController(self.controller.name, port=port))
+        else:
+            self.network = MininetCluster(
+                topo=topo, servers=servers,
+                placement=SwitchBinPlacer,
+                controller=RemoteController(self.controller.name, port=port))
         self.dpctl = DPCTL(self.network.switches)
         self.traffic_manager = TrafficManager(self.network)
 
@@ -303,7 +378,7 @@ class OpenFlowTestbed:
         return self.dpctl.dump_flows()
 
     def rule_num(self):
-        return len(self.rules())
+        return self.dpctl.rule_num(count_zero=True)
 
     def hosts(self):
         return self.network.hosts
@@ -346,10 +421,11 @@ class OpenFlowTestbed:
 
 class Testbed(OpenFlowTestbed):
     def __init__(self, topo, path='~/lib/compromutator/compromutator',
-                 log_file='log.txt', load_time=5):
+                 log_file='log.txt', load_time=5, servers=None):
         OpenFlowTestbed.__init__(
-            self, topo=topo, port=6653, controller_port=6633)
-        self.compromutator = Compromutator(path=path, log_file=log_file)
+            self, topo=topo, port=6653, controller_port=6633, servers=servers)
+        self.compromutator = Compromutator(
+            path=path, controller='127.0.0.1', log_file=log_file)
         self.load_time = load_time
 
     def rules(self):
@@ -357,6 +433,10 @@ class Testbed(OpenFlowTestbed):
         rule_list = [r for r in rule_list if r.table_id != 0]
         return rule_list
 
+    def rule_num(self):
+        return self.dpctl.rule_num(count_zero=False)
+
+    @retry(exceptions=RuntimeError, tries=5)
     def get_counter(self, rule):
         # Get rules
         real_rule = self.dpctl.get_rule(rule)
@@ -398,9 +478,9 @@ class Testbed(OpenFlowTestbed):
 
 
 class DebugTestbed(Testbed):
-    def __init__(self, topo):
+    def __init__(self, topo, servers=None):
         OpenFlowTestbed.__init__(
-            self, topo=topo, port=6653, controller_port=6633)
+            self, topo=topo, port=6653, controller_port=6633, servers=servers)
 
     def _start(self):
         OpenFlowTestbed._start(self)

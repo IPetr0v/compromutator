@@ -11,8 +11,9 @@ from mininet.topolib import Topo
 from mininet.util import quietRun
 from mininet.node import RemoteController, Ryu
 from mininet.topo import LinearTopo, SingleSwitchTopo
+from mininet.topolib import TreeTopo, TorusTopo
 
-from testbed import Testbed, DebugTestbed
+from testbed import OpenFlowTestbed, Testbed, DebugTestbed
 
 
 #class TestTopo(Topo):
@@ -45,6 +46,7 @@ from testbed import Testbed, DebugTestbed
 #            self.addLink(h3, root, cls=TCLink, bw=10)
 #        else:
 #            self.addLink(h3, switches[0], cls=TCLink, bw=10)
+# TestTopo(10) LinearTopo(2, 1, lopts={'cls':TCLink, 'bw':10}) SingleSwitchTopo(2)
 
 class DebugTopo(Topo):
     def __init__(self):
@@ -65,9 +67,7 @@ if __name__ == '__main__':
     setLogLevel('info')
 
     # Create test stand
-    # TestTopo(10) LinearTopo(2, 1, lopts={'cls':TCLink, 'bw':10}) SingleSwitchTopo(2)
-    testbed = DebugTestbed(
-        topo=LinearTopo(100, 1, lopts={'cls': TCLink, 'bw': 10}))
+    testbed = DebugTestbed(topo=LinearTopo(2, 1))
 
     # Emulate network
     with testbed:

@@ -9,7 +9,7 @@ from retry import retry
 from tqdm import tqdm, trange
 
 from sys import argv
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from time import time, sleep
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo, TorusTopo
@@ -39,16 +39,18 @@ class PingDelayTest:
             for j in range(i+1, len(hosts)):
                 ping_pairs.append((i, j))
         shuffle(ping_pairs)
+        ping_pairs = ping_pairs[:500]
 
         for pair in tqdm(ping_pairs, desc='Ping', leave=False):
             # Run ping test
             # TODO: remove sleep and fix rule installation
-            sleep(1)
+            #sleep(1)
             result = self.ping(
                 testbed, src=hosts[pair[0]], dst=hosts[pair[1]], real=real)
             results.append(result)
         return results
 
+    @retry(exceptions=RuntimeError, tries=5)
     def ping(self, testbed, src, dst, real=False):
         # Get first ping since only it influences rule installation
         output = testbed.network.pingFull(hosts=[src, dst], timeout=0.5)[0]
@@ -89,12 +91,15 @@ class PredictionTest:
                 for _ in tqdm(range(self.request_num),
                               desc='Requests', leave=False):
                     rules = testbed.rules()
+                    rule_num = len(rules)
                     shuffle(rules)
-                    for rule in rules:
-                        results.append(self.predict(rule, testbed))
+                    rules = rules[:1000]
+                    for rule in tqdm(rules, desc='Predictions', leave=False):
+                        results.append(self.predict(rule, testbed, rule_num))
         return pd.DataFrame(results)
 
-    def predict(self, rule, testbed):
+    @retry(exceptions=RuntimeError, tries=5)
+    def predict(self, rule, testbed, rule_num):
         real, predicted = testbed.get_counter(rule)
 
         # DEBUG
@@ -113,7 +118,7 @@ class PredictionTest:
         result['pred_bytes'] = predicted['byte_count']
         result['real_bytes'] = real['byte_count']
         result['switch_num'] = testbed.switch_num()
-        result['rule_num'] = testbed.rule_num()
+        result['rule_num'] = rule_num
         result['flow_num'] = testbed.flow_num()
         result['load'] = testbed.network_load()
         #result['delay'] = self.delay
@@ -124,9 +129,11 @@ class PerformanceTest:
     def __init__(self, result_dir, run_times=1):
         self.result_dir = result_dir
         self.run_times = run_times
-        self.topologies = [LinearTopo(n, 1) for n in range(5, 106, 5)]
-        self.topologies = [LinearTopo(1, 2)] + self.topologies
+        self.topologies = [LinearTopo(n, 1) for n in range(100, 201, 5)]
+        #self.topologies = [LinearTopo(1, 2)] + self.topologies
+        #self.topologies = [TreeTopo(n, 2) for n in range(2, 8)]
         self.bandwidth_list = [b*1000000 for b in [10, 100, 1000]]
+        #self.bandwidth_list = [b*1000000 for b in [100]]
 
     def run_delay_tests(self):
         path = os.path.join(self.result_dir, 'delay.csv')
@@ -160,14 +167,15 @@ class PerformanceTest:
         print 'Saved to', path
         return results
 
-if __name__ == '__main__':
-    test = PerformanceTest(result_dir='./experiments', run_times=1)
 
-    print '--- Delay Test --'
+if __name__ == '__main__':
+    test = PerformanceTest(result_dir='./experiments', run_times=3)
+
+    print '--- Delay Test ---'
     delay = test.run_delay_tests()
 
-    print '--- Prediction Test --'
-    prediction = test.run_prediction_tests()
+    #print '--- Prediction Test ---'
+    #prediction = test.run_prediction_tests()
 
     print 'delay', delay
     print 'prediction', prediction
