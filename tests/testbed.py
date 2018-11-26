@@ -7,6 +7,8 @@ import random
 from collections import OrderedDict
 from time import time, sleep
 from retry import retry
+import pandas as pd
+from copy import copy
 
 from mininet.node import RemoteController, Ryu
 from mininet.net import Mininet
@@ -20,25 +22,33 @@ from mininet.examples.cluster import MininetCluster, SwitchBinPlacer
 class Compromutator:
     def __init__(self, path, controller, log_file):
         self.path = os.path.expanduser(path)
-        self.args = ''
+        self.perf_file = '/tmp/compromutator_perf.csv'
+        self.args = '-m %s' % self.perf_file
         self.log_file = open(log_file, 'w') if log_file else None
         self._process = None
 
         if not self._check_path():
             raise ValueError('%s: not found' % path)
 
+    def pop_perf_results(self):
+        with open(self.perf_file, 'r') as f:
+            perf_results = pd.read_csv(f, index_col=None, header=0)
+        os.remove(self.perf_file)
+        return perf_results
+
     def start(self):
-        cmd = self.path + self.args
+        cmd = self.path + ' ' + self.args
         self._process = subprocess.Popen(
             cmd.split(),
             stdin=subprocess.PIPE,
             stdout=self.log_file if self.log_file else subprocess.PIPE,
-            stderr=self.log_file if self.log_file else subprocess.STDOUT,
-            shell=True)
+            stderr=self.log_file if self.log_file else subprocess.STDOUT)
+            #shell=True)
             #preexec_fn=lambda: os.nice(-2))
 
     def stop(self):
         self._process.kill()
+        self._process = None
         os.popen('sudo pkill compromutator')
 
     def _check_path(self):
@@ -421,7 +431,7 @@ class OpenFlowTestbed:
 
 class Testbed(OpenFlowTestbed):
     def __init__(self, topo, path='~/lib/compromutator/compromutator',
-                 log_file='log.txt', load_time=5, servers=None):
+                 log_file='log.txt', load_time=3, servers=None):
         OpenFlowTestbed.__init__(
             self, topo=topo, port=6653, controller_port=6633, servers=servers)
         self.compromutator = Compromutator(
@@ -436,8 +446,11 @@ class Testbed(OpenFlowTestbed):
     def rule_num(self):
         return self.dpctl.rule_num(count_zero=False)
 
-    @retry(exceptions=RuntimeError, tries=5)
-    def get_counter(self, rule):
+    @retry(exceptions=RuntimeError, tries=5, jitter=0.1)
+    def get_counter(self, orig_rule):
+        rule = copy(orig_rule)
+        assert rule.table_id != 0
+
         # Get rules
         real_rule = self.dpctl.get_rule(rule)
         rule.table_id -= 1
@@ -461,6 +474,22 @@ class Testbed(OpenFlowTestbed):
         predicted['byte_count'] = predicted_rule.byte_count
 
         return real, predicted
+
+    def start_compromutator(self):
+        # TODO: Add TrafficManager.restart()
+        self.traffic_manager = TrafficManager(self.network)
+        self.compromutator.start()
+        sleep(self.load_time)
+
+    def stop_compromutator(self):
+        sleep(0.1)
+        self.compromutator.stop()
+        os.popen('sudo pkill compromutator')
+        os.popen('sudo pkill iperf3')
+        sleep(0.1)
+
+    def pop_perf_results(self):
+        return self.compromutator.pop_perf_results()
 
     def _start(self):
         OpenFlowTestbed._start(self)

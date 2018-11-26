@@ -13,6 +13,7 @@ Compromutator::Compromutator(ProxySettings settings,
     pipeline_(proxy_.getSender(), controller_)
 {
     std::cout<<"Timeout: "<<timeout_duration<<std::endl;
+    std::cout<<"Measurements: "<<measurement_filename<<std::endl;
 }
 
 Compromutator::~Compromutator()

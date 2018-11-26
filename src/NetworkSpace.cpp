@@ -105,7 +105,7 @@ Match NetworkSpace::match() const
 {
     auto headers = header_.getBitSpace();
     assert(not headers.empty());
-    return Match(in_port_, std::move(headers[0].mask));
+    return Match(in_port_, std::move(headers.front().mask));
 }
 
 NetworkSpace& NetworkSpace::operator+=(const NetworkSpace& right)

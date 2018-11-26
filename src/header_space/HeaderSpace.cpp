@@ -290,7 +290,8 @@ HeaderSpace& HeaderSpace::operator-=(const HeaderSpace& right)
         for (int i = 0; i < right.hs_->list.used; i++) {
             hs_diff(hs_, right.hs_->list.elems[i]);
         }
-        hs_compact(hs_);
+        // TODO: Deleted for optimization. Compact after.
+        //hs_compact(hs_);
     }
     return *this;
 }
@@ -326,12 +327,28 @@ HeaderSpace& HeaderSpace::computeDifference()
     return *this;
 }
 
-std::vector<BitSpace> HeaderSpace::getBitSpace() const
+bool HeaderSpace::empty() const
 {
-    hs_compact(hs_);
+    if (countMatch()) {
+        if (countDiff()) {
+            return !hs_compact(hs_);
+        }
+        else {
+            return false;
+        }
+    }
+    else {
+        return true;
+    }
+}
+
+std::list<BitSpace> HeaderSpace::getBitSpace() const
+{
+    // TODO: Deleted to increase performance. Compact later.
+    //hs_compact(hs_);
 
     // Get bit vectors
-    std::vector<BitSpace> bit_space;
+    std::list<BitSpace> bit_space;
     for (int i = 0; i < hs_->list.used; i++) {
         // Get mask
         BitMask mask(length_, hs_->list.elems[i]);

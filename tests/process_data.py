@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import glob
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ from tqdm import tqdm
 
 
 def cut_by_item(dataframe, key, step):
+    print dataframe[key].min(), dataframe[key].max()
     item_range = np.arange(0, dataframe[key].max(), step)
     grouped = dataframe.groupby(pd.cut(dataframe[key], item_range))
     keys = [key for key, _ in grouped]
@@ -20,23 +22,52 @@ def process_delays_new(delays):
     rule_interval = 250
     window = 100
 
-    real = delays.ix[delays['real'] == True]
-    tested = delays.ix[delays['real'] == False]
-
-    real_key_list, real_list = cut_by_item(real, 'switch_num', step)
+    real_key_list, real_list = cut_by_item(delays, 'network_size', step)
     real_by_rule_list = [
         r.groupby(pd.cut(
-            r['rule_num'],
-            np.arange(0, r['rule_num'].max(), rule_interval))
+            r['graph_size'],
+            np.arange(0, r['graph_size'].max(), rule_interval))
         )['RTT'].mean()
         for r in real_list
     ]
 
-    tested_key_list, tested_list = cut_by_item(tested, 'switch_num', step)
+    for label, real_by_rule in zip(real_key_list, real_by_rule_list):
+        real_keys = [(k.left + k.right)/2.0 for k in real_by_rule.keys()]
+        keys = real_keys
+        delay = pd.DataFrame(real_by_rule).rolling(window=window).mean()
+        #delay = tested_by_rule - real_by_rule
+        plt.plot(keys, delay, label=str(label.right))#, 'r')
+        plt.legend()
+
+    plt.xlabel('Rule number')
+    plt.ylabel('RTT')
+    plt.title('RTT by rule number')
+    plt.savefig(data_dir + '/plot/' + 'RTT by rule number.png', fmt='png')
+    plt.gcf().clear()
+
+
+def process_delays_old(delays):
+    step = 10
+    rule_interval = 250
+    window = 100
+
+    real = delays.ix[delays['real'] == True]
+    tested = delays.ix[delays['real'] == False]
+
+    real_key_list, real_list = cut_by_item(real, 'network_size', step)
+    real_by_rule_list = [
+        r.groupby(pd.cut(
+            r['graph_size'],
+            np.arange(0, r['graph_size'].max(), rule_interval))
+        )['RTT'].mean()
+        for r in real_list
+    ]
+
+    tested_key_list, tested_list = cut_by_item(tested, 'network_size', step)
     tested_by_rule_list = [
         t.groupby(pd.cut(
-            t['rule_num'],
-            np.arange(0, t['rule_num'].max(), rule_interval))
+            t['graph_size'],
+            np.arange(0, t['graph_size'].max(), rule_interval))
         )['RTT'].mean()
         for t in tested_list
     ]
@@ -195,12 +226,15 @@ def load(files):
     for dataframe_file in files:
         df = pd.read_csv(dataframe_file, index_col=None, header=0)
         dataframe_list.append(df)
-    return pd.concat(dataframe_list)
+    return pd.concat(dataframe_list, ignore_index=True)
 
 
 if __name__ == '__main__':
     tqdm.pandas()
-    data_dir = './experiments'
+    data_dir = '../experiments'
+
+    print os.path.dirname(os.path.realpath(__file__))
+    print os.getcwd()
 
     delay_files = glob.glob(data_dir + "/delay*")
     prediction_files = glob.glob(data_dir + "/prediction*")

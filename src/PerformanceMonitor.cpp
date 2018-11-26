@@ -28,7 +28,7 @@ void PerformanceMeasurement::setFinish()
 
 std::string PerformanceMeasurement::header()
 {
-    return "measurement,graph_size,network_size,duration,";
+    return "measurement,graph_size,network_size,duration";
 }
 
 std::string PerformanceMeasurement::str() const
@@ -41,7 +41,7 @@ std::string PerformanceMeasurement::str() const
     return name + "," +
            std::to_string(graph_size) + "," +
            std::to_string(network_size) + "," +
-           std::to_string(duration_ms.count()) + ",";
+           std::to_string(duration_ms.count());
 }
 
 PerformanceMonitor::PerformanceMonitor(std::string measurement_filename):
@@ -95,13 +95,6 @@ void PerformanceMonitor::flush()
 {
     if (save_results_) {
         for (auto measurement : measurements_to_write_) {
-            auto duration_ms = std::chrono::duration_cast<
-                std::chrono::milliseconds
-            >(measurement->duration);
-            std::cout<<"["<<measurement->id.second<<"] graph: "
-                     <<measurement->graph_size<<" | net: "
-                     <<measurement->network_size<<" | duration: "
-                     <<std::to_string(duration_ms.count())<<std::endl;
             measurement_file_ << measurement->str() << std::endl;
         }
     }

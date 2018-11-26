@@ -108,10 +108,12 @@ public:
     
     // TODO: check correctness and make more optimal empty()
     // (do not compact every time)
-    bool empty() const {return !hs_compact(hs_);}
+    bool empty() const;
     int length() const {return length_;}
+    int countMatch() const {return hs_count(hs_);}
+    int countDiff() const {return hs_count_diff(hs_);}
 
-    std::vector<BitSpace> getBitSpace() const;
+    std::list<BitSpace> getBitSpace() const;
 
     static int GLOBAL_LENGTH;
 

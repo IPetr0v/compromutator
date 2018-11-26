@@ -67,7 +67,7 @@ if __name__ == '__main__':
     setLogLevel('info')
 
     # Create test stand
-    testbed = DebugTestbed(topo=LinearTopo(2, 1))
+    testbed = Testbed(topo=LinearTopo(2, 1))
 
     # Emulate network
     with testbed:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import re
 import pandas as pd
 from collections import OrderedDict
@@ -9,7 +10,6 @@ from retry import retry
 from tqdm import tqdm, trange
 
 from sys import argv
-#import matplotlib.pyplot as plt
 from time import time, sleep
 from mininet.topo import LinearTopo
 from mininet.topolib import TreeTopo, TorusTopo
@@ -102,16 +102,6 @@ class PredictionTest:
     def predict(self, rule, testbed, rule_num):
         real, predicted = testbed.get_counter(rule)
 
-        # DEBUG
-        #if predicted > real + 10:
-        #    os.popen('sudo pkill iperf3')
-        #    print rule.to_dict()
-        #    testbed.cli()
-
-        #print 'packets: %d/%d | bytes: %d/%d' % (
-        #    predicted['packet_count'], real['packet_count'],
-        #    predicted['byte_count'], real['byte_count'])
-
         result = OrderedDict()
         result['pred_packets'] = predicted['packet_count']
         result['real_packets'] = real['packet_count']
@@ -126,14 +116,14 @@ class PredictionTest:
 
 
 class PerformanceTest:
-    def __init__(self, result_dir, run_times=1):
+    def __init__(self, result_dir, switch_num=5, run_times=1):
         self.result_dir = result_dir
         self.run_times = run_times
-        self.topologies = [LinearTopo(n, 1) for n in range(100, 201, 5)]
-        #self.topologies = [LinearTopo(1, 2)] + self.topologies
-        #self.topologies = [TreeTopo(n, 2) for n in range(2, 8)]
+        if switch_num < 5:
+            switch_num = 5
+        self.topologies = [LinearTopo(n, 1) for n in range(
+            switch_num, switch_num + 101, 5)]
         self.bandwidth_list = [b*1000000 for b in [10, 100, 1000]]
-        #self.bandwidth_list = [b*1000000 for b in [100]]
 
     def run_delay_tests(self):
         path = os.path.join(self.result_dir, 'delay.csv')
@@ -167,15 +157,86 @@ class PerformanceTest:
         print 'Saved to', path
         return results
 
+    def run_experimental(self):
+        # TODO: delete this
+
+        if os.path.exists('experiments/prediction.csv'):
+            os.remove('experiments/prediction.csv')
+        if os.path.exists('experiments/delay.csv'):
+            os.remove('experiments/delay.csv')
+
+        prediction_dfs = []
+        delay_dfs = []
+        for _ in tqdm(range(self.run_times), desc='Iterations'):
+            for topo in tqdm(self.topologies, desc='Topologies', leave=False):
+                with Testbed(topo) as testbed:
+                    self.flow_num = (testbed.switch_num()*testbed.switch_num())/2 - 1
+                    if self.flow_num > 1000:
+                        self.flow_num = 1000
+
+                    for bandwidth in tqdm(self.bandwidth_list, desc='Bandwidth', leave=False):
+                        predictions = []
+                        for _ in tqdm(range(self.flow_num), desc='Flows', leave=False):
+                            testbed.add_flow(bandwidth=bandwidth)
+                            sleep(0.05)
+
+                            # Get rule counter predictions
+                            rules = testbed.rules()
+                            rule_num = len(rules)
+                            shuffle(rules)
+                            rules = rules[:1000]
+                            for rule in tqdm(rules, desc='Predictions', leave=False):
+                                predictions.append(self.predict(rule, testbed, rule_num))
+
+                        # Restart compromutator and get measurements
+                        testbed.stop_compromutator()
+                        prediction = pd.DataFrame(predictions)
+                        delay = testbed.pop_perf_results()
+
+                        with open('experiments/prediction.csv', 'a') as f:
+                            prediction.to_csv(f, index=False)
+                        with open('experiments/delay.csv', 'a') as f:
+                            delay.to_csv(f, index=False)
+
+                        prediction_dfs.append(prediction)
+                        delay_dfs.append(delay)
+
+                        testbed.start_compromutator()
+
+        return pd.concat(prediction_dfs, ignore_index=True), \
+               pd.concat(delay_dfs, ignore_index=True)
+
+    def predict(self, rule, testbed, rule_num):
+        real, predicted = testbed.get_counter(rule)
+
+        result = OrderedDict()
+        result['pred_packets'] = predicted['packet_count']
+        result['real_packets'] = real['packet_count']
+        result['pred_bytes'] = predicted['byte_count']
+        result['real_bytes'] = real['byte_count']
+        result['switch_num'] = testbed.switch_num()
+        result['rule_num'] = rule_num
+        result['flow_num'] = testbed.flow_num()
+        result['load'] = testbed.network_load()
+        #result['delay'] = self.delay
+        return result
+
 
 if __name__ == '__main__':
-    test = PerformanceTest(result_dir='./experiments', run_times=3)
+    switch_num = int(sys.argv[1])
+    print 'Switch number', switch_num
+    test = PerformanceTest(result_dir='./experiments', switch_num=switch_num, run_times=5)
 
-    print '--- Delay Test ---'
-    delay = test.run_delay_tests()
+    #print '--- Delay Test ---'
+    #delay = test.run_delay_tests()
 
     #print '--- Prediction Test ---'
     #prediction = test.run_prediction_tests()
 
-    print 'delay', delay
-    print 'prediction', prediction
+    #print 'delay', delay
+    #print 'prediction', prediction
+
+    print '--- Experimental Test ---'
+    predictions, delays = test.run_experimental()
+    print 'delay', delays
+    print 'prediction', predictions
