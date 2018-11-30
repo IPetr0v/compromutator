@@ -47,8 +47,9 @@ class Compromutator:
             #preexec_fn=lambda: os.nice(-2))
 
     def stop(self):
-        self._process.kill()
-        self._process = None
+        if self._process:
+            self._process.kill()
+            self._process = None
         os.popen('sudo pkill compromutator')
 
     def _check_path(self):
@@ -431,12 +432,12 @@ class OpenFlowTestbed:
 
 class Testbed(OpenFlowTestbed):
     def __init__(self, topo, path='~/lib/compromutator/compromutator',
-                 log_file='log.txt', load_time=3, servers=None):
+                 log_file='log.txt', servers=None):
         OpenFlowTestbed.__init__(
             self, topo=topo, port=6653, controller_port=6633, servers=servers)
         self.compromutator = Compromutator(
             path=path, controller='127.0.0.1', log_file=log_file)
-        self.load_time = load_time
+        self.load_time = max(2, self.switch_num() / 3)
 
     def rules(self):
         rule_list = OpenFlowTestbed.rules(self)

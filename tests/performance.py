@@ -17,89 +17,140 @@ from mininet.topolib import TreeTopo, TorusTopo
 from testbed import OpenFlowTestbed, Testbed, DebugTestbed
 
 
-class PingDelayTest:
-    def __init__(self, topo):
-        self.topo = topo
+class TestBase:
+    def save_dataframe(self, dataframe, filename):
+        if os.path.exists(filename):
+            with open(filename, 'a') as f:
+                dataframe.to_csv(f, index=False, header=False)
+        else:
+            with open(filename, 'w') as f:
+                dataframe.to_csv(f, index=False)
 
-    @retry(exceptions=RuntimeError, tries=5)
+
+class DelayTest(TestBase):
+    def __init__(self, topologies, result_file, max_pings=500, run_times=1):
+        self.topologies = topologies
+        self.result_file = result_file
+        self.max_pings = max_pings
+        self.run_times = run_times
+        if os.path.exists(self.result_file):
+            os.remove(self.result_file)
+
     def run(self):
-        with OpenFlowTestbed(self.topo) as real_testbed:
-            real_results = self.pingall(real_testbed, real=True)
-        with Testbed(self.topo) as testbed:
-            results = self.pingall(testbed, real=False)
-        return pd.DataFrame(results + real_results)
+        delays = []
+        for _ in tqdm(range(self.run_times), desc='Iterations'):
+            for topo in tqdm(self.topologies, desc='Topologies', leave=False):
+                try:
+                    result = self.run_topo_test(topo)
+                    delays.extend(result)
+                except RuntimeError:
+                    pass
+        return pd.concat(delays, ignore_index=True)
 
-    def pingall(self, testbed, real=False):
-        results = []
+    @retry(exceptions=RuntimeError, tries=2)
+    def run_topo_test(self, topo):
+        delays = []
+        with Testbed(topo) as testbed:
+            self.ping_all(testbed)
 
-        # Create host ping sequence
-        ping_pairs = []
-        hosts = testbed.network.hosts
-        for i in range(len(hosts)):
-            for j in range(i+1, len(hosts)):
-                ping_pairs.append((i, j))
-        shuffle(ping_pairs)
-        ping_pairs = ping_pairs[:500]
+            # Restart compromutator and get measurements
+            testbed.stop_compromutator()
+            delay = testbed.pop_perf_results()
+            self.save_dataframe(delay, self.result_file)
+            delays.append(delay)
 
-        for pair in tqdm(ping_pairs, desc='Ping', leave=False):
-            # Run ping test
-            # TODO: remove sleep and fix rule installation
-            #sleep(1)
-            result = self.ping(
-                testbed, src=hosts[pair[0]], dst=hosts[pair[1]], real=real)
-            results.append(result)
-        return results
+            testbed.start_compromutator()
+        return delays
 
-    @retry(exceptions=RuntimeError, tries=5)
-    def ping(self, testbed, src, dst, real=False):
-        # Get first ping since only it influences rule installation
-        output = testbed.network.pingFull(hosts=[src, dst], timeout=0.5)[0]
+    @retry(exceptions=RuntimeError, tries=5, jitter=1)
+    def ping_all(self, testbed):
+        try:
+            # Create host ping sequence
+            ping_pairs = []
+            hosts = testbed.network.hosts
+            for i in range(len(hosts)):
+                for j in range(i+1, len(hosts)):
+                    ping_pairs.append((i, j))
+            shuffle(ping_pairs)
+            ping_pairs = ping_pairs[:self.max_pings]
+
+            for pair in tqdm(ping_pairs, desc='Ping', leave=False):
+                self.ping(testbed, src=hosts[pair[0]], dst=hosts[pair[1]])
+
+        except RuntimeError as ex:
+            testbed.stop_compromutator()
+            testbed.start_compromutator()
+            raise ex
+
+    @retry(exceptions=RuntimeError, tries=5, jitter=0.2)
+    def ping(self, testbed, src, dst):
+        output = testbed.network.pingFull(hosts=[src, dst], timeout=3)[0]
         ping_output = output[2]
-
-        # Get max RTT
-        result = OrderedDict()
-        result['RTT'] = ping_output[4]
-        result['switch_num'] = testbed.switch_num()
-        result['rule_num'] = testbed.rule_num()
-        result['real'] = real
-
-        if not result['RTT']:
-            raise RuntimeError(
-                'Ping failed on %d switches' % result['switch_num'])
-        return result
+        if not ping_output[4]:
+            raise RuntimeError('Ping failed')
 
 
-class PredictionTest:
-    def __init__(self, topo, flow_num, bandwidth, request_num=1):
-        self.topo = topo
+class PredictionTest(TestBase):
+    def __init__(self, topologies, result_file, flow_num,
+                 bandwidth_list, delay=0, run_times=1):
+        self.topologies = topologies
+        self.result_file = result_file
         self.flow_num = flow_num
-        self.bandwidth = bandwidth
-        #self.delay = delay
-        self.request_num = request_num
+        self.bandwidth_list = bandwidth_list
+        self.delay = delay
+        self.run_times = run_times
 
-        # TODO: Make consistency test
-
-    @retry(exceptions=RuntimeError, tries=5)
     def run(self):
-        results = []
-        with Testbed(self.topo) as testbed:
-            for _ in tqdm(range(self.flow_num), desc='Flows', leave=False):
-                testbed.add_flow(bandwidth=self.bandwidth)
-                sleep(1)
+        predictions = []
+        for _ in tqdm(range(self.run_times), desc='Iterations'):
+            for topo in tqdm(self.topologies, desc='Topologies', leave=False):
+                try:
+                    result = self.run_topo_test(topo)
+                    predictions.extend(result)
+                except RuntimeError:
+                    pass
+        return pd.concat(predictions, ignore_index=True)
 
-                # Get rule counter predictions
-                for _ in tqdm(range(self.request_num),
-                              desc='Requests', leave=False):
-                    rules = testbed.rules()
-                    rule_num = len(rules)
-                    shuffle(rules)
-                    rules = rules[:1000]
-                    for rule in tqdm(rules, desc='Predictions', leave=False):
-                        results.append(self.predict(rule, testbed, rule_num))
-        return pd.DataFrame(results)
+    @retry(exceptions=RuntimeError, tries=2)
+    def run_topo_test(self, topo):
+        predictions = []
+        with Testbed(topo) as testbed:
+            for bandwidth in tqdm(self.bandwidth_list, desc='Bandwidth', leave=False):
+                for _ in tqdm(range(self.flow_num), desc='Flows', leave=False):
+                    testbed.add_flow(bandwidth=bandwidth)
+
+                sleep(1)
+                prediction = self.predict_all(testbed, bandwidth)
+
+                # Restart compromutator and get measurements
+                testbed.stop_compromutator()
+                self.save_dataframe(prediction, self.result_file)
+                predictions.append(prediction)
+
+                testbed.start_compromutator()
+        return predictions
 
     @retry(exceptions=RuntimeError, tries=5)
-    def predict(self, rule, testbed, rule_num):
+    def predict_all(self, testbed, bandwidth):
+        predictions = []
+        try:
+            # Get rule counter predictions
+            rules = testbed.rules()
+            rule_num = len(rules)
+            shuffle(rules)
+            for rule in tqdm(rules, desc='Predictions', leave=False):
+                prediction = self.predict(rule, testbed, bandwidth, rule_num)
+                predictions.append(prediction)
+
+        except RuntimeError as ex:
+            testbed.stop_compromutator()
+            testbed.start_compromutator()
+            raise ex
+
+        return pd.DataFrame(predictions)
+
+    @retry(exceptions=RuntimeError, tries=5)
+    def predict(self, rule, testbed, bandwidth, rule_num):
         real, predicted = testbed.get_counter(rule)
 
         result = OrderedDict()
@@ -110,8 +161,9 @@ class PredictionTest:
         result['switch_num'] = testbed.switch_num()
         result['rule_num'] = rule_num
         result['flow_num'] = testbed.flow_num()
-        result['load'] = testbed.network_load()
-        #result['delay'] = self.delay
+        result['bandwidth'] = bandwidth
+        #result['load'] = testbed.network_load()
+        result['delay'] = self.delay
         return result
 
 
@@ -124,20 +176,6 @@ class PerformanceTest:
         self.topologies = [LinearTopo(n, 1) for n in range(
             switch_num, switch_num + 101, 5)]
         self.bandwidth_list = [b*1000000 for b in [10, 100, 1000]]
-
-    def run_delay_tests(self):
-        path = os.path.join(self.result_dir, 'delay.csv')
-        results = []
-        for _ in tqdm(range(self.run_times), desc='Iterations'):
-            for topo in tqdm(self.topologies, desc='Topologies', leave=False):
-                result = PingDelayTest(topo).run()
-                results.append(result)
-
-                # Save intermediate results
-                data = pd.concat(results, ignore_index=True)
-                data.to_csv(path, index=False)
-        print 'Saved to', path
-        return results
 
     def run_prediction_tests(self):
         path = os.path.join(self.result_dir, 'prediction.csv')
@@ -193,10 +231,19 @@ class PerformanceTest:
                         prediction = pd.DataFrame(predictions)
                         delay = testbed.pop_perf_results()
 
-                        with open('experiments/prediction.csv', 'a') as f:
-                            prediction.to_csv(f, index=False)
-                        with open('experiments/delay.csv', 'a') as f:
-                            delay.to_csv(f, index=False)
+                        if os.path.exists('experiments/prediction.csv'):
+                            with open('experiments/prediction.csv', 'a') as f:
+                                prediction.to_csv(f, index=False, header=False)
+                        else:
+                            with open('experiments/prediction.csv', 'w') as f:
+                                prediction.to_csv(f, index=False)
+
+                        if os.path.exists('experiments/delay.csv'):
+                            with open('experiments/delay.csv', 'a') as f:
+                                delay.to_csv(f, index=False, header=False)
+                        else:
+                            with open('experiments/delay.csv', 'w') as f:
+                                delay.to_csv(f, index=False)
 
                         prediction_dfs.append(prediction)
                         delay_dfs.append(delay)
@@ -218,25 +265,4 @@ class PerformanceTest:
         result['rule_num'] = rule_num
         result['flow_num'] = testbed.flow_num()
         result['load'] = testbed.network_load()
-        #result['delay'] = self.delay
         return result
-
-
-if __name__ == '__main__':
-    switch_num = int(sys.argv[1])
-    print 'Switch number', switch_num
-    test = PerformanceTest(result_dir='./experiments', switch_num=switch_num, run_times=5)
-
-    #print '--- Delay Test ---'
-    #delay = test.run_delay_tests()
-
-    #print '--- Prediction Test ---'
-    #prediction = test.run_prediction_tests()
-
-    #print 'delay', delay
-    #print 'prediction', prediction
-
-    print '--- Experimental Test ---'
-    predictions, delays = test.run_experimental()
-    print 'delay', delays
-    print 'prediction', predictions
