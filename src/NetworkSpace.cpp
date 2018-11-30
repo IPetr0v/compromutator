@@ -148,9 +148,8 @@ NetworkSpace NetworkSpace::operator&(const NetworkSpace& right)
     else
         new_in_port = (in_port_ == right.in_port_) ? in_port_
                                                    : SpecialPort::NONE;
-    HeaderSpace new_domain = header_ & right.header_;
 
-    bool is_empty = new_in_port == SpecialPort::NONE || new_domain.empty();
+    bool is_empty = new_in_port == SpecialPort::NONE;
     return is_empty ? NetworkSpace::emptySpace()
                     : NetworkSpace(new_in_port, header_ & right.header_);
 }
