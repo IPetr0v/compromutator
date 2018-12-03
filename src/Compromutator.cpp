@@ -49,13 +49,11 @@ void Compromutator::handle_detector_instruction()
     while (controller_.detector.instructionsExist()) {
         auto instruction = controller_.detector.getInstruction();
 
-        for (const auto& reply : instruction.replies) {
-            controller_.stats_manager.sendRuleStats(reply);
-        }
-
+        std::unordered_set<SwitchId> requested_switches;
         for (const auto& request : instruction.requests.data) {
             auto request_id = request->id;
             if (auto rule_request = RuleRequest::pointerCast(request)) {
+                requested_switches.insert(rule_request->rule->switch_id);
                 controller_.stats_manager.getRuleStats(
                     request_id, rule_request->rule);
             }
@@ -63,8 +61,11 @@ void Compromutator::handle_detector_instruction()
                 assert(0);
             }
         }
+        for (const auto& switch_id: requested_switches) {
+            controller_.rule_manager.sendBarrier(switch_id);
+        }
 
-        std::set<SwitchId> affected_switches;
+        std::unordered_set<SwitchId> affected_switches;
         auto& rules_to_delete = instruction.interceptor_diff.rules_to_delete;
         for (const auto& rule_to_delete : rules_to_delete) {
             affected_switches.insert(rule_to_delete->switch_id);
@@ -77,6 +78,10 @@ void Compromutator::handle_detector_instruction()
         auto& rules_to_add = instruction.interceptor_diff.rules_to_add;
         for (const auto& rule_to_add : rules_to_add) {
             controller_.rule_manager.installRule(rule_to_add);
+        }
+
+        for (const auto& reply : instruction.replies) {
+            controller_.stats_manager.sendRuleStats(reply);
         }
 
         // DEBUG

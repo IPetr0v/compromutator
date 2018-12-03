@@ -102,45 +102,52 @@ class PredictionTest(TestBase):
 
     def run(self):
         predictions = []
-        for _ in tqdm(range(self.run_times), desc='Iterations'):
-            for topo in tqdm(self.topologies, desc='Topologies', leave=False):
-                try:
-                    result = self.run_topo_test(topo)
-                    predictions.extend(result)
-                except RuntimeError:
-                    pass
+        with tqdm(range(self.run_times), desc='Iterations') as iter_range:
+            for _ in iter_range:
+                with tqdm(self.topologies, desc='Topologies', leave=False) as topo_range:
+                    for topo in topo_range:
+                        try:
+                            result = self.run_topo_test(topo)
+                            predictions.extend(result)
+                        except RuntimeError:
+                            pass
         return pd.concat(predictions, ignore_index=True)
 
     @retry(exceptions=RuntimeError, tries=2)
     def run_topo_test(self, topo):
         predictions = []
         with Testbed(topo) as testbed:
-            for bandwidth in tqdm(self.bandwidth_list, desc='Bandwidth', leave=False):
-                for _ in tqdm(range(self.flow_num), desc='Flows', leave=False):
-                    testbed.add_flow(bandwidth=bandwidth)
+            with tqdm(self.bandwidth_list, desc='Bandwidth', leave=False) as bandwidth_range:
+                for bandwidth in bandwidth_range:
+                    prediction = self.predict_all(testbed, bandwidth)
 
-                sleep(1)
-                prediction = self.predict_all(testbed, bandwidth)
+                    # Restart compromutator and get measurements
+                    testbed.stop_compromutator()
+                    self.save_dataframe(prediction, self.result_file)
+                    predictions.append(prediction)
 
-                # Restart compromutator and get measurements
-                testbed.stop_compromutator()
-                self.save_dataframe(prediction, self.result_file)
-                predictions.append(prediction)
-
-                testbed.start_compromutator()
+                    testbed.start_compromutator()
         return predictions
 
     @retry(exceptions=RuntimeError, tries=5)
     def predict_all(self, testbed, bandwidth):
         predictions = []
         try:
+            with tqdm(range(self.flow_num), desc='Flows', leave=False) as flow_range:
+                for _ in flow_range:
+                    testbed.add_flow(bandwidth=bandwidth)
+                    sleep(0.05)
+            sleep(1)
+
             # Get rule counter predictions
             rules = testbed.rules()
             rule_num = len(rules)
             shuffle(rules)
-            for rule in tqdm(rules, desc='Predictions', leave=False):
-                prediction = self.predict(rule, testbed, bandwidth, rule_num)
-                predictions.append(prediction)
+
+            with tqdm(rules, desc='Predictions', leave=False) as prediction_range:
+                for rule in prediction_range:
+                    prediction = self.predict(rule, testbed, bandwidth, rule_num)
+                    predictions.append(prediction)
 
         except RuntimeError as ex:
             testbed.stop_compromutator()
@@ -164,6 +171,8 @@ class PredictionTest(TestBase):
         result['bandwidth'] = bandwidth
         #result['load'] = testbed.network_load()
         result['delay'] = self.delay
+
+        assert result['flow_num'] != 0
         return result
 
 

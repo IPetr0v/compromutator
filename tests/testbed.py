@@ -247,6 +247,9 @@ class TrafficManager:
         self._last_id = 0
         self._last_port = 10000
 
+    def __del__(self):
+        self.clear()
+
     def network_load(self):
         flow_size_list = [f['bandwidth'] for f in self.flows.values()]
         return sum(flow_size_list)
@@ -271,21 +274,16 @@ class TrafficManager:
         ip = dst.intfs[0].ip
         port = self._last_port
         self._last_port += 1
-        server = 'iperf3 -s -B %s -p %d >/dev/null &' % (ip, port)#2>&1
-        client = 'iperf3 -c %s -p %d -b %s -t 3600 &' % (#>/dev/null 2>&1
+
+        # Space at the end is a workaround for mininet host shell
+        # not returning the PID of a backgound process
+        server = 'iperf3 -s -B %s -p %d >/dev/null 2>&1 & ' % (ip, port)
+        client = 'iperf3 -c %s -p %d -b %s -t 3600 >/dev/null 2>&1 & ' % (
             ip, port, bandwidth)
 
         # Run iperf
-        #print 'Add flow', ip
-        #dst_pid = self._pid(dst.cmd(server, verbose=True))
-        #src_pid = self._pid(src.cmd(client, verbose=True))
-
-        dst.cmd(server)
-        src.cmd(client)
-
-        dst_pid = 1
-        src_pid = 1
-
+        dst_pid = self._pid(dst.cmd(server))#, verbose=True, printPid=True))
+        src_pid = self._pid(src.cmd(client))#, verbose=True, printPid=True))
 
         # Create flow entry
         flow = dict()
@@ -304,11 +302,15 @@ class TrafficManager:
         flow['dst'].cmd('sudo kill -9 %d' % flow['dst_pid'])
         del self.flows[flow_id]
 
+    def clear(self):
+        flows = copy(self.flows)
+        for flow_id in flows:
+            self.delete_flow(flow_id)
+
     def _pid(self, bash_output):
         parsed = re.findall(r'\[\d+\]\s(\d+)', bash_output.strip())
-        print bash_output
         if len(parsed) != 1:
-            raise RuntimeError('iperf3 error', bash_output)
+            raise ValueError('iperf3 error', bash_output)
         return int(parsed[0])
 
 
@@ -320,7 +322,6 @@ class Controller(Ryu):
         Ryu.__init__(self, 'ryu', ryu_args, port=port)
         self.url = 'http://localhost:%d' % rest_port
 
-    #@retry(exceptions=RuntimeError, tries=5)
     def get_rule(self, rule):
         # Create REST request
         url = self.url + '/stats/flow/%d' % rule.dpid
@@ -341,8 +342,6 @@ class Controller(Ryu):
         dpid, rule_info = response.items()[0]
         dpid = int(dpid)
         assert dpid == rule.dpid
-        #assert len(rule_info) < 2, rule_info
-        #assert len(rule_info) == 1, rule_info
 
         if not rule_info:
             raise RuntimeError('Stat request failed')
@@ -478,13 +477,14 @@ class Testbed(OpenFlowTestbed):
 
     def start_compromutator(self):
         # TODO: Add TrafficManager.restart()
-        self.traffic_manager = TrafficManager(self.network)
+        #self.traffic_manager = TrafficManager(self.network)
         self.compromutator.start()
         sleep(self.load_time)
 
     def stop_compromutator(self):
         sleep(0.1)
         self.compromutator.stop()
+        self.traffic_manager.clear()
         os.popen('sudo pkill compromutator')
         os.popen('sudo pkill iperf3')
         sleep(0.1)

@@ -16,7 +16,7 @@ if __name__ == '__main__':
     result_file = 'experiments/prediction_%d_%d_id%d.csv' % (
         min_switches, max_switches, randint(1000, 9999))
     test = PredictionTest(topologies, result_file=result_file,
-                          flow_num=50, bandwidth_list=bandwidth_list,
+                          flow_num=25, bandwidth_list=bandwidth_list,
                           run_times=1)
     delays = test.run()
 
