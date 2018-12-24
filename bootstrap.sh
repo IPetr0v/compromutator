@@ -3,6 +3,8 @@
 git submodule init
 git submodule update
 
+./third_party/bootstrap.sh
+
 sudo apt-get -y install build-essential libtool autoconf cmake
 sudo apt-get -y install python python-pip mininet
 
