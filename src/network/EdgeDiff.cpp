@@ -80,26 +80,6 @@ std::ostream& operator<<(std::ostream& os, const EdgeDiff& diff)
     return os;
 }
 
-//bool EdgeDiff::equals(const EdgePtr& first_edge,
-//                      const EdgePtr& second_edge) const
-//{
-//    return *first_edge->src->rule == *second_edge->src->rule &&
-//           *first_edge->dst->rule == *second_edge->dst->rule;
-//}
-//
-//bool EdgeDiff::equals(const EdgePtr& first_edge,
-//                      const DeletedEdge& second_edge) const
-//{
-//    return *first_edge->src->rule == *second_edge.first &&
-//           *first_edge->dst->rule == *second_edge.second;
-//}
-//
-//bool EdgeDiff::is_source(const EdgePtr& first_edge,
-//                         const EdgePtr& second_edge) const
-//{
-//    return *first_edge->dst->rule == *second_edge->src->rule;
-//}
-
 void EdgeDiff::delete_intersection(std::list<Dependency>& src,
                                    std::list<Dependency>& dst) {
     auto it = std::remove_if(src.begin(), src.end(),

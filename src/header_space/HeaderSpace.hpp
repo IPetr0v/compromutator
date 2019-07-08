@@ -76,8 +76,8 @@ public:
     // And think how to implement copy on write to hs_
     // that will be needed if I will use smart pointers
     explicit HeaderSpace(std::string str);
-    HeaderSpace(const BitMask& bit_vector);
-    HeaderSpace(BitMask&& bit_vector);
+    explicit HeaderSpace(const BitMask& bit_vector);
+    explicit HeaderSpace(BitMask&& bit_vector);
     HeaderSpace(const HeaderSpace& other);
     HeaderSpace(HeaderSpace&& other) noexcept;
     static HeaderSpace emptySpace(int length);

@@ -137,7 +137,7 @@ class PredictionTest(TestBase):
                 for _ in flow_range:
                     testbed.add_flow(bandwidth=bandwidth)
                     sleep(0.05)
-            sleep(1)
+            sleep(5)
 
             # Get rule counter predictions
             rules = testbed.rules()

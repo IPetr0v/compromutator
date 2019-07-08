@@ -137,7 +137,7 @@ RulePtr Network::addRule(SwitchId switch_id, TableId table_id,
 {
     // Get Table
     SwitchPtr sw = getSwitch(switch_id);
-    TablePtr table = sw ? sw->table(table_id) : nullptr;
+    TablePtr table = sw ? sw->addTable(table_id) : nullptr;
     if (not table) {
         auto msg = "Wrong table:" + std::to_string(table_id) +
                    " for dpid:" + std::to_string(switch_id);
@@ -316,7 +316,7 @@ std::pair<bool, Actions> Network::get_actions(SwitchPtr sw,
     }
     for (auto& table_action_base : actions_base.table_actions) {
         auto table_id = table_action_base.table_id;
-        auto table = getTable(sw->id(), table_id);
+        auto table = sw->addTable(table_id);
         if (table) {
             TableAction table_action(std::move(table_action_base), table);
             actions.table_actions.emplace_back(std::move(table_action));

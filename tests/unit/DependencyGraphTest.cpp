@@ -99,44 +99,53 @@ TEST_F(InitDependencyGraphTest, CreationTest)
     network->deleteRule(rule11->id());
 
     // Add special rules
-    EXPECT_TRUE(dependency_graph->addRule(network->dropRule()).empty());
-    EXPECT_TRUE(dependency_graph->addRule(network->controllerRule()).empty());
+    dependency_graph->addRule(network->dropRule());
+    EXPECT_TRUE(dependency_graph->popEdgeDiff().empty());
+    dependency_graph->addRule(network->controllerRule());
+    EXPECT_TRUE(dependency_graph->popEdgeDiff().empty());
     for (auto port : {port11, port12, port21, port22}) {
-        EXPECT_TRUE(dependency_graph->addRule(port->sourceRule()).empty());
-        EXPECT_TRUE(dependency_graph->addRule(port->sinkRule()).empty());
+        dependency_graph->addRule(port->sourceRule());
+        EXPECT_TRUE(dependency_graph->popEdgeDiff().empty());
+        dependency_graph->addRule(port->sinkRule());
+        EXPECT_TRUE(dependency_graph->popEdgeDiff().empty());
     }
 
     // Add table miss rules
-    auto diff = dependency_graph->addRule(table_miss);
+    dependency_graph->addRule(table_miss);
+    auto diff = dependency_graph->popEdgeDiff();
     ASSERT_EQ(1u, diff.new_edges.size());
-    auto new_edge = *diff.new_edges.begin();
-    EXPECT_EQ(table_miss->id(), new_edge->src->rule->id());
-    EXPECT_EQ(network->dropRule(), new_edge->dst->rule);
+    auto new_edge = diff.new_edges.begin();
+    EXPECT_EQ(table_miss->id(), new_edge->src->id());
+    EXPECT_EQ(network->dropRule(), new_edge->dst);
     ASSERT_EQ(2u, diff.new_dependent_edges.size());
     std::set<std::pair<RulePtr, RulePtr>> new_dependent_edges {
         {port11->sourceRule(), table_miss},
         {port12->sourceRule(), table_miss}
     };
-    for (auto edge : diff.new_dependent_edges) {
-        auto it = new_dependent_edges.find({edge->src->rule, edge->dst->rule});
+    for (const auto& edge : diff.new_dependent_edges) {
+        auto it = new_dependent_edges.find({edge.src, edge.dst});
         EXPECT_NE(new_dependent_edges.end(), it);
         new_dependent_edges.erase(it);
     }
     EXPECT_TRUE(new_dependent_edges.empty());
     dependency_graph->addRule(table_miss_sw2);
+    dependency_graph->popEdgeDiff();
 
     // Add link
-    auto link_diff = dependency_graph->addLink(link);
+    dependency_graph->addLink(link);
+    auto link_diff = dependency_graph->popEdgeDiff();
     EXPECT_TRUE(link_diff.new_edges.empty());
     EXPECT_TRUE(link_diff.new_dependent_edges.empty());
     EXPECT_TRUE(link_diff.changed_edges.empty());
     ASSERT_EQ(2u, link_diff.removed_edges.size());
-    std::set<std::pair<RulePtr, RulePtr>> expected_edges {
+    std::list<Dependency> expected_edges {
         {port12->sourceRule(), table_miss},
         {port21->sourceRule(), table_miss_sw2}
     };
     for (auto edge : link_diff.removed_edges) {
-        auto it = expected_edges.find(edge);
+        auto it = std::find(expected_edges.begin(),
+                            expected_edges.end(),
+                            edge);
         EXPECT_NE(expected_edges.end(), it);
         expected_edges.erase(it);
     }
@@ -158,6 +167,7 @@ protected:
         }
         dependency_graph->addRule(table_miss1);
         dependency_graph->addRule(table_miss2);
+        dependency_graph->popEdgeDiff();
     }
 
     virtual void TearDown() {
@@ -165,27 +175,29 @@ protected:
         dependency_graph.reset();
     }
 
-    using Desc = EdgePtr;
+    //using Desc = EdgePtr;
     struct EdgeInfo {RulePtr src_rule, dst_rule; N domain;};
-    EdgeInfo getEdgeInfo(Desc edge) const {
-        auto src_rule = edge->src->rule;
-        auto dst_rule = edge->dst->rule;
-        auto domain = edge->domain;
+    EdgeInfo getEdgeInfo(Dependency dependency) const {
+        auto src_rule = dependency.src;
+        auto dst_rule = dependency.dst;
+        auto domain = dependency.domain;
         return EdgeInfo{src_rule, dst_rule, domain};
     }
-    EdgeInfo findEdgeFrom(const std::vector<Desc>& edges, RulePtr rule) const {
+    EdgeInfo findEdgeFrom(const std::list<Dependency>& edges,
+                          RulePtr rule) const {
         auto it = std::find_if(edges.begin(), edges.end(),
-            [rule, this](EdgePtr edge) -> bool {
-                return rule == edge->src->rule;
+            [rule](Dependency dependency) -> bool {
+                return rule == dependency.src;
             }
         );
         return it != edges.end() ? getEdgeInfo(*it)
                                  : EdgeInfo{nullptr, nullptr, N::emptySpace()};
     }
-    EdgeInfo findEdgeTo(const std::vector<Desc>& edges, RulePtr rule) const {
+    EdgeInfo findEdgeTo(const std::list<Dependency>& edges,
+                        RulePtr rule) const {
         auto it = std::find_if(edges.begin(), edges.end(),
-            [rule, this](EdgePtr edge) -> bool {
-               return rule == edge->dst->rule;
+            [rule](Dependency dependency) -> bool {
+               return rule == dependency.dst;
             }
         );
         return it != edges.end() ? getEdgeInfo(*it)
@@ -197,7 +209,8 @@ protected:
 
 TEST_F(DependencyGraphTest, AddRuleTest)
 {
-    auto rule_diff = dependency_graph->addRule(rule1);
+    dependency_graph->addRule(rule1);
+    auto rule_diff = dependency_graph->popEdgeDiff();
     ASSERT_EQ(1u, rule_diff.new_edges.size());
     ASSERT_EQ(1u, rule_diff.new_dependent_edges.size());
     ASSERT_EQ(1u, rule_diff.changed_edges.size());
@@ -215,15 +228,15 @@ TEST_F(DependencyGraphTest, AddRuleTest)
     EXPECT_EQ(port12->sinkRule(), out_edge.dst_rule);
     EXPECT_EQ(N(2, H("0000xxxx")), out_edge.domain);
 
-    auto changed_edge = rule_diff.changed_edges[0];
-    EXPECT_EQ(port11->sourceRule(), changed_edge->src->rule);
-    EXPECT_EQ(table_miss1, changed_edge->dst->rule);
-    EXPECT_EQ(N(port11->id()) - N(1, H("0000xxxx")),
-              dependency_graph->edge(changed_edge).domain);
+    auto changed_edge = *rule_diff.changed_edges.begin();
+    EXPECT_EQ(port11->sourceRule(), changed_edge.src);
+    EXPECT_EQ(table_miss1, changed_edge.dst);
+    EXPECT_EQ(N(port11->id()) - N(1, H("0000xxxx")), changed_edge.domain);
 
-    auto top_rule = network->addRule(1, 0, 2, 0x0, N(1, H("00000011")),
+    auto top_rule = network->addRule(1, 0, 2, 0x0, M(1, B("00000011")),
                                      ActionsBase::portAction(2));
-    auto top_diff = dependency_graph->addRule(top_rule);
+    dependency_graph->addRule(top_rule);
+    auto top_diff = dependency_graph->popEdgeDiff();
     ASSERT_EQ(1u, top_diff.changed_edges.size());
     auto last_edge = findEdgeTo(top_diff.changed_edges, rule1);
     EXPECT_EQ(port11->sourceRule(), last_edge.src_rule);
@@ -234,25 +247,27 @@ TEST_F(DependencyGraphTest, AddRuleTest)
 TEST_F(DependencyGraphTest, DeleteRuleTest)
 {
     dependency_graph->addRule(rule1);
-    auto rule_diff = dependency_graph->deleteRule(rule1);
+    dependency_graph->popEdgeDiff();
+    dependency_graph->deleteRule(rule1);
+    auto rule_diff = dependency_graph->popEdgeDiff();
     EXPECT_TRUE(rule_diff.new_edges.empty());
     EXPECT_TRUE(rule_diff.new_dependent_edges.empty());
     ASSERT_EQ(1u, rule_diff.changed_edges.size());
     ASSERT_EQ(1u, rule_diff.removed_edges.size());
     ASSERT_EQ(1u, rule_diff.removed_dependent_edges.size());
 
-    auto& changed_table_miss_edge = rule_diff.changed_edges[0];
-    EXPECT_EQ(port11->sourceRule(), changed_table_miss_edge->src->rule);
-    EXPECT_EQ(table_miss1, changed_table_miss_edge->dst->rule);
-    EXPECT_EQ(N(1, H("xxxxxxxx")), changed_table_miss_edge->domain);
+    auto& changed_table_miss_edge = *rule_diff.changed_edges.begin();
+    EXPECT_EQ(port11->sourceRule(), changed_table_miss_edge.src);
+    EXPECT_EQ(table_miss1, changed_table_miss_edge.dst);
+    EXPECT_EQ(N(1, H("xxxxxxxx")), changed_table_miss_edge.domain);
 
     auto deleted_out_edge = *rule_diff.removed_edges.begin();
-    EXPECT_EQ(rule1, deleted_out_edge.first);
-    EXPECT_EQ(port12->sinkRule(), deleted_out_edge.second);
+    EXPECT_EQ(rule1, deleted_out_edge.src);
+    EXPECT_EQ(port12->sinkRule(), deleted_out_edge.dst);
 
     auto deleted_in_edge = *rule_diff.removed_dependent_edges.begin();
-    EXPECT_EQ(port11->sourceRule(), deleted_in_edge.first);
-    EXPECT_EQ(rule1, deleted_in_edge.second);
+    EXPECT_EQ(port11->sourceRule(), deleted_in_edge.src);
+    EXPECT_EQ(rule1, deleted_in_edge.dst);
 
 }
 
@@ -260,9 +275,11 @@ TEST_F(DependencyGraphTest, AddLinkTest)
 {
     dependency_graph->addRule(rule1);
     dependency_graph->addRule(rule2);
+    dependency_graph->popEdgeDiff();
 
     auto link = network->addLink({1,2}, {2,1}).first;
-    auto diff = dependency_graph->addLink(link);
+    dependency_graph->addLink(link);
+    auto diff = dependency_graph->popEdgeDiff();
     ASSERT_EQ(2u, diff.new_edges.size());
     EXPECT_EQ(0u, diff.changed_edges.size());
     EXPECT_EQ(4u, diff.removed_edges.size());
@@ -294,10 +311,12 @@ TEST_F(DependencyGraphTest, ExistingLinkTest)
     network->deleteRule(rule1->id());
     auto link = network->addLink({1,2}, {2,1}).first;
     dependency_graph->addLink(link);
+    dependency_graph->popEdgeDiff();
 
-    auto rule = network->addRule(1, 0, 1, 0x0, N(1, H("0000xxxx")),
+    auto rule = network->addRule(1, 0, 1, 0x0, M(1, B("0000xxxx")),
                                  ActionsBase::portAction(2));
-    auto diff = dependency_graph->addRule(rule);
+    dependency_graph->addRule(rule);
+    auto diff = dependency_graph->popEdgeDiff();
 
     auto link_edge_to2 = findEdgeTo(diff.new_edges, rule2);
     EXPECT_EQ(rule, link_edge_to2.src_rule);
@@ -317,9 +336,11 @@ TEST_F(DependencyGraphTest, DeleteLinkTest)
     dependency_graph->addRule(rule2);
     auto new_link = network->addLink({1,2}, {2,1}).first;
     dependency_graph->addLink(new_link);
+    dependency_graph->popEdgeDiff();
 
     auto deleted_link = network->deleteLink({1,2}, {2,1}).first;
-    auto diff = dependency_graph->deleteLink(deleted_link);
+    dependency_graph->deleteLink(deleted_link);
+    auto diff = dependency_graph->popEdgeDiff();
     EXPECT_EQ(4u, diff.new_edges.size());
     EXPECT_EQ(0u, diff.changed_edges.size());
     EXPECT_EQ(2u, diff.removed_edges.size());
@@ -348,8 +369,8 @@ TEST_F(DependencyGraphTest, DeleteLinkTest)
         {rule1, rule2}, {rule1, table_miss2}
     };
     for (auto edge : diff.removed_edges) {
-        auto src_rule = edge.first;
-        auto dst_rule = edge.second;
+        auto src_rule = edge.src;
+        auto dst_rule = edge.dst;
         auto it = expected_removed_edges.find({src_rule, dst_rule});
         EXPECT_NE(expected_removed_edges.end(), it);
         expected_removed_edges.erase(it);
@@ -361,30 +382,35 @@ TEST_F(DependencyGraphTest, EdgeCleanUpTest)
 {
     network->deleteRule(rule1->id());
     network->deleteRule(rule2->id());
-    auto rule = network->addRule(1, 0, 1, 0x0, N(1, H("xxxxxxxx")),
+    auto rule = network->addRule(1, 0, 1, 0x0, M(1, B("xxxxxxxx")),
                                  ActionsBase::portAction(2));
-    auto diff = dependency_graph->addRule(rule);
+    dependency_graph->addRule(rule);
+    auto diff = dependency_graph->popEdgeDiff();
     ASSERT_EQ(1u, diff.removed_edges.size());
     EXPECT_TRUE(diff.changed_edges.empty());
-    auto edge = diff.removed_edges[0];
-    EXPECT_EQ(port11->sourceRule(), edge.first);
-    EXPECT_EQ(table_miss1, edge.second);
-    EXPECT_NE(rule, edge.second);
+    auto edge = *diff.removed_edges.begin();
+    EXPECT_EQ(port11->sourceRule(), edge.src);
+    EXPECT_EQ(table_miss1, edge.dst);
+    EXPECT_NE(rule, edge.dst);
 }
 
 TEST_F(DependencyGraphTest, TableRuleTest)
 {
     dependency_graph->addRule(rule1);
     dependency_graph->addRule(rule2);
-    dependency_graph->addRule(network->getSwitch(1)->table(1)->tableMissRule());
+    dependency_graph->addRule(
+        network->getSwitch(1)->addTable(1)->tableMissRule()
+    );
 
-    auto table1_rule = network->addRule(1, 1, 1, 0x0, N(1, H("000000xx")),
+    auto table1_rule = network->addRule(1, 1, 1, 0x0, M(1, B("000000xx")),
                                         ActionsBase::portAction(2));
     dependency_graph->addRule(table1_rule);
+    dependency_graph->popEdgeDiff();
     // TODO: check this test, may be wrong
-    auto rule = network->addRule(1, 0, 2, 0x0, N(1, H("00000011")),
+    auto rule = network->addRule(1, 0, 2, 0x0, M(1, B("00000011")),
                                  ActionsBase::tableAction(1));
-    auto diff = dependency_graph->addRule(rule);
+    dependency_graph->addRule(rule);
+    auto diff = dependency_graph->popEdgeDiff();
     ASSERT_EQ(1u, diff.new_edges.size());
     ASSERT_EQ(1u, diff.new_dependent_edges.size());
     ASSERT_EQ(1u, diff.changed_edges.size());

@@ -1,9 +1,12 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+
+plt.rcParams.update({'font.size': 18})
 
 
 def cut_by_item(dataframe, key, step):
@@ -16,42 +19,61 @@ def cut_by_item(dataframe, key, step):
 
 def plot_delays_by_rules(dataframe):
     print 'Plotting by rules'
-    bounds = [32000, 64000, 100000]
-    group_by_switches = dataframe.groupby(pd.cut(dataframe['network_size'], np.arange(0, 301, 100)))
+    bounds = [31000, 64000, 85000, 105000]
+    #group_by_switches = dataframe.groupby(pd.cut(dataframe['network_size'], np.arange(0, 301, 100)))
+    group_by_switches = dataframe.groupby(pd.cut(dataframe['network_size'], [0, 100, 200, 250, 300]))
     labels = [l for l, _ in group_by_switches]
     delays = [d for _, d in group_by_switches]
 
-    #fig, axes = plt.subplots(1, 3)
-    plt.ylim(0, 370)
+    #fig, axes = plt.subplots(2, 2)#, sharey=True)
+    ax_indices = [(0, 0), (0, 1), (1, 0), (1, 1)]
 
-    for label, delay, bound in zip(labels, delays, bounds):
+    for label, delay, bound, idx in zip(labels, delays, bounds, ax_indices):
         rule_interval = 100
         grouped_by_rules = delay.groupby(pd.cut(
             delay['graph_size'],
             np.arange(0, bound, rule_interval))
+            #np.arange(0, max(delay['graph_size']), rule_interval))
         )['duration']
 
         mean = grouped_by_rules.mean()
         #median = grouped_by_rules.median()
-        lower = grouped_by_rules.quantile(0.10)
-        upper = grouped_by_rules.quantile(0.90)
+        lower = grouped_by_rules.quantile(0.05)
+        upper = grouped_by_rules.quantile(0.95)
 
-        mean = mean.rolling(window=5, min_periods=1).mean()
-        #median = median.rolling(window=5, min_periods=1).mean()
-        lower = lower.rolling(window=5, min_periods=1).mean()
-        upper = upper.rolling(window=5, min_periods=1).mean()
+        #mean = mean.rolling(window=5, min_periods=1).mean()
+        ##median = median.rolling(window=5, min_periods=1).mean()
+        #lower = lower.rolling(window=5, min_periods=1).mean()
+        #upper = upper.rolling(window=5, min_periods=1).mean()
 
         keys = [(k.left + k.right)/2.0 for k in mean.keys()]
 
+        plt.figure(figsize=(8, 6))
+        plt.ylim(0, 450)
         plt.plot(keys, mean, 'green')
         plt.fill_between(keys, lower, upper, color='green', alpha='0.15')
-        plt.xlabel('Rule number')
-        plt.ylabel('Delay, ms')
+        plt.xlabel(u'Количество правил')#('Rule number')
+        plt.ylabel(u'Задержка, мс')#('Delay, ms')
         #plt.title('Delay by rule number')
-        plt.savefig(data_dir + '/plot/' + 'Delay by rule number %s.png' % str(label),
-                    fmt='png')
+        plt.grid()
+        plt.tight_layout()
+        plt.savefig(data_dir + '/plot/' + 'delay_by_rules_%i_%i.pdf' % (label.left, label.right),
+                    fmt='pdf')
         #plt.show()
         plt.gcf().clear()
+
+        #ax = axes[idx[0]][idx[1]]
+        #ax.plot(keys, mean, 'green')
+        #ax.fill_between(keys, lower, upper, color='green', alpha='0.15')
+        #ax.set_xlabel(u'Количество правил')#('Rule number')
+        #ax.set_ylabel(u'Задержка, мс')#('Delay, ms')
+        #ax.set_title(u'От %i до %i коммутаторов' % (label.left, label.right))#('Delay by rule number')
+        #ax.grid()
+
+    #fig.savefig(data_dir + '/plot/' + 'Delay by rule number', fmt='pdf')
+    ##plt.show()
+    #plt.gcf().clear()
+
     print 'Done'
 
 
@@ -60,6 +82,9 @@ def plot_delays_by_switches(dataframe):
     switch_interval = 10
     switch_bound = 301
 
+    dataframe = dataframe.sort_values(['graph_size'])
+    dataframe['duration'] = dataframe['duration'].rolling(window=3, min_periods=1).mean()
+
     grouped_by_switches = dataframe.groupby(pd.cut(
         dataframe['network_size'],
         np.arange(0, switch_bound, switch_interval))
@@ -67,13 +92,15 @@ def plot_delays_by_switches(dataframe):
 
     mean = grouped_by_switches.mean()
     #median = grouped_by_switches.median()
-    lower = grouped_by_switches.quantile(0.10)
-    upper = grouped_by_switches.quantile(0.90)
+    #std = grouped_by_switches.std()
+    lower = grouped_by_switches.quantile(0.05)
+    upper = grouped_by_switches.quantile(0.95)
 
     keys = [(k.left + k.right)/2.0 for k in mean.keys()]
 
     mean = pd.Series(mean).reset_index(drop=True)
     #median = pd.Series(median).reset_index(drop=True)
+    #std = pd.Series(std).reset_index(drop=True)
     lower = pd.Series(lower).reset_index(drop=True)
     upper = pd.Series(upper).reset_index(drop=True)
 
@@ -85,13 +112,16 @@ def plot_delays_by_switches(dataframe):
     #plt.boxplot(data)
     #plt.plot(keys, median, yerr=std, color='blue')
     #plt.plot(keys, mean, 'ro')
+    plt.figure(figsize=(14, 6))
     plt.errorbar(keys, mean, yerr=[lower, upper],
-                 color='blue', fmt='o', capsize=3, elinewidth=1)
+                 color='blue', fmt='o', markersize=9, capsize=6, elinewidth=3, capthick=2)
     #plt.fill_between(keys, lower, upper, color='blue', alpha='0.15')
-    plt.xlabel('Network size')
-    plt.ylabel('Delay, ms')
-    plt.title('Delay by network size')
-    plt.savefig(data_dir + '/plot/' + 'Delay by network size.png', fmt='png')
+    plt.xlabel(u'Количество коммутаторов')#('Network size')
+    plt.ylabel(u'Задержка, мс')#('Delay, ms')
+    #plt.title('Delay by network size')
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(data_dir + '/plot/' + 'delay_by_switches.pdf', fmt='pdf')
     #plt.show()
     plt.gcf().clear()
 
@@ -108,52 +138,80 @@ def process_delays(delays):
     plot_delays_by_switches(delays)
 
 
-def process_predictions(predictions):
-    # Prediction
-    #result['pred_packets'] = predicted['packet_count']
-    #result['real_packets'] = real['packet_count']
-    #result['pred_bytes'] = predicted['byte_count']
-    #result['real_bytes'] = real['byte_count']
-    #result['switch_num'] = testbed.switch_num()
-    #result['rule_num'] = rule_num
-    #result['flow_num'] = testbed.flow_num()
-    #result['load'] = testbed.network_load()
+def predictions_boxplot(dataframe, delay):
+    #dataframe['packet_error'] = np.abs(dataframe['real_packets'] - dataframe['pred_packets'])
+    #dataframe['byte_error'] = np.abs(dataframe['real_bytes'] - dataframe['pred_bytes'])
 
-    predictions['packet_error'] = np.square(predictions['real_packets'] -
-                                            predictions['pred_packets'])
-    predictions['byte_error'] = np.square(predictions['real_bytes'] -
-                                          predictions['pred_bytes'])
+    #labels = list(reversed(['100 Kbps', '1 Mbps', '10 Mbps', '100 Mbps', '1 Gbps']))
+    labels = list(reversed([u'100 Кбит/с', u'1 Мбит/с', u'10 Мбит/с', u'100 Мбит/с', u'1 Гбит/с']))
+    bandwidths = reversed([int(b*1000000) for b in [0.1, 1, 10, 100, 1000]])
+    packet_data = []
+    byte_data = []
+    for bandwidth in bandwidths:
+        packet_data.append(dataframe[dataframe['bandwidth'] == bandwidth]['packet_error'])
+        byte_data.append(dataframe[dataframe['bandwidth'] == bandwidth]['byte_error'])
 
-    prediction_by_bandwidth = predictions.groupby(
-        ['bandwidth'])
-    prediction_by_switch_num = predictions.groupby(
-        ['switch_num'])
-    dataframes = [g for g in prediction_by_bandwidth]
+    adjust_left = 0.21
+    packet_xlabel = u'Ошибка предсказания (количество пакетов)'#'Packet error'
+    byte_xlabel = u'Ошибка предсказания (количество байт)'#'Byte error'
 
-    keys = [k for k, _ in prediction_by_switch_num]
-    labels = [l for l, _ in dataframes]
-    errors = [df.groupby(['switch_num'])['packet_error'].mean() for _, df in dataframes]
-    #for key, df in dataframes:
-    #    keys.append(key)
-    #    prediction_by_switch_num = df.groupby(
-    #        ['switch_num'])['packet_error'].mean()
-    #    predictions_by_switch_num.append(prediction_by_switch_num)
+    #b = plt.boxplot(packet_data, showfliers=False, vert=False)
+    #print('Delay:', delay, '| Quantile:', [p.quantile(0.95) for p in packet_data])
+    #print 'Delay:', delay, '| Quantile:', [item.get_xdata() for item in b['whiskers']]
+    #return None  # DEBUG
 
-    data = []
-
-    for label, error in zip(labels, errors):
-        print 'keys', len(keys), keys
-        print 'error', len(error.keys()), error.keys()
-        for k, e in zip(keys, error.keys()):
-            print k, e
-        plt.plot(keys, error, label=label)
-    plt.legend()
-    #plt.boxplot(data)
-    #plt.xticks([1, 2, 3, 4, 5],#[int(b*1000000) for b in [0.1, 1, 10, 100, 1000]],
-    #           ['100 Kbps', '1 Mbps', '10 Mbps', '100 Mbps', '1 Gbps'])
-    #plt.savefig(data_dir + '/plot/' + 'Delay by network size.png', fmt='png')
-    plt.show()
+    # Plot in normal scale
+    plt.figure(figsize=(8, 6))
+    plt.boxplot(packet_data, showfliers=False, vert=False)
+    plt.yticks([1, 2, 3, 4, 5], labels)
+    plt.xlabel(packet_xlabel)
+    plt.tight_layout()
+    plt.gcf().subplots_adjust(left=adjust_left)
+    plt.savefig(data_dir + '/plot/' + 'packet_error_%d.pdf' % delay, fmt='pdf')
+    #plt.show()
     plt.gcf().clear()
+
+    # Plot in logarithmic scale
+    ax = plt.gca()
+    ax.set_xscale('log')
+    plt.boxplot(packet_data, showfliers=False, vert=False)
+    plt.yticks([1, 2, 3, 4, 5], labels)
+    plt.xlabel(packet_xlabel)
+    plt.tight_layout()
+    plt.gcf().subplots_adjust(left=adjust_left)
+    plt.savefig(data_dir + '/plot/' + 'packet_error_%d_log.pdf' % delay, fmt='pdf')
+    #plt.show()
+    plt.gcf().clear()
+
+    # Plot in normal scale
+    plt.boxplot(byte_data, showfliers=False, vert=False)
+    plt.yticks([1, 2, 3, 4, 5], labels)
+    plt.xlabel(byte_xlabel)
+    plt.tight_layout()
+    plt.gcf().subplots_adjust(left=adjust_left)
+    plt.savefig(data_dir + '/plot/' + 'byte_error_%d.pdf' % delay, fmt='pdf')
+    #plt.show()
+    plt.gcf().clear()
+
+    # Plot in logarithmic scale
+    ax = plt.gca()
+    ax.set_xscale('log')
+    plt.boxplot(byte_data, showfliers=False, vert=False)
+    plt.yticks([1, 2, 3, 4, 5], labels)
+    plt.xlabel(byte_xlabel)
+    plt.tight_layout()
+    plt.gcf().subplots_adjust(left=adjust_left)
+    plt.savefig(data_dir + '/plot/' + 'byte_error_%d_log.pdf' % delay, fmt='pdf')
+    #plt.show()
+    plt.gcf().clear()
+
+
+def process_predictions(dataframe):
+    dataframe = dataframe[dataframe['real_packets'] > 0]
+    dataframe['packet_error'] = np.abs(dataframe['real_packets'] - dataframe['pred_packets'])
+    dataframe['byte_error'] = np.abs(dataframe['real_bytes'] - dataframe['pred_bytes'])
+    for delay in [0, 1, 33, 66, 333, 666, 2000]:
+        predictions_boxplot(dataframe[dataframe['delay'] == delay], delay)
 
 
 def load(files):
@@ -168,11 +226,12 @@ if __name__ == '__main__':
     data_dir = './experiments'
 
     delay_files = [data_dir + '/delay.csv']
-    #prediction_files = [data_dir + '/prediction.csv']
+    #delay_files = [data_dir + '/no_delay_prediction']
+    prediction_files = [data_dir + '/prediction.csv']
 
-    print 'Loading delays'
-    delays = load(delay_files)
-    process_delays(delays)
+    #print 'Loading delays'
+    #delays = load(delay_files)
+    #process_delays(delays)
 
     print 'Loading predictions'
     predictions = load(prediction_files)

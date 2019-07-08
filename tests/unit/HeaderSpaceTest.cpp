@@ -237,8 +237,8 @@ TEST_F(HeaderSpaceTest, NetworkSpaceTest)
     EXPECT_EQ(N(1, zeros()), N(whole()) & N(1, zeros()));
     EXPECT_EQ(N(1, zeros()), N(1, whole()) & N(1, zeros()));
     EXPECT_EQ(N::emptySpace(), N(1, whole()) & N(2, whole()));
-    EXPECT_EQ(N::emptySpace(), N(whole()) & N(1, empty()));
-    EXPECT_EQ(N::emptySpace(), N(zeros()) & N(1, ones()));
+    EXPECT_EQ(N(1, empty()), N(whole()) & N(1, empty()));
+    EXPECT_EQ(N(1, empty()), N(zeros()) & N(1, ones()));
 }
 
 TEST_F(HeaderSpaceTest, BitVectorTest)
@@ -257,8 +257,8 @@ TEST_F(HeaderSpaceTest, BitVectorTest)
     diff_header.computeDifference();
     auto bit_space = diff_header.getBitSpace();
     ASSERT_EQ(2u, bit_space.size());
-    auto bit_vector0 = bit_space[0].mask;
-    auto bit_vector1 = bit_space[1].mask;
+    auto bit_vector0 = bit_space.begin()->mask;
+    auto bit_vector1 = std::next(bit_space.begin())->mask;
     auto header0 = H(bit_vector0);
     auto header1 = H(bit_vector1);
     if (H("1xxxxxxx") == header0) {

@@ -23,6 +23,8 @@ TEST(InitSwitchTest, CreationTest)
 class SwitchTest : public ::testing::Test
 {
 protected:
+    using B = BitMask;
+    using M = Match;
     using H = HeaderSpace;
     using N = NetworkSpace;
 
@@ -49,14 +51,14 @@ TEST_F(SwitchTest, PortTest)
 
         auto source_rule = port->sourceRule();
         ASSERT_NE(nullptr, source_rule);
-        EXPECT_EQ(N(port_number), source_rule->match());
+        EXPECT_EQ(M(port_number), source_rule->match());
         const auto& source_actions = source_rule->actions();
         EXPECT_TRUE(source_actions.port_actions.empty());
 
         auto sink_rule = port->sinkRule();
         ASSERT_NE(nullptr, sink_rule);
         EXPECT_EQ(port_number, sink_rule->inPort());
-        EXPECT_EQ(N(port_number), sink_rule->match());
+        EXPECT_EQ(M(port_number), sink_rule->match());
         const auto& sink_actions = sink_rule->actions();
         EXPECT_TRUE(sink_actions.port_actions.empty());
 
@@ -75,7 +77,7 @@ TEST_F(SwitchTest, TableTest)
     auto rule = *table->rules().begin();
     ASSERT_NE(nullptr, rule);
     EXPECT_EQ(table_miss_rule->id(), rule->id());
-    EXPECT_EQ(NetworkSpace::wholeSpace(), table_miss_rule->match());
+    EXPECT_EQ(Match::wholeSpace(), table_miss_rule->match());
 }
 
 TEST(BasicNetworkTest, CreationTest)
@@ -95,7 +97,7 @@ class NetworkTest : public ::testing::Test
 protected:
     virtual void SetUp() {
         initNetwork();
-        new_rule0 = network->addRule(1, 0, 3, 0x0, N(1, H("00001111")),
+        new_rule0 = network->addRule(1, 0, 3, 0x0, M(1, B("00001111")),
                                      ActionsBase::portAction(2));
         deleted_rule5_id_ = rule5->id();
         network->deleteRule(deleted_rule5_id_);

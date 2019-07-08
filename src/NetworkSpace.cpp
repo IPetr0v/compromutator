@@ -19,10 +19,32 @@ std::string getPortString(PortId port_id)
     return port_string;
 }
 
+Match::Match(PortId in_port):
+    in_port_(in_port),
+    header_(BitMask::wholeSpace(HeaderSpace::GLOBAL_LENGTH))
+{
+
+}
+
+Match::Match(BitMask&& header):
+    in_port_(SpecialPort::ANY), header_(std::move(header))
+{
+
+}
+
 Match::Match(PortId in_port, BitMask&& header):
     in_port_(in_port), header_(std::move(header))
 {
 
+}
+
+Match Match::wholeSpace()
+{
+    // We represent empty network space as any getPort with an empty header
+    return Match(
+        SpecialPort::ANY,
+        BitMask::wholeSpace(HeaderSpace::GLOBAL_LENGTH)
+    );
 }
 
 bool Match::operator==(const Match& other) const
@@ -138,8 +160,7 @@ NetworkSpace NetworkSpace::operator&(const NetworkSpace& right)
 {
     // TODO: make it simpler (remove multiple if)
     PortId new_in_port;
-    if (in_port_ == SpecialPort::NONE ||
-        right.in_port_ == SpecialPort::NONE)
+    if (in_port_ == SpecialPort::NONE || right.in_port_ == SpecialPort::NONE)
         new_in_port = SpecialPort::NONE;
     else if (in_port_ == SpecialPort::ANY)
         new_in_port = right.in_port_;

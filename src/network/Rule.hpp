@@ -212,6 +212,10 @@ struct Dependency {
         src(src->rule), dst(dst->rule),
         transfer(Transfer::identityTransfer()),
         domain(NetworkSpace::emptySpace()) {}
+    Dependency(const RulePtr src, const RulePtr dst):
+        src(src), dst(dst),
+        transfer(Transfer::identityTransfer()),
+        domain(NetworkSpace::emptySpace()) {}
 
     RulePtr src;
     RulePtr dst;

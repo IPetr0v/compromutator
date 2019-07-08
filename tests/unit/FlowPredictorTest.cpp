@@ -12,16 +12,32 @@ protected:
         initGraph();
         xid_generator = std::make_shared<RequestIdGenerator>();
         stats_manager = std::make_shared<StatsManager>(xid_generator);
+
+        node1 = nodes.emplace(nodes.end(),
+            Node(1u, rule1, NetworkSpace::wholeSpace(),
+                Transfer::identityTransfer(), 1u));
+        node2 = nodes.emplace(nodes.end(),
+            Node(2u, rule2, NetworkSpace::wholeSpace(),
+                Transfer::identityTransfer(), 1u));
+        path = domain_paths.emplace(domain_paths.end(),
+            DomainPath(1u, node1, node2, TimestampFactory().createTimestamp()));
     }
 
     virtual void TearDown() {
         stats_manager.reset();
         xid_generator.reset();
+        nodes.clear();
+        domain_paths.clear();
         destroyGraph();
     }
 
     std::shared_ptr<RequestIdGenerator> xid_generator;
     std::shared_ptr<StatsManager> stats_manager;
+
+    std::list<Node> nodes;
+    std::list<DomainPath> domain_paths;
+    NodePtr node1, node2;
+    DomainPathPtr path;
 };
 
 TEST_F(StatsManagerTest, BucketTest)
@@ -41,25 +57,24 @@ TEST_F(StatsManagerTest, BucketTest)
 TEST_F(StatsManagerTest, BasicTest)
 {
     uint64_t packet_count = 100u;
-    PathId path_id = 1u;
 
     stats_manager->requestRule(rule1);
-    stats_manager->requestPath(
-        path_id, DomainPathPtr(nullptr), rule1, rule2
-    );
-    stats_manager->discardPathRequest(path_id);
+    stats_manager->requestPath(path);
+    stats_manager->discardPathRequest(path);
 
     auto requests = stats_manager->getNewRequests();
     ASSERT_EQ(1u, requests.data.size());
     auto rule_request = RuleRequest::pointerCast(requests.data[0]);
     ASSERT_NE(nullptr, rule_request);
-    EXPECT_EQ(rule1->id(), rule_request->rule->id());
+    EXPECT_EQ(*rule1->info(), *rule_request->rule);
     EXPECT_LT(rule_request->time.value, stats_manager->frontTime().value);
     rule_request->stats.packet_count = packet_count;
     stats_manager->passRequest(rule_request);
     auto stats_list = stats_manager->popStatsList();
-    ASSERT_EQ(1u, stats_list.size());
-    auto rule_stats = std::dynamic_pointer_cast<RuleStats>(*stats_list.begin());
+    ASSERT_EQ(1u, stats_list.stats.size());
+    auto rule_stats = std::dynamic_pointer_cast<RuleStats>(
+        *stats_list.stats.begin()
+    );
     ASSERT_NE(nullptr, rule_stats);
     EXPECT_EQ(rule1->id(), rule_stats->rule->id());
     EXPECT_EQ(packet_count, rule_stats->stats_fields.packet_count);
@@ -147,13 +162,13 @@ protected:
         flow_predictor->updateEdges(link_deletion_diff);
     }
 
-    RulePtr getRule(SwitchId sw_id, NetworkSpace domain,
-                    const std::vector<RulePtr>& rules) {
+    RuleInfoPtr getRule(SwitchId sw_id, NetworkSpace domain,
+                        const std::list<RuleInfoPtr>& rules) {
         auto it = std::find_if(rules.begin(), rules.end(),
-            [sw_id, domain](RulePtr rule) {
-                if (rule->sw()) {
-                    return rule->sw()->id() == sw_id &&
-                        rule->match() == domain;
+            [sw_id, domain](RuleInfoPtr rule) {
+                if (rule->switch_id) {
+                    return rule->switch_id == sw_id &&
+                        rule->match == domain.match();
                 }
                 return false;
             }
@@ -161,7 +176,7 @@ protected:
         return (it != rules.end()) ? *it : nullptr;
     }
 
-    RulePtr getRequestedRule(SwitchId sw_id, NetworkSpace domain,
+    RuleInfoPtr getRequestedRule(SwitchId sw_id, NetworkSpace domain,
                              const RequestList& request_list) {
         auto it = std::find_if(
             request_list.data.begin(), request_list.data.end(),
@@ -170,9 +185,9 @@ protected:
                 if (not rule_request) return false;
 
                 auto rule = rule_request->rule;
-                if (rule->sw()) {
-                    return rule->sw()->id() == sw_id &&
-                        rule->match() == domain;
+                if (rule->switch_id) {
+                    return rule->switch_id == sw_id &&
+                        rule->match == domain.match();
                 }
                 return false;
             }
@@ -232,7 +247,7 @@ TEST_F(FlowPredictorTest, AddRuleTest)
     auto request = *rule1_instruction.requests.data.begin();
     auto rule_request = RuleRequest::pointerCast(request);
     ASSERT_NE(nullptr, rule_request);
-    EXPECT_EQ(table_miss_source1->id(), rule_request->rule->id());
+    EXPECT_EQ(*table_miss_source1, *rule_request->rule);
 
     // Check rule1 new rules
     auto& rule1_new_rules = rule1_instruction.interceptor_diff.rules_to_add;
@@ -248,7 +263,7 @@ TEST_F(FlowPredictorTest, AddRuleTest)
     ASSERT_EQ(1u, rule1_deleted_rules.size());
     auto rule1_old_rule1 = getRule(1u, N(1), rule1_deleted_rules);
     ASSERT_NE(nullptr, rule1_old_rule1);
-    EXPECT_EQ(table_miss_source1->id(), rule1_old_rule1->id());
+    EXPECT_EQ(*table_miss_source1, *rule1_old_rule1);
 
     // Get rule2 instruction
     updateSecondRuleEdges();
@@ -263,7 +278,8 @@ TEST_F(FlowPredictorTest, DeleteRuleTest)
     updateAllRules();
 
     // Delete rule
-    auto diff = dependency_graph->deleteRule(rule1);
+    dependency_graph->deleteRule(rule1);
+    auto diff = dependency_graph->popEdgeDiff();
     flow_predictor->updateEdges(diff);
     auto instruction = flow_predictor->getInstruction();
 

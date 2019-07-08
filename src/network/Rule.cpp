@@ -142,7 +142,10 @@ std::ostream& operator<<(std::ostream& os, const Rule& rule)
 
 std::ostream& operator<<(std::ostream& os, const RulePtr rule)
 {
-    os << rule->toString();
+    if (rule)
+        os << rule->toString();
+    else
+        os << "[NULL]";
     return os;
 }
 

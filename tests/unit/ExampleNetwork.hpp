@@ -8,6 +8,8 @@
 class ExampleNetwork
 {
 protected:
+    using B = BitMask;
+    using M = Match;
     using H = HeaderSpace;
     using N = NetworkSpace;
 
@@ -31,11 +33,11 @@ protected:
         port21 = sw2->port(1);
         port22 = sw2->port(2);
 
-        rule1 = network->addRule(1, 0, 1, 0x0, N(1, H("0000xxxx")),
+        rule1 = network->addRule(1, 0, 1, 0x0, M(1, B("0000xxxx")),
                                  ActionsBase::portAction(2));
         table_miss1 = network->getSwitch(1)->table(0)->tableMissRule();
 
-        rule2 = network->addRule(2, 0, 1, 0x0, N(1, H("000000xx")),
+        rule2 = network->addRule(2, 0, 1, 0x0, M(1, B("000000xx")),
                                  ActionsBase::portAction(2));
         table_miss2 = network->getSwitch(2)->table(0)->tableMissRule();
     }
@@ -64,26 +66,26 @@ protected:
         port21 = sw2->port(1);
         port22 = sw2->port(2);
 
-        rule1 = network->addRule(1, 0, 3, 0x0, N(1, H("00000000")),
+        rule1 = network->addRule(1, 0, 3, 0x0, M(1, B("00000000")),
                                  ActionsBase::tableAction(1));
-        rule2 = network->addRule(1, 0, 2, 0x0, N(1, H("0000xxxx")),
+        rule2 = network->addRule(1, 0, 2, 0x0, M(1, B("0000xxxx")),
                                  ActionsBase::portAction(2));
 
         link = network->addLink({1,2}, {2,1}).first;
 
-        rule3 = network->addRule(1, 0, 2, 0x0, N(1, H("0011xxxx")),
+        rule3 = network->addRule(1, 0, 2, 0x0, M(1, B("0011xxxx")),
                                  ActionsBase::portAction(2));
-        rule4 = network->addRule(1, 0, 2, 0x0, N(H("11111111")),
+        rule4 = network->addRule(1, 0, 2, 0x0, M(B("11111111")),
                                  ActionsBase::dropAction());
-        rule5 = network->addRule(1, 0, 1, 0x0, N(H("1111xxxx")),
+        rule5 = network->addRule(1, 0, 1, 0x0, M(B("1111xxxx")),
                                  ActionsBase::portAction(2));
         table_miss = network->getSwitch(1)->table(0)->tableMissRule();
 
-        rule11 = network->addRule(1, 1, 1, 0x0, N(1, H("00xxxxxx")),
+        rule11 = network->addRule(1, 1, 1, 0x0, M(1, B("00xxxxxx")),
                                   ActionsBase::portAction(2));
         table_miss1 = network->getSwitch(1)->table(1)->tableMissRule();
 
-        rule1_sw2 = network->addRule(2, 0, 1, 0x0, N(1, H("00000000")),
+        rule1_sw2 = network->addRule(2, 0, 1, 0x0, M(1, B("00000000")),
                                   ActionsBase::portAction(2));
         table_miss_sw2 = network->getSwitch(2)->table(0)->tableMissRule();
     }

@@ -15,9 +15,12 @@ enum SpecialPort: PortId
 class Match
 {
 public:
+    explicit Match(PortId in_port);
+    explicit Match(BitMask&& header);
     Match(PortId in_port, BitMask&& header);
     Match(const Match&) = default;
     Match(Match&&) = default;
+    static Match wholeSpace();
 
     Match& operator=(const Match& other) = default;
     Match& operator=(Match&& other) noexcept = default;

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.2)
 enable_testing()
 project(compromutator)
 
-include(third_party/configure.cmake)
+include(third_party/libfluid.cmake)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_STANDARD 11)
