@@ -115,6 +115,7 @@ std::string Rule::toString() const
 
     std::ostringstream os;
     os << "[" << type
+       << ": id=" << std::get<3>(id_)
        << ": sw=" << sw
        << ", table=" << table
        << ", prio=" << std::to_string(priority_)

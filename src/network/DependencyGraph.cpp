@@ -127,7 +127,7 @@ void DependencyGraph::addLink(Link link)
         edge_installer_.deleteOutEdges(dst_port->sourceRule()->vertex_);
 
         // Add edges that go through the link
-        for (auto src_rule : src_port->srcRules()) {
+        for (const auto& src_rule : src_port->srcRules()) {
             // Find port action that sends packets to the src rule
             auto action = src_rule->actions().getPortAction(src_port->id());
             assert(nullptr != action);
@@ -152,7 +152,8 @@ void DependencyGraph::deleteLink(Link link)
         for (auto src_rule : src_port->srcRules()) {
             // Delete edges between ports
             for (auto dst_rule : dst_port->dstRules()) {
-                edge_installer_.deleteEdge(src_rule->vertex_, dst_rule->vertex_);
+                edge_installer_.deleteEdge(src_rule->vertex_,
+                                           dst_rule->vertex_);
             }
 
             // Find port action that sends packets to the src rule

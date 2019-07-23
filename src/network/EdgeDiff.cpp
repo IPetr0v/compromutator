@@ -110,16 +110,16 @@ void EdgeDiff::move_intersection(std::list<Dependency>& src,
 
 std::list<Dependency> EdgeDiff::pop_dependent(std::list<Dependency>& edges)
 {
-    auto it = std::remove_if(edges.begin(), edges.end(),
+    auto it = std::partition(edges.begin(), edges.end(),
     [this](const Dependency& checked_edge) {
         // Edges connected to the new vertices are dependent
         // New vertices are defined as sources of new edges
         for (const auto& existing_edge: new_edges) {
             if (checked_edge.incident(existing_edge)) {
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     });
 
     // Move edges
